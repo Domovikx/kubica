@@ -1,0 +1,40 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "blender": {
+      "type": "local",
+      "command": ["uvx", "ageless-blender-mcp"],
+      "enabled": true,
+      "environment": {
+        "MCP_ADAPTER": "socket",
+        "MCP_SOCKET_HOST": "127.0.0.1",
+        "MCP_SOCKET_PORT": "9876",
+        "MCP_ENABLE_SCRIPT_EXECUTE": "1"
+      }
+    },
+    "freecad": {
+      "type": "local",
+      "command": [
+        "C:/Users/Domo/workspace/dnd-dice-blender/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe",
+        "--mode",
+        "embedded",
+        "--log-level",
+        "INFO"
+      ],
+      "enabled": true,
+      "environment": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    },
+    "cadquery": {
+      "type": "local",
+      "command": [
+        "C:/Users/Domo/workspace/dnd-dice-blender/tools/cadquery-venv/Scripts/cadquery-mcp.exe"
+      ],
+      "enabled": true,
+      "environment": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}

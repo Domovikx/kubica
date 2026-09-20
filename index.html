@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Один и тот же D6, спроектированный в FreeCAD, OpenSCAD и CadQuery — сравнение"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+    <title>D6: FreeCAD vs OpenSCAD vs CadQuery</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="title">D6 16 мм: FreeCAD · OpenSCAD · CadQuery</h1>
+      <p class="hint">Вращение: мышь или палец · автоповорот · можно перетащить свой .glb</p>
+    </header>
+
+    <main class="viewers">
+      <section class="viewer">
+        <canvas id="scene1"></canvas>
+        <p class="viewerLabel">FreeCAD · фаска 1 мм</p>
+        <p class="viewerInfo" id="info1"></p>
+        <div class="viewerOverlay" id="overlay1" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/cad-d6.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer">
+        <canvas id="scene2"></canvas>
+        <p class="viewerLabel">OpenSCAD · скруглённые рёбра r=1</p>
+        <p class="viewerInfo" id="info2"></p>
+        <div class="viewerOverlay" id="overlay2" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/cad-d6-openscad.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer">
+        <canvas id="scene3"></canvas>
+        <p class="viewerLabel">CadQuery · фаска 1 мм</p>
+        <p class="viewerInfo" id="info3"></p>
+        <div class="viewerOverlay" id="overlay3" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/cad-d6-cadquery.glb</code></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bottombar">
+      <p class="attribution">
+        FreeCAD 1.1.3 · OpenSCAD 2021.01 · CadQuery 2.8.0 — все кубики 16×16×16 мм, 21 пипс ·
+        STL→GLB через Blender
+      </p>
+    </footer>
+
+    <script type="module" src="/src/d20.ts"></script>
+  </body>
+</html>

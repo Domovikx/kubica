@@ -1,0 +1,32 @@
+# Node / Vite
+node_modules/
+dist/
+
+# Python venv (FreeCAD MCP, CadQuery MCP)
+tools/*venv*/
+tools/freecad-venv/
+tools/freecad-venv-embedded/
+tools/cadquery-venv/
+
+# OpenSCAD portable install
+tools/openscad/
+
+# Отладка и временное
+debug/
+**/debug/**
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# CAD-бэкапы
+*.FCBak
+*.blend1
+
+# Сторонние модели со Sketchfab (исходники, не используются в сборке)
+dice.glb
+dice_20.glb
+
+# Локальная копия blender-mcp аддона (в конфиге используется uvx-пакет)
+tools/blender-mcp/
