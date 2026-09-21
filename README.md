@@ -1,0 +1,93 @@
+# DnD Dice CAD — точные игральные кости на трёх CAD-стеках
+
+Проект: генерация точного набора игральных костей D&D (d4–d20) с
+гарантированной геометрией, сравнение трёх CAD-технологий и публикация
+результата в web (three.js). Размеры контролируются до миллиметра, маркировка
+соответствует стандартам (противоположные грани в сумме = N+1).
+
+## Зачем это
+
+Обычная 3D-генерация (нейронки: Hunyuan3D, TRELLIS, Meshy, Tripo) даёт
+«похожие» модели без контроля размеров — для игральной кости это вопрос
+честности броска. CAD-подход даёт:
+- точные габариты (16.0 × 16.0 × 16.0 мм, проверяется BoundBox),
+- симметричную геометрию,
+- производственные форматы (STEP/STL/FCStd),
+- параметричность: один скрипт → любой размер.
+
+Подробное сравнение и выводы: [docs/RESEARCH.md](docs/RESEARCH.md).
+
+## Стек
+
+| Компонент | Роль |
+|---|---|
+| **FreeCAD 1.1.3** + Robust MCP (embedded) | основной CAD: STEP/STL/FCStd, GUI-правка |
+| **OpenSCAD 2026.09.18** (Manifold) | генератор набора d4–d20: `hull()` скругления, мгновенные итерации |
+| **CadQuery 2.8.0** | Python-API (эксперимент, баги OCC задокументированы) |
+| **Blender 5.2** (headless) | конвертер STL→GLB, раскраска впадин, починка нормалей |
+| **three.js + Vite** | web-просмотр: вращение, автоповорот, drag&drop GLB |
+| MCP-серверы | freecad-robust-mcp, cadquery-mcp (конфиг в opencode.json) |
+
+## Пайплайн
+
+```
+FreeCAD/OpenSCAD/CadQuery → STL
+    → tools/blender-stl-colorize.py / blender-stl-colorize-set.py (материалы + нормали + GLB)
+    → index.html (three.js: 3 панели CAD-сравнения + 6 панелей набора)
+```
+
+- `tools/freecad-build-d6.py` — сборка D6 через MCP-инструменты FreeCAD
+  (куб → филе → 21 сфера-пипс → boolean → STEP/STL/FCStd)
+- `tools/d6.scad` — параметрический D6 на OpenSCAD
+- `tools/d6_cadquery.py` — D6 на CadQuery
+- `tools/dice_set.scad` — генератор набора d4/d6/d8/d10/d12/d20 (один файл,
+  `-D DIE="dN"`); d4 — цифры на вершинах, d10 — цифры 0–9, остальные — пипсы;
+  противоположные грани в сумме N+1 (d10: 9)
+- `tools/blender-stl-colorize.py` — STL → GLB для куба: графитовый корпус +
+  красные пипсы (классификация впадин по наклону нормалей, коррекция
+  инвертированных нормалей)
+- `tools/blender-stl-colorize-set.py` — то же для любого полиэдра набора
+  (пипсы = поверхности сфер-пипсов; цифры d4/d10 = грани глубже уровня граней)
+- `tools/blender-stl-to-glb.py` — простой STL → GLB
+
+## Артефакты
+
+`public/cad/`:
+- `cad-d6.step` / `.stl` / `.fcstd` / `.glb` — D6 FreeCAD
+- `cad-d6-openscad.*` — D6 OpenSCAD
+- `cad-d6-cadquery.*` — D6 CadQuery
+- `set/*.stl` + `set/*.glb` — набор костей d4–d20 (OpenSCAD)
+
+## Запуск
+
+```bash
+npm install
+npm run dev        # http://localhost:5173/
+npm run build      # сборка dist/
+```
+
+## Известные баги и обходы (задокументировано)
+
+- **FreeCAD MCP**: `Part::Box` занимает 0..16 (не −8..8) — центрировать
+  placement; `boolean_operation` создаёт новый объект на вырез — брать имя из
+  ответа; `export_stl` сломан — `Shape.exportStl()`; `chamfer_edges` требует
+  список рёбер.
+- **CadQuery 2.8.0**: `Solid.makeSphere` = полусфера (angleDegrees2=90);
+  `Workplane.translate()` не двигает солиды; boolean в отрицательных
+  координатах — невалидное тело; шов сферы должен быть перпендикулярен оси
+  грани (плоскость построения по оси: X→YZ, Y→XZ, Z→XY).
+- **OpenSCAD**: `minkowski` зависает на больших $fn — заменён на `hull()` из
+  8 сфер (тот же результат, в разы быстрее); встроенного `sum()` нет —
+  суммы считаются вручную; **набор d4–d20 требует свежий снапшот (2026.x,
+  Manifold)** — в 2021.01 (CGAL) d6 рендерится 95 c, d20 не влезает в таймаут;
+  headless `text()` требует `FONTCONFIG_FILE` с fonts.conf (шрифты в комплекте).
+- **Blender**: у впадин CadQuery инвертированные нормали в GLB — коррекция
+  в colorize-скрипте.
+
+## Лицензия и источники
+
+- Модели, сгенерированные в этом проекте — собственные (FreeCAD/OpenSCAD/
+  CadQuery), без внешних ассетов.
+- Исходники dice_20.glb / dice.glb (Sketchfab, для референса) в репозиторий
+  не включены: Dice 20 © Javier.Herrera (CC BY), Twenty-sided dice © Mike
+  Shepherd (Sketchfab Store).

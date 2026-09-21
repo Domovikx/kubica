@@ -130,6 +130,12 @@ const MODELS = [
   { canvasId: 'scene1', overlayId: 'overlay1', infoId: 'info1', url: `${import.meta.env.BASE_URL}cad/cad-d6.glb`, source: 'FreeCAD 1.1.3' },
   { canvasId: 'scene2', overlayId: 'overlay2', infoId: 'info2', url: `${import.meta.env.BASE_URL}cad/cad-d6-openscad.glb`, source: 'OpenSCAD 2021.01' },
   { canvasId: 'scene3', overlayId: 'overlay3', infoId: 'info3', url: `${import.meta.env.BASE_URL}cad/cad-d6-cadquery.glb`, source: 'CadQuery 2.8.0' },
+  { canvasId: 'scene4', overlayId: 'overlay4', infoId: 'info4', url: `${import.meta.env.BASE_URL}cad/set/d4.glb`, source: 'd4 · OpenSCAD' },
+  { canvasId: 'scene5', overlayId: 'overlay5', infoId: 'info5', url: `${import.meta.env.BASE_URL}cad/set/d6.glb`, source: 'd6 · OpenSCAD' },
+  { canvasId: 'scene6', overlayId: 'overlay6', infoId: 'info6', url: `${import.meta.env.BASE_URL}cad/set/d8.glb`, source: 'd8 · OpenSCAD' },
+  { canvasId: 'scene7', overlayId: 'overlay7', infoId: 'info7', url: `${import.meta.env.BASE_URL}cad/set/d10.glb`, source: 'd10 · OpenSCAD' },
+  { canvasId: 'scene8', overlayId: 'overlay8', infoId: 'info8', url: `${import.meta.env.BASE_URL}cad/set/d12.glb`, source: 'd12 · OpenSCAD' },
+  { canvasId: 'scene9', overlayId: 'overlay9', infoId: 'info9', url: `${import.meta.env.BASE_URL}cad/set/d20.glb`, source: 'd20 · OpenSCAD' },
 ]
 
 const viewers = MODELS.map(({ canvasId, overlayId, infoId, url, source }) => {

@@ -5,10 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Один и тот же D6, спроектированный в FreeCAD, OpenSCAD и CadQuery — сравнение"
+      content="Точные игральные кости D&D (d4, d6, d8, d10, d12, d20), спроектированные в FreeCAD, OpenSCAD и CadQuery: 16 мм, противоположные грани в сумме N+1, честные броски. Сравнение CAD-стеков, конвертация STL→GLB, просмотр 3D в браузере."
     />
+    <meta
+      name="keywords"
+      content="игральные кости, d6, d20, dnd dice, D&D dice, FreeCAD, OpenSCAD, CadQuery, 3D-печать dice, STL dice, GLB, игральные кубики, точный CAD, параметрические кости, честные кости, dice CAD"
+    />
+    <meta name="author" content="DomovikX" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#14161a" />
+    <link rel="canonical" href="https://github.com/Domovikx/dnd-dice-blender" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:title" content="D6 16 мм: FreeCAD vs OpenSCAD vs CadQuery — точные игральные кости" />
+    <meta
+      property="og:description"
+      content="Сравнение трёх CAD-стеков на одном D6: точность 16.0 мм, 21 пипс, скруглённые рёбра, экспорт STEP/STL/GLB. Параметрические генераторы d4–d20."
+    />
+    <meta property="og:site_name" content="DnD Dice CAD" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="D6 16 мм: FreeCAD vs OpenSCAD vs CadQuery" />
+    <meta
+      name="twitter:description"
+      content="Точные игральные кости D&D: CAD-генерация, STL→GLB, 3D-просмотр."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "D6 16 мм: FreeCAD vs OpenSCAD vs CadQuery",
+        "description": "Точные игральные кости D&D, сгенерированные в трёх CAD: FreeCAD, OpenSCAD, CadQuery. Размеры 16.0 мм, 21 пипс, экспорт STEP/STL/GLB.",
+        "inLanguage": "ru",
+        "about": {
+          "@type": "Thing",
+          "name": "Игральные кости D&D",
+          "description": "Набор d4-d20 с честной геометрией: противоположные грани в сумме N+1"
+        }
+      }
+    </script>
     <link rel="stylesheet" href="/src/style.css" />
-    <title>D6: FreeCAD vs OpenSCAD vs CadQuery</title>
+    <title>D6 16 мм: FreeCAD vs OpenSCAD vs CadQuery — точные игральные кости</title>
   </head>
   <body>
     <header class="topbar">
@@ -17,7 +53,7 @@
     </header>
 
     <main class="viewers">
-      <section class="viewer">
+      <section class="viewer viewerWide">
         <canvas id="scene1"></canvas>
         <p class="viewerLabel">FreeCAD · фаска 1 мм</p>
         <p class="viewerInfo" id="info1"></p>
@@ -27,7 +63,7 @@
         </div>
       </section>
 
-      <section class="viewer">
+      <section class="viewer viewerWide">
         <canvas id="scene2"></canvas>
         <p class="viewerLabel">OpenSCAD · скруглённые рёбра r=1</p>
         <p class="viewerInfo" id="info2"></p>
@@ -37,7 +73,7 @@
         </div>
       </section>
 
-      <section class="viewer">
+      <section class="viewer viewerWide">
         <canvas id="scene3"></canvas>
         <p class="viewerLabel">CadQuery · фаска 1 мм</p>
         <p class="viewerInfo" id="info3"></p>
@@ -46,12 +82,72 @@
           <p class="viewerOverlayText">Нужен <code>public/cad/cad-d6-cadquery.glb</code></p>
         </div>
       </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene4"></canvas>
+        <p class="viewerLabel">d4 · OpenSCAD</p>
+        <p class="viewerInfo" id="info4"></p>
+        <div class="viewerOverlay" id="overlay4" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d4.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene5"></canvas>
+        <p class="viewerLabel">d6 · OpenSCAD</p>
+        <p class="viewerInfo" id="info5"></p>
+        <div class="viewerOverlay" id="overlay5" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d6.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene6"></canvas>
+        <p class="viewerLabel">d8 · OpenSCAD</p>
+        <p class="viewerInfo" id="info6"></p>
+        <div class="viewerOverlay" id="overlay6" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d8.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene7"></canvas>
+        <p class="viewerLabel">d10 · OpenSCAD</p>
+        <p class="viewerInfo" id="info7"></p>
+        <div class="viewerOverlay" id="overlay7" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d10.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene8"></canvas>
+        <p class="viewerLabel">d12 · OpenSCAD</p>
+        <p class="viewerInfo" id="info8"></p>
+        <div class="viewerOverlay" id="overlay8" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d12.glb</code></p>
+        </div>
+      </section>
+
+      <section class="viewer viewerNarrow">
+        <canvas id="scene9"></canvas>
+        <p class="viewerLabel">d20 · OpenSCAD</p>
+        <p class="viewerInfo" id="info9"></p>
+        <div class="viewerOverlay" id="overlay9" hidden>
+          <p class="viewerOverlayTitle">Модель не найдена</p>
+          <p class="viewerOverlayText">Нужен <code>public/cad/set/d20.glb</code></p>
+        </div>
+      </section>
     </main>
 
     <footer class="bottombar">
       <p class="attribution">
-        FreeCAD 1.1.3 · OpenSCAD 2021.01 · CadQuery 2.8.0 — все кубики 16×16×16 мм, 21 пипс ·
-        STL→GLB через Blender
+        FreeCAD 1.1.3 · OpenSCAD 2026.09.18 (Manifold) · CadQuery 2.8.0 — все кубики 16×16×16 мм,
+        пипсы на гранях, STL→GLB через Blender
       </p>
     </footer>
 
