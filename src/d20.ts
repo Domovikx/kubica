@@ -74,6 +74,10 @@ const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer =
   controls.minDistance = 2
   controls.maxDistance = 12
   controls.autoRotate = true
+  // Уважать prefers-reduced-motion: без автоповорота (a11y + батарея)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    controls.autoRotate = false
+  }
   controls.autoRotateSpeed = 2
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3f4d, 0.35))
@@ -288,6 +292,10 @@ const renderViewers = () => {
         f.name.toLowerCase().endsWith('.glb'),
       )
       if (!file) return
+      if (file.size > DROP_SIZE_LIMIT) {
+        info.textContent = `Файл ${(file.size / 1048576).toFixed(0)} МБ — лимит 50 МБ`
+        return
+      }
       overlay.hidden = true
       viewer.load(URL.createObjectURL(file), (tris) => {
         info.textContent = `${file.name} · ${tris.toLocaleString('ru-RU')} треугольников`
@@ -321,8 +329,14 @@ const resize = () => {
   for (const viewer of viewers) viewer.resize()
 }
 
+// Лимит дропа чужого .glb: защита от OOM на слабом железе (50 МБ)
+const DROP_SIZE_LIMIT = 50 * 1024 * 1024
+
 const animate = () => {
-  for (const viewer of viewers) viewer.update()
+  // Скрытая вкладка: кадры не рендерим (батарея), rAF и так троттлится
+  if (!document.hidden) {
+    for (const viewer of viewers) viewer.update()
+  }
   requestAnimationFrame(animate)
 }
 
