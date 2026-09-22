@@ -5,8 +5,12 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
 
 const VIEW_SIZE = 2.4
+// Угол складки для сглаживания: скругления (двугранный угол ~5–10°) сглаживаются,
+// плоские грани и грани цифр (90°+) остаются чёткими
+const CREASE_ANGLE = Math.PI / 5
 const BASE = import.meta.env.BASE_URL
 
 interface ModelDef {
@@ -105,6 +109,18 @@ const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer =
     return Math.round(total)
   }
 
+  const smoothShade = (root: THREE.Object3D) => {
+    // Сглаживание нормалей со складками: скругления выглядят гладко,
+    // плоские грани и рёбра цифр остаются чёткими. Только визуал, геометрия та же.
+    root.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const smoothed = toCreasedNormals(child.geometry, CREASE_ANGLE)
+        child.geometry.dispose()
+        child.geometry = smoothed
+      }
+    })
+  }
+
   const showModel = (root: THREE.Object3D) => {
     if (current) {
       scene.remove(current)
@@ -118,6 +134,7 @@ const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer =
       current = null
     }
     fitToView(root)
+    smoothShade(root)
     scene.add(root)
     current = root
     overlay.hidden = true
