@@ -160,9 +160,10 @@ module body(die) {
 // ---------- цифры (d4 — на вершинах, d10 — на гранях) ----------
 
 FONT = "Liberation Sans:style=Bold";
-// Глубина гравировки: 0.2 мм — display-вариант (тонкий рельеф для веб-просмотра).
+// Глубина гравировки: 0.05 мм — display-вариант (едва заметный рельеф для веба).
+// Дно выреза ровно на DIGIT_DEPTH (текст/планка выступают на 0.1 наружу для чистого реза).
 // Для FDM-печати нужен минимум 0.4–0.5 мм (иначе заплывает) — вернуть DIGIT_DEPTH = 0.5.
-DIGIT_DEPTH = 0.2;
+DIGIT_DEPTH = 0.05;
 DIGIT_SIZE_D4 = 5.0;
 DIGIT_SIZE_D6 = 4.0;
 DIGIT_SIZE_D8 = 3.2;
@@ -194,13 +195,13 @@ module engrave(pos, nv, bu, bv, txt, size, under = false) {
     [bu[2], bv[2], -nv[2], nv[2] * plane_d],
     [0, 0, 0, 1],
   ]) {
-    translate([u, v, 0])
-      linear_extrude(height = DIGIT_DEPTH + 0.2)
+    translate([u, v, -0.1])
+      linear_extrude(height = DIGIT_DEPTH + 0.1)
         mirror([1, 0, 0])
           text(txt, size = size, halign = "center", valign = "center", font = FONT);
     if (under)
-      translate([u, v - size * 0.62, (DIGIT_DEPTH + 0.2) / 2 - 0.1])
-        cube([size * 0.7, size * 0.16, DIGIT_DEPTH + 0.3], center = true);
+      translate([u, v - size * 0.62, (DIGIT_DEPTH - 0.1) / 2])
+        cube([size * 0.7, size * 0.16, DIGIT_DEPTH + 0.1], center = true);
   }
 }
 

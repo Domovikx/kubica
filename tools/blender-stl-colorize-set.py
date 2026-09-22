@@ -13,7 +13,7 @@ from mathutils import Vector
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
 
 PIP_R = 1.4
-DIGIT_DEPTH = 0.2
+DIGIT_DEPTH = 0.05
 
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
@@ -263,10 +263,10 @@ for face in bm.faces:
             # Скругления у рёбер тоже ниже плоскости — широкий бокс красил бы их,
             # поэтому запас минимальный (+0.15).
             two = len(str(val)) > 1
-            half_u = size * (0.70 if two else 0.45)
-            half_v = size * 0.45
+            half_u = size * (0.70 if two else 0.45) + 0.4
+            half_v = size * 0.45 + 0.4
             lo = -half_v - (size * 0.35 if val in (6, 9) else 0.0)
-            if abs(uu) < half_u and lo < vv < half_v and 0.05 < depth < DIGIT_DEPTH + 0.4:
+            if abs(uu) < half_u and lo < vv < half_v and 0.005 < depth < DIGIT_DEPTH + 0.3:
                 is_pip = True
                 break
     face.material_index = 1 if is_pip else 0
