@@ -40,6 +40,15 @@ body {
   background: var(--bg);
 }
 
+.viewers {
+  display: grid;
+  height: 100%;
+  margin-left: 248px;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
 .viewer canvas {
   display: block;
   width: 100%;
@@ -405,8 +414,16 @@ body {
 
   .viewers {
     margin-left: 0;
-    grid-template-columns: 1fr;
-    height: calc(100% - 32vh);
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: 62vh;
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  body {
+    overflow-y: auto;
   }
 
   .viewer {

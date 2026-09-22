@@ -228,8 +228,14 @@ const renderViewers = () => {
   for (const viewer of viewers) viewer.dispose()
   viewers = []
   viewersContainer.innerHTML = ''
-  for (const model of MODELS) {
-    if (!selected.has(model.id)) continue
+  const defs = MODELS.filter((m) => selected.has(m.id))
+  // Раскладка: все выбранные — на одном экране без скролла
+  const n = defs.length
+  const cols = n <= 1 ? 1 : n === 2 ? 2 : n <= 4 ? 2 : 3
+  const rows = Math.max(1, Math.ceil(n / cols))
+  viewersContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`
+  viewersContainer.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`
+  for (const model of defs) {
     const section = document.createElement('section')
     section.className = 'viewer'
 
