@@ -2,9 +2,9 @@ import bpy
 import sys
 import traceback
 
-BUILD_SCRIPT = 'C:/Users/Domo/workspace/dnd-dice-blender/tools/blender/make_d6.py'
-BUILD_LOG = 'C:/Users/Domo/workspace/dnd-dice-blender/tools/blender/build.log'
-SELF_TEST = 'C:/Users/Domo/workspace/dnd-dice-blender/tools/blender/self_test.py'
+BUILD_SCRIPT = 'C:/Users/Domo/workspace/kubica/tools/blender/make_d6.py'
+BUILD_LOG = 'C:/Users/Domo/workspace/kubica/tools/blender/build.log'
+SELF_TEST = 'C:/Users/Domo/workspace/kubica/tools/blender/self_test.py'
 
 
 def run_file(path: str) -> None:

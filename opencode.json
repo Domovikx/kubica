@@ -15,7 +15,7 @@
     "freecad": {
       "type": "local",
       "command": [
-        "C:/Users/Domo/workspace/dnd-dice-blender/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe",
+        "C:/Users/Domo/workspace/kubica/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe",
         "--mode",
         "embedded",
         "--log-level",
@@ -28,9 +28,7 @@
     },
     "cadquery": {
       "type": "local",
-      "command": [
-        "C:/Users/Domo/workspace/dnd-dice-blender/tools/cadquery-venv/Scripts/cadquery-mcp.exe"
-      ],
+      "command": ["C:/Users/Domo/workspace/kubica/tools/cadquery-venv/Scripts/cadquery-mcp.exe"],
       "enabled": true,
       "environment": {
         "PYTHONIOENCODING": "utf-8"

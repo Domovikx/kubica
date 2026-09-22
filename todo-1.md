@@ -2,7 +2,7 @@
 
 ## Состояние на входе
 
-- Проект: `dnd-dice-blender` (git, remote: github.com/Domovikx/dnd-dice-blender, ветка master)
+- Проект: `kubica` (git, remote: github.com/Domovikx/kubica, ветка master)
 - D6 16 мм готов и запушен: FreeCAD / OpenSCAD / CadQuery — все с красными пипсами, филе r=1, тёмный
   графит (страница three.js, 3 панели).
 - Набор d4–d20 готов и запушен: OpenSCAD-генератор (`tools/dice_set.scad`), 6 STL + 6 GLB (все кости
@@ -62,7 +62,7 @@
 - Если апрувним: проработать брендинг целиком и переехать (чеклист): имя репозитория + GitHub Pages
   URL, `<title>`/SEO/og-карточки, PWA-манифест (name/short_name, иконки), TG-бот и Mini App
   название, тексты футера/About, `docs/BUSINESS.md` § positioning.
-- До апрува: везде остаётся рабочее `dnd-dice-blender`, новый нейминг никуда не вшивать.
+- До апрува: нейминг апрувнут (Kubica) — переезд выполнен, см. docs/BRANDING.md.
 
 ## Известные баги/обходы (копия из README)
 

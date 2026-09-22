@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   // Базовый путь для GitHub Pages (project site). Локально `npm run dev` — тоже работает.
-  base: '/dnd-dice-blender/',
+  base: '/kubica/',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

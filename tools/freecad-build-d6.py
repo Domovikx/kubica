@@ -9,8 +9,8 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-SERVER = r'C:/Users/Domo/workspace/dnd-dice-blender/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe'
-OUT = r'C:/Users/Domo/workspace/dnd-dice-blender/assets/cad'
+SERVER = r'C:/Users/Domo/workspace/kubica/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe'
+OUT = r'C:/Users/Domo/workspace/kubica/assets/cad'
 
 PIP_LAYOUTS = {
     '+z': [[0, 0]],
@@ -32,7 +32,7 @@ async def main() -> None:
         command=SERVER,
         args=['--mode', 'embedded', '--log-level', 'DEBUG'],
         env=None,
-        errlog=open(r'C:/Users/Domo/workspace/dnd-dice-blender/debug/freecad-server.log', 'w'),
+        errlog=open(r'C:/Users/Domo/workspace/kubica/debug/freecad-server.log', 'w'),
     )
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
