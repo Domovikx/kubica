@@ -1,0 +1,18 @@
+{
+  // markdownlint-cli2: линт *.md (топ-2026, maintained-форк markdownlint-cli).
+  // Prettier — финальное слово по форматированию (proseWrap 80 + всегда),
+  // поэтому отключаем конфликтующие/шумные правила.
+  "config": {
+    "default": true,
+    // Длинные строки ок: Prettier сам переносит прозу (proseWrap: always),
+    // таблицы и URL не переносим принципиально
+    "MD013": false,
+    // Дубли заголовков разрешены в разных разделах (siblings_only)
+    "MD024": { "siblings_only": true },
+    // Трейлинг-пробелы: 2 пробела = жёсткий перенос в md — разрешаем,
+    // остальное Prettier чистит сам
+    "MD009": { "br_spaces": 2, "strict": false },
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", "dist/**", "debug/**", "tools/**"],
+}

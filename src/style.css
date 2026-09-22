@@ -482,24 +482,24 @@ body {
     display: none;
   }
 
-.modelInfo {
-  position: fixed;
-  top: 76px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  margin: 0;
-  padding: 8px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: var(--panel);
-  backdrop-filter: blur(8px);
-  font-size: 13px;
-  color: var(--muted);
-  white-space: nowrap;
-}
+  .modelInfo {
+    position: fixed;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    margin: 0;
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: var(--panel);
+    backdrop-filter: blur(8px);
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
 
-.result {
+  .result {
     top: 16%;
   }
 }

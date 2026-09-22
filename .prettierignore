@@ -1,0 +1,14 @@
+# Prettier: не трогать зависимости, сборку и венвы
+node_modules/
+dist/
+debug/
+tools/*venv*/
+tools/freecad-venv/
+tools/freecad-venv-embedded/
+tools/cadquery-venv/
+tools/openscad/
+tools/blender-mcp/
+public/cad/
+*.glb
+*.stl
+*.FCBak
