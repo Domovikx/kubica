@@ -21,7 +21,6 @@ const MODELS: ModelDef[] = [
   { id: 'd6-openscad', label: 'D6 · OpenSCAD (сравнение)', url: `${BASE}cad/cad-d6-openscad.glb`, source: 'OpenSCAD 2021.01' },
   { id: 'd6-cadquery', label: 'D6 · CadQuery (сравнение)', url: `${BASE}cad/cad-d6-cadquery.glb`, source: 'CadQuery 2.8.0' },
   { id: 'd4', label: 'D4 · цифры на вершинах', url: `${BASE}cad/set/d4.glb`, source: 'OpenSCAD · набор' },
-  { id: 'd6', label: 'D6 · набор', url: `${BASE}cad/set/d6.glb`, source: 'OpenSCAD · набор' },
   { id: 'd8', label: 'D8 · набор', url: `${BASE}cad/set/d8.glb`, source: 'OpenSCAD · набор' },
   { id: 'd10', label: 'D10 · цифры 0–9', url: `${BASE}cad/set/d10.glb`, source: 'OpenSCAD · набор' },
   { id: 'd12', label: 'D12 · набор', url: `${BASE}cad/set/d12.glb`, source: 'OpenSCAD · набор' },

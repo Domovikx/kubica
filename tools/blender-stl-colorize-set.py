@@ -13,6 +13,7 @@ from mathutils import Vector
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
 
 PIP_R = 1.4
+DIGIT_DEPTH = 0.75
 
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
@@ -158,10 +159,42 @@ def pip_centers(die):
 
 # ---------- применение ----------
 
-def die_inradius(die):
+def digit_boxes(die):
+    # Зеркало SCAD-разметки digits_d4()/digits_d10():
+    # (pos, nv, bu, bv, size) в НОРМИРОВАННЫХ координатах (verts / inradius),
+    # как в SCAD-функции verts(). Python-модуль verts() возвращает unit-вершины,
+    # поэтому делим pos на inradius.
     v = verts(die)
     f = faces(die)
-    return min(abs(centroid(v, face).dot(face_normal(v, face))) for face in f)
+    inr = min(
+        abs(sum((Vector(v[i]) for i in face), Vector())
+            .dot(face_normal(v, face)) / len(face)) for face in f
+    )
+    out = []
+    if die == 'd4':
+        for vi in range(4):
+            for fj in range(4):
+                if vi not in f[fj]:
+                    continue
+                c = centroid(v, f[fj])
+                nv = face_normal(v, f[fj])
+                if nv.dot(c) < 0:
+                    nv = -nv
+                bv = normalize(Vector(v[vi]) - c)
+                bu = normalize(nv.cross(bv))
+                pos = (c + (Vector(v[vi]) - c) * 0.62) / inr
+                out.append((pos, nv, bu, bv, 5.0))
+    elif die == 'd10':
+        for fi in range(10):
+            c = centroid(v, f[fi])
+            nv = face_normal(v, f[fi])
+            if nv.dot(c) < 0:
+                nv = -nv
+            pole = f[fi][0]
+            bv = normalize(Vector(v[pole]) - c)
+            bu = normalize(nv.cross(bv))
+            out.append((c / inr, nv, bu, bv, 3.0))
+    return out
 
 
 SIZE = 16.0
@@ -205,12 +238,26 @@ for face in bm.faces:
 
 centers = [Vector(p) for p in pip_centers(DIE)]
 is_digit_die = DIE in ('d4', 'd10')
+boxes = digit_boxes(DIE) if is_digit_die else []
+s = SIZE / 2 - EDGE_R
 for face in bm.faces:
     c = sum((v.co for v in face.verts), Vector()) / len(face.verts)
     if is_digit_die:
-        # цифры (d4/d10): тело выпуклое, минимальный радиус поверхности = SIZE/2 = 8.0
-        # (плоскости граней), вырезы уходят внутрь до 7.25 — грань с r < 7.7 это вырез
-        is_pip = c.length < SIZE / 2 - 0.3
+        # цифры (d4/d10): грань красная, если её центр внутри бокса какой-либо
+        # цифры (в плоскости грани, в пределах глифа) и утоплен ниже плоскости грани.
+        # pos/nv/bu/bv — в нормированных координатах (inradius=1), масштаб = s
+        is_pip = False
+        for pos, nv, bu, bv, size in boxes:
+            plane_d = s * pos.dot(nv) + EDGE_R
+            u0 = s * pos.dot(bu)
+            v0 = s * pos.dot(bv)
+            uu = c.dot(bu) - u0
+            vv = c.dot(bv) - v0
+            depth = plane_d - c.dot(nv)
+            half = size * 0.65
+            if abs(uu) < half and abs(vv) < half and 0.05 < depth < DIGIT_DEPTH + 0.4:
+                is_pip = True
+                break
     else:
         is_pip = any(abs((c - pc).length - PIP_R) < 0.12 for pc in centers)
     face.material_index = 1 if is_pip else 0

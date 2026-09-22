@@ -165,12 +165,14 @@ DIGIT_SIZE_D4 = 5.0;
 DIGIT_SIZE_D10 = 3.0;
 
 // гравировка: текст ложится плоско на грань (нормаль nv), "вверх" = bv.
-// c, bu, bv, nv — в нормированных координатах; масштаб под тело применяется здесь.
-module engrave(c, nv, bu, bv, txt, size) {
+// pos, bu, bv, nv — в нормированных координатах; масштаб под тело применяется здесь.
+// Текст зеркалится по X: вырез уходит внутрь кости, и снаружи видно «изнанку» дна —
+// чтобы цифра читалась, рисуем её отражённой.
+module engrave(pos, nv, bu, bv, txt, size) {
   s = SIZE / 2 - EDGE_R;
-  plane_d = s * (c * nv) + EDGE_R;
-  u = s * (c * bu);
-  v = s * (c * bv);
+  plane_d = s * (pos * nv) + EDGE_R;
+  u = s * (pos * bu);
+  v = s * (pos * bv);
   multmatrix(m = [
     [bu[0], bv[0], -nv[0], nv[0] * plane_d],
     [bu[1], bv[1], -nv[1], nv[1] * plane_d],
@@ -179,7 +181,8 @@ module engrave(c, nv, bu, bv, txt, size) {
   ])
   translate([u, v, 0])
   linear_extrude(height = DIGIT_DEPTH + 0.2)
-    text(txt, size = size, halign = "center", valign = "center", font = FONT);
+    mirror([1, 0, 0])
+      text(txt, size = size, halign = "center", valign = "center", font = FONT);
 }
 
 // d4: цифра на каждой из 3 граней у вершины, читается от вершины
@@ -197,7 +200,7 @@ module digits_d4() {
           bv = normalize(v[vi] - c);
           bu = normalize(cross(nv, bv));
           pos = c + (v[vi] - c) * 0.62;
-          engrave(c, nv, bu, bv, txt, DIGIT_SIZE_D4);
+          engrave(pos, nv, bu, bv, txt, DIGIT_SIZE_D4);
         }
       }
     }
