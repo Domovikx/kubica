@@ -42,7 +42,13 @@ interface Viewer {
 }
 
 const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer => {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false, // фон задаём сценой — дешевле композитинга
+    stencil: false, // стенсил-буфер не используем
+    powerPreference: 'high-performance', // дискретная GPU, если есть
+  })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -54,7 +60,8 @@ const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer =
 
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-  scene.environmentIntensity = 0.06
+  // IBL почти бесплатен (запечён в PMREM один раз), но даёт PBR-блики на графите и красном
+  scene.environmentIntensity = 0.4
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
   camera.position.set(3.2, 2, 4.2)
@@ -229,12 +236,13 @@ const renderViewers = () => {
   viewers = []
   viewersContainer.innerHTML = ''
   const defs = MODELS.filter((m) => selected.has(m.id))
-  // Раскладка: все выбранные — на одном экране без скролла
+  // Раскладка: все выбранные — на одном экране без скролла.
+  // Колонки/ряды задаются data-атрибутами (чистый CSS, без инлайн-стилей и !important)
   const n = defs.length
   const cols = n <= 1 ? 1 : n === 2 ? 2 : n <= 4 ? 2 : 3
   const rows = Math.max(1, Math.ceil(n / cols))
-  viewersContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`
-  viewersContainer.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`
+  viewersContainer.dataset.cols = String(cols)
+  viewersContainer.dataset.rows = String(rows)
   for (const model of defs) {
     const section = document.createElement('section')
     section.className = 'viewer'
