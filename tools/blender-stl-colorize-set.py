@@ -13,7 +13,7 @@ from mathutils import Vector
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
 
 PIP_R = 1.4
-DIGIT_DEPTH = 0.05
+DIGIT_DEPTH = 0.1
 
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
