@@ -12,6 +12,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint . && markdownlint-cli2 \"**/*.md\"",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "lint:arch": "depcruise src",
     "prepare": "husky"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/three": "^0.186.0",
+    "dependency-cruiser": "^18.4.0",
     "eslint": "^10.11.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
