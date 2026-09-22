@@ -32,8 +32,8 @@
    железе, `powerPreference` уже стоит.
 2. **P1 — один рендерер + scissor viewports** (официальный паттерн three.js
    `webgl_multiple_elements`): 1 контекст, 1 компиляция шейдеров, 1 shadow map, N видов через
-   `setViewport/setScissor`. Это главный выигрыш, но рефактор `d20.ts` (канвасы → один canvas +
-   прозрачные панели-окна).
+   `setViewport/setScissor`. Это главный выигрыш, но рефактор `shared/three/viewer.ts` (канвасы →
+   один canvas + прозрачные панели-окна).
 3. **P2 — общий PMREM/env** даже при N рендерерах (сейчас каждый печёт свой).
 
 ## 3. Lazy loading (что грузить когда)

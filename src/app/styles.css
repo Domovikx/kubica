@@ -1,0 +1,192 @@
+:root {
+  --alfa-red: #ef3124;
+  --alfa-red-hover: #d92b20;
+  --bg: #14161a;
+  --panel: rgba(20, 22, 26, 0.72);
+  --text: #f0f1f3;
+  --muted: #9a9da4;
+  --transition-fast: 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+  background: linear-gradient(to bottom, rgba(20, 22, 26, 0.85), transparent);
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.hint {
+  margin: 0 0 0 auto;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Общий примитив кнопок (сейчас — сайдбар, позже — панели роллера) */
+.switchBtn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.switchBtn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.switchBtn.active {
+  background: var(--alfa-red);
+  border-color: var(--alfa-red);
+  color: #fff;
+}
+
+.switchBtn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px 20px;
+  background: linear-gradient(to top, rgba(20, 22, 26, 0.85), transparent);
+}
+
+.attribution {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.attribution a {
+  color: var(--muted);
+}
+
+.attribution a:hover {
+  color: var(--text);
+}
+
+/* Зарезервировано под MVP-1 роллер (UX_ROLL.md): поп результата броска */
+.result {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  padding: 14px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.resultLabel {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.resultValue {
+  min-width: 44px;
+  font-size: 32px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--alfa-red);
+}
+
+.resultSum {
+  width: 100%;
+  font-size: 13px;
+  text-align: center;
+  color: var(--muted);
+}
+
+@keyframes pop {
+  from {
+    transform: translateX(-50%) scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .title {
+    width: 100%;
+    order: 3;
+    font-size: 15px;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .result {
+    top: 16%;
+  }
+}
+
+@media (max-width: 480px) {
+  .attribution {
+    text-align: center;
+  }
+}

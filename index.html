@@ -46,7 +46,6 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="/src/style.css" />
     <title>D6 16 мм: FreeCAD vs OpenSCAD vs CadQuery — точные игральные кости</title>
   </head>
   <body>
@@ -58,14 +57,7 @@
       </p>
     </header>
 
-    <aside class="sidebar">
-      <p class="sidebarTitle">Модели</p>
-      <div class="sidebarActions">
-        <button class="switchBtn" id="selectAll" type="button">Все</button>
-        <button class="switchBtn" id="clearAll" type="button">Ничего</button>
-      </div>
-      <div class="modelList" id="modelList"></div>
-    </aside>
+    <aside class="sidebar" id="sidebar"></aside>
 
     <main class="viewers" id="viewers"></main>
 
@@ -76,6 +68,6 @@
       </p>
     </footer>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/app/main.ts"></script>
   </body>
 </html>
