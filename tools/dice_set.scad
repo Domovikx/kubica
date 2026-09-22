@@ -162,7 +162,17 @@ module body(die) {
 FONT = "Liberation Sans:style=Bold";
 DIGIT_DEPTH = 0.75;
 DIGIT_SIZE_D4 = 5.0;
+DIGIT_SIZE_D8 = 3.2;
 DIGIT_SIZE_D10 = 3.0;
+DIGIT_SIZE_D12 = 3.5;
+DIGIT_SIZE_D20 = 2.0;
+
+function digit_size(die) =
+  die == "d4" ? DIGIT_SIZE_D4
+  : die == "d8" ? DIGIT_SIZE_D8
+  : die == "d10" ? DIGIT_SIZE_D10
+  : die == "d12" ? DIGIT_SIZE_D12
+  : DIGIT_SIZE_D20;
 
 // гравировка: текст ложится плоско на грань (нормаль nv), "вверх" = bv.
 // pos, bu, bv, nv — в нормированных координатах; масштаб под тело применяется здесь.
@@ -212,19 +222,22 @@ module digits_d4() {
   }
 }
 
-// d10: цифра 0-9 в центре каждой грани; у 6 и 9 — подчёркивание
-module digits_d10() {
-  v = verts("d10");
-  f = faces("d10");
+// d8/d10/d12/d20: цифра в центре грани, "вверх" = к первой вершине грани.
+// у одиночных 6 и 9 — подчёркивание (16/19 не подчёркиваются: их различает «1»).
+module digits_centered(die) {
+  v = verts(die);
+  f = faces(die);
+  n = len(f);
+  size = digit_size(die);
   union() {
-    for (fi = [0 : 9]) {
+    for (fi = [0 : n - 1]) {
       c = centroid(v, f[fi]);
       nv = face_normal(v, f[fi]);
-      val = values_for("d10", fi, 10);
-      pole = f[fi][0];
-      bv = normalize(v[pole] - c);
+      val = values_for(die, fi, n);
+      anchor = f[fi][0];
+      bv = normalize(v[anchor] - c);
       bu = normalize(cross(nv, bv));
-      engrave(c, nv, bu, bv, str(val), DIGIT_SIZE_D10, val == 6 || val == 9);
+      engrave(c, nv, bu, bv, str(val), size, val == 6 || val == 9);
     }
   }
 }
@@ -234,9 +247,7 @@ module pips(die) {
   // иначе N boolean-вырезов против тела вешают CGAL (d20 = 210 сфер!)
   if (die == "d4") {
     digits_d4();
-  } else if (die == "d10") {
-    digits_d10();
-  } else {
+  } else if (die == "d6") {
     union() {
       v = verts(die);
       f = faces(die);
@@ -248,6 +259,8 @@ module pips(die) {
         for (p = layout_for(val)) pip_at(nv, p[0], p[1], PIP_R);
       }
     }
+  } else {
+    digits_centered(die);
   }
 }
 

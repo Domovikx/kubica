@@ -194,6 +194,19 @@ def digit_boxes(die):
             bv = normalize(Vector(v[pole]) - c)
             bu = normalize(nv.cross(bv))
             out.append((c / inr, nv, bu, bv, 3.0))
+    elif die in ('d8', 'd12', 'd20'):
+        # цифры в центре грани, "вверх" = к первой вершине (как в SCAD digits_centered)
+        sizes = {'d8': 3.2, 'd12': 3.5, 'd20': 2.0}
+        size = sizes[die]
+        for fi in range(len(f)):
+            c = centroid(v, f[fi])
+            nv = face_normal(v, f[fi])
+            if nv.dot(c) < 0:
+                nv = -nv
+            anchor = f[fi][0]
+            bv = normalize(Vector(v[anchor]) - c)
+            bu = normalize(nv.cross(bv))
+            out.append((c / inr, nv, bu, bv, size))
     return out
 
 
@@ -236,16 +249,17 @@ for face in bm.faces:
     if face.normal.dot(c - center) < 0:
         face.normal_flip()
 
-centers = [Vector(p) for p in pip_centers(DIE)]
-is_digit_die = DIE in ('d4', 'd10')
+centers = [Vector(p) for p in pip_centers(DIE)] if DIE == 'd6' else []
+is_digit_die = DIE in ('d4', 'd8', 'd10', 'd12', 'd20')
 boxes = digit_boxes(DIE) if is_digit_die else []
 s = SIZE / 2 - EDGE_R
 for face in bm.faces:
     c = sum((v.co for v in face.verts), Vector()) / len(face.verts)
     if is_digit_die:
-        # цифры (d4/d10): грань красная, если её центр внутри бокса какой-либо
+        # цифры: грань красная, если её центр внутри бокса какой-либо
         # цифры (в плоскости грани, в пределах глифа) и утоплен ниже плоскости грани.
-        # pos/nv/bu/bv — в нормированных координатах (inradius=1), масштаб = s
+        # pos/nv/bu/bv — в нормированных координатах (inradius=1), масштаб = s.
+        # Двузначные числа шире: half_u с запасом; подчёркивание 6/9 уходит ниже.
         is_pip = False
         for pos, nv, bu, bv, size in boxes:
             plane_d = s * pos.dot(nv) + EDGE_R
@@ -254,12 +268,10 @@ for face in bm.faces:
             uu = c.dot(bu) - u0
             vv = c.dot(bv) - v0
             depth = plane_d - c.dot(nv)
-            half = size * 0.65
-            # d10: подчёркивание у 6/9 уходит ниже бокса цифры —
-            # расширяем нижнюю границу (там неглубоко, тело не заденет:
-            # depth>0.05 отсекает поверхность)
-            lo = -half - (size * 0.75 if DIE == 'd10' else 0.0)
-            if abs(uu) < half and lo < vv < half and 0.05 < depth < DIGIT_DEPTH + 0.4:
+            half_u = size * 0.95
+            half_v = size * 0.65
+            lo = -half_v - size * 0.75
+            if abs(uu) < half_u and lo < vv < half_v and 0.05 < depth < DIGIT_DEPTH + 0.4:
                 is_pip = True
                 break
     else:
