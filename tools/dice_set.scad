@@ -168,7 +168,8 @@ DIGIT_SIZE_D10 = 3.0;
 // pos, bu, bv, nv — в нормированных координатах; масштаб под тело применяется здесь.
 // Текст зеркалится по X: вырез уходит внутрь кости, и снаружи видно «изнанку» дна —
 // чтобы цифра читалась, рисуем её отражённой.
-module engrave(pos, nv, bu, bv, txt, size) {
+// under=true — подчёркивание под цифрой (для 6 и 9): тонкая планка той же глубины.
+module engrave(pos, nv, bu, bv, txt, size, under = false) {
   s = SIZE / 2 - EDGE_R;
   plane_d = s * (pos * nv) + EDGE_R;
   u = s * (pos * bu);
@@ -178,11 +179,15 @@ module engrave(pos, nv, bu, bv, txt, size) {
     [bu[1], bv[1], -nv[1], nv[1] * plane_d],
     [bu[2], bv[2], -nv[2], nv[2] * plane_d],
     [0, 0, 0, 1],
-  ])
-  translate([u, v, 0])
-  linear_extrude(height = DIGIT_DEPTH + 0.2)
-    mirror([1, 0, 0])
-      text(txt, size = size, halign = "center", valign = "center", font = FONT);
+  ]) {
+    translate([u, v, 0])
+      linear_extrude(height = DIGIT_DEPTH + 0.2)
+        mirror([1, 0, 0])
+          text(txt, size = size, halign = "center", valign = "center", font = FONT);
+    if (under)
+      translate([u, v - size * 0.62, -0.1])
+        cube([size * 0.7, size * 0.16, DIGIT_DEPTH + 0.3]);
+  }
 }
 
 // d4: цифра на каждой из 3 граней у вершины, читается от вершины
@@ -207,7 +212,7 @@ module digits_d4() {
   }
 }
 
-// d10: цифра 0-9 в центре каждой грани
+// d10: цифра 0-9 в центре каждой грани; у 6 и 9 — подчёркивание
 module digits_d10() {
   v = verts("d10");
   f = faces("d10");
@@ -219,7 +224,7 @@ module digits_d10() {
       pole = f[fi][0];
       bv = normalize(v[pole] - c);
       bu = normalize(cross(nv, bv));
-      engrave(c, nv, bu, bv, str(val), DIGIT_SIZE_D10);
+      engrave(c, nv, bu, bv, str(val), DIGIT_SIZE_D10, val == 6 || val == 9);
     }
   }
 }

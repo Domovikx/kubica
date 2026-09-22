@@ -255,7 +255,11 @@ for face in bm.faces:
             vv = c.dot(bv) - v0
             depth = plane_d - c.dot(nv)
             half = size * 0.65
-            if abs(uu) < half and abs(vv) < half and 0.05 < depth < DIGIT_DEPTH + 0.4:
+            # d10: подчёркивание у 6/9 уходит ниже бокса цифры —
+            # расширяем нижнюю границу (там неглубоко, тело не заденет:
+            # depth>0.05 отсекает поверхность)
+            lo = -half - (size * 0.75 if DIE == 'd10' else 0.0)
+            if abs(uu) < half and lo < vv < half and 0.05 < depth < DIGIT_DEPTH + 0.4:
                 is_pip = True
                 break
     else:
