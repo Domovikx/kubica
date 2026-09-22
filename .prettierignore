@@ -2,6 +2,7 @@
 node_modules/
 dist/
 debug/
+assets/
 tools/*venv*/
 tools/freecad-venv/
 tools/freecad-venv-embedded/

@@ -75,10 +75,10 @@ npm run build          # сборка dist
 SCAD="tools/openscad/openscad-2026.09.18/openscad.exe"
 export FONTCONFIG_FILE="tools/openscad/openscad-2026.09.18/fonts/fonts.conf"
 for die in d4 d6 d8 d10 d12 d20; do
-  "$SCAD" -o "public/cad/set/$die.stl" -D "DIE=\"$die\"" tools/dice_set.scad
+  "$SCAD" -o "assets/cad/set/$die.stl" -D "DIE=\"$die\"" tools/dice_set.scad
   "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background \
     --python tools/blender-stl-colorize-set.py -- \
-    "public/cad/set/$die.stl" "public/cad/set/$die.glb" "$die"
+    "assets/cad/set/$die.stl" "public/cad/set/$die.glb" "$die"
 done
 # D6 сборки:
 PYTHONIOENCODING=utf-8 tools/freecad-venv-embedded/Scripts/python.exe tools/freecad-build-d6.py

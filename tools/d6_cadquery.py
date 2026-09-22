@@ -40,6 +40,6 @@ for face, value in FACE_PIPS.items():
         pip_count += 1
 
 print(f'pips: {pip_count}, volume: {result.val().Volume():.1f} mm3')
-cq.exporters.export(result, 'C:/Users/Domo/workspace/dnd-dice-blender/public/cad/cad-d6-cadquery.stl', tolerance=0.05)
-cq.exporters.export(result, 'C:/Users/Domo/workspace/dnd-dice-blender/public/cad/cad-d6-cadquery.step')
+cq.exporters.export(result, 'C:/Users/Domo/workspace/dnd-dice-blender/assets/cad/cad-d6-cadquery.stl', tolerance=0.05)
+cq.exporters.export(result, 'C:/Users/Domo/workspace/dnd-dice-blender/assets/cad/cad-d6-cadquery.step')
 print('exported')

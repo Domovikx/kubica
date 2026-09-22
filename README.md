@@ -51,12 +51,14 @@ FreeCAD/OpenSCAD/CadQuery → STL
 
 ## Артефакты
 
-`public/cad/`:
+Исходники CAD (не деплоятся): `assets/cad/` — `.step` / `.stl` / `.fcstd`.
 
-- `cad-d6.step` / `.stl` / `.fcstd` / `.glb` — D6 FreeCAD
-- `cad-d6-openscad.*` — D6 OpenSCAD
-- `cad-d6-cadquery.*` — D6 CadQuery
-- `set/*.stl` + `set/*.glb` — набор костей d4–d20 (OpenSCAD)
+Для веба (деплой): `public/cad/` — только `.glb`:
+
+- `cad-d6.glb` — D6 FreeCAD
+- `cad-d6-openscad.glb` — D6 OpenSCAD
+- `cad-d6-cadquery.glb` — D6 CadQuery
+- `set/*.glb` — набор костей d4–d20 (OpenSCAD)
 
 ## Запуск
 

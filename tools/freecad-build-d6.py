@@ -10,7 +10,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 SERVER = r'C:/Users/Domo/workspace/dnd-dice-blender/tools/freecad-venv-embedded/Scripts/freecad-mcp.exe'
-OUT = r'C:/Users/Domo/workspace/dnd-dice-blender/public/cad'
+OUT = r'C:/Users/Domo/workspace/dnd-dice-blender/assets/cad'
 
 PIP_LAYOUTS = {
     '+z': [[0, 0]],
