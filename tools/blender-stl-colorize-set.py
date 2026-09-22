@@ -13,7 +13,7 @@ from mathutils import Vector
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
 
 PIP_R = 1.4
-DIGIT_DEPTH = 0.5
+DIGIT_DEPTH = 0.2
 
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
@@ -160,12 +160,13 @@ def pip_centers(die):
 # ---------- применение ----------
 
 def digit_boxes(die):
-    # Зеркало SCAD-разметки digits_d4()/digits_d10():
-    # (pos, nv, bu, bv, size) в НОРМИРОВАННЫХ координатах (verts / inradius),
+    # Зеркало SCAD-разметки digits_d4()/digits_centered():
+    # (pos, nv, bu, bv, size, val) в НОРМИРОВАННЫХ координатах (verts / inradius),
     # как в SCAD-функции verts(). Python-модуль verts() возвращает unit-вершины,
     # поэтому делим pos на inradius.
     v = verts(die)
     f = faces(die)
+    n = len(f)
     inr = min(
         abs(sum((Vector(v[i]) for i in face), Vector())
             .dot(face_normal(v, face)) / len(face)) for face in f
@@ -183,22 +184,12 @@ def digit_boxes(die):
                 bv = normalize(Vector(v[vi]) - c)
                 bu = normalize(nv.cross(bv))
                 pos = (c + (Vector(v[vi]) - c) * 0.62) / inr
-                out.append((pos, nv, bu, bv, 5.0))
-    elif die == 'd10':
-        for fi in range(10):
-            c = centroid(v, f[fi])
-            nv = face_normal(v, f[fi])
-            if nv.dot(c) < 0:
-                nv = -nv
-            pole = f[fi][0]
-            bv = normalize(Vector(v[pole]) - c)
-            bu = normalize(nv.cross(bv))
-            out.append((c / inr, nv, bu, bv, 3.0))
-    elif die in ('d6', 'd8', 'd12', 'd20'):
-        # цифры в центре грани, "вверх" = к первой вершине (как в SCAD digits_centered)
-        sizes = {'d6': 4.0, 'd8': 3.2, 'd12': 3.5, 'd20': 2.0}
+                out.append((pos, nv, bu, bv, 5.0, vi + 1))
+    else:
+        # d6/d8/d10/d12/d20: цифра в центре грани, "вверх" = к первой вершине
+        sizes = {'d6': 4.0, 'd8': 3.2, 'd10': 3.0, 'd12': 3.5, 'd20': 2.0}
         size = sizes[die]
-        for fi in range(len(f)):
+        for fi in range(n):
             c = centroid(v, f[fi])
             nv = face_normal(v, f[fi])
             if nv.dot(c) < 0:
@@ -206,7 +197,7 @@ def digit_boxes(die):
             anchor = f[fi][0]
             bv = normalize(Vector(v[anchor]) - c)
             bu = normalize(nv.cross(bv))
-            out.append((c / inr, nv, bu, bv, size))
+            out.append((c / inr, nv, bu, bv, size, values_for(die, fi, n)))
     return out
 
 
@@ -260,16 +251,21 @@ for face in bm.faces:
         # pos/nv/bu/bv — в нормированных координатах (inradius=1), масштаб = s.
         # Двузначные числа шире: half_u с запасом; подчёркивание 6/9 уходит ниже.
         is_pip = False
-        for pos, nv, bu, bv, size in boxes:
+        for pos, nv, bu, bv, size, val in boxes:
             plane_d = s * pos.dot(nv) + EDGE_R
             u0 = s * pos.dot(bu)
             v0 = s * pos.dot(bv)
             uu = c.dot(bu) - u0
             vv = c.dot(bv) - v0
             depth = plane_d - c.dot(nv)
-            half_u = size * 0.95
-            half_v = size * 0.65
-            lo = -half_v - size * 0.75
+            # Точный бокс по размеру глифа: цифра ~0.64*size шириной на символ,
+            # ~0.73*size высотой; планка 6/9: центр на -0.62*size, низ на -0.70*size.
+            # Скругления у рёбер тоже ниже плоскости — широкий бокс красил бы их,
+            # поэтому запас минимальный (+0.15).
+            two = len(str(val)) > 1
+            half_u = size * (0.70 if two else 0.45)
+            half_v = size * 0.45
+            lo = -half_v - (size * 0.35 if val in (6, 9) else 0.0)
             if abs(uu) < half_u and lo < vv < half_v and 0.05 < depth < DIGIT_DEPTH + 0.4:
                 is_pip = True
                 break
