@@ -160,8 +160,11 @@ module body(die) {
 // ---------- цифры (d4 — на вершинах, d10 — на гранях) ----------
 
 FONT = "Liberation Sans:style=Bold";
-DIGIT_DEPTH = 0.75;
+// Глубина гравировки: 0.5 мм — минимум по best practices FDM-печати
+// (читаемая вдавленная надпись: ≥0.4–0.5 мм, штрих ≥ сопла 0.4; мельче — заплывает).
+DIGIT_DEPTH = 0.5;
 DIGIT_SIZE_D4 = 5.0;
+DIGIT_SIZE_D6 = 4.0;
 DIGIT_SIZE_D8 = 3.2;
 DIGIT_SIZE_D10 = 3.0;
 DIGIT_SIZE_D12 = 3.5;
@@ -169,6 +172,7 @@ DIGIT_SIZE_D20 = 2.0;
 
 function digit_size(die) =
   die == "d4" ? DIGIT_SIZE_D4
+  : die == "d6" ? DIGIT_SIZE_D6
   : die == "d8" ? DIGIT_SIZE_D8
   : die == "d10" ? DIGIT_SIZE_D10
   : die == "d12" ? DIGIT_SIZE_D12
@@ -247,18 +251,6 @@ module pips(die) {
   // иначе N boolean-вырезов против тела вешают CGAL (d20 = 210 сфер!)
   if (die == "d4") {
     digits_d4();
-  } else if (die == "d6") {
-    union() {
-      v = verts(die);
-      f = faces(die);
-      n = len(f);
-      for (fi = [0 : n - 1]) {
-        c = centroid(v, f[fi]);
-        nv = face_normal(v, f[fi]);
-        val = values_for(die, fi, n);
-        for (p = layout_for(val)) pip_at(nv, p[0], p[1], PIP_R);
-      }
-    }
   } else {
     digits_centered(die);
   }

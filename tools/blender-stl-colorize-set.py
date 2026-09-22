@@ -13,7 +13,7 @@ from mathutils import Vector
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
 
 PIP_R = 1.4
-DIGIT_DEPTH = 0.75
+DIGIT_DEPTH = 0.5
 
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
@@ -194,9 +194,9 @@ def digit_boxes(die):
             bv = normalize(Vector(v[pole]) - c)
             bu = normalize(nv.cross(bv))
             out.append((c / inr, nv, bu, bv, 3.0))
-    elif die in ('d8', 'd12', 'd20'):
+    elif die in ('d6', 'd8', 'd12', 'd20'):
         # цифры в центре грани, "вверх" = к первой вершине (как в SCAD digits_centered)
-        sizes = {'d8': 3.2, 'd12': 3.5, 'd20': 2.0}
+        sizes = {'d6': 4.0, 'd8': 3.2, 'd12': 3.5, 'd20': 2.0}
         size = sizes[die]
         for fi in range(len(f)):
             c = centroid(v, f[fi])
@@ -249,8 +249,7 @@ for face in bm.faces:
     if face.normal.dot(c - center) < 0:
         face.normal_flip()
 
-centers = [Vector(p) for p in pip_centers(DIE)] if DIE == 'd6' else []
-is_digit_die = DIE in ('d4', 'd8', 'd10', 'd12', 'd20')
+is_digit_die = DIE in ('d4', 'd6', 'd8', 'd10', 'd12', 'd20')
 boxes = digit_boxes(DIE) if is_digit_die else []
 s = SIZE / 2 - EDGE_R
 for face in bm.faces:
@@ -274,8 +273,6 @@ for face in bm.faces:
             if abs(uu) < half_u and lo < vv < half_v and 0.05 < depth < DIGIT_DEPTH + 0.4:
                 is_pip = True
                 break
-    else:
-        is_pip = any(abs((c - pc).length - PIP_R) < 0.12 for pc in centers)
     face.material_index = 1 if is_pip else 0
 
 bm.to_mesh(obj.data)
