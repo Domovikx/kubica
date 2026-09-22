@@ -19,6 +19,16 @@
   letter-spacing: 0.4px;
 }
 
+.sidebarSection + .sidebarSection {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebarSection .sidebarTitle {
+  margin-top: 0;
+}
+
 .sidebarActions {
   display: flex;
   gap: 8px;

@@ -1,14 +1,48 @@
 import { MODELS, type ModelDef } from '@/entities/model/models'
+import type { DieId } from '@/entities/dice-geometry/geometry'
 import {
   isSelected,
   subscribeSelection,
   type Selection,
 } from '@/features/select-model/select-model'
+import { quickRoll } from '@/features/roll-dice/quick-roll'
 import { createViewer, type Viewer } from '@/shared/three/viewer'
 import './viewer-grid.css'
 
 // Лимит дропа чужого .glb: защита от OOM на слабом железе (50 МБ)
 const DROP_SIZE_LIMIT = 50 * 1024 * 1024
+
+/** ID панели → физическая кость (d6-freecad → d6, d20 → d20). */
+const parseDieId = (id: string): DieId | null => {
+  const m = /^d(\d+)/.exec(id)
+  if (!m) return null
+  const n = Number(m[1])
+  return ([4, 6, 8, 10, 12, 20] as const).includes(n as 4 | 6 | 8 | 10 | 12 | 20)
+    ? (`d${n}` as DieId)
+    : null
+}
+
+/** Тап (без драга) по канвасу = бросок. Порог отличает тап от вращения. */
+const attachTapToRoll = (canvas: HTMLCanvasElement, onTap: () => void): (() => void) => {
+  let downX = 0
+  let downY = 0
+  let downT = 0
+  const onDown = (e: PointerEvent) => {
+    downX = e.clientX
+    downY = e.clientY
+    downT = performance.now()
+  }
+  const onUp = (e: PointerEvent) => {
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY)
+    if (moved < 8 && performance.now() - downT < 500) onTap()
+  }
+  canvas.addEventListener('pointerdown', onDown)
+  canvas.addEventListener('pointerup', onUp)
+  return () => {
+    canvas.removeEventListener('pointerdown', onDown)
+    canvas.removeEventListener('pointerup', onUp)
+  }
+}
 
 const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLElement => {
   const section = document.createElement('section')
@@ -47,6 +81,22 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       info.textContent = `${model.source} · не загрузилась`
     },
   )
+  // Тап по кости = бросок (физика headless + косметический кувырок модели).
+  // Слушатели висят на canvas, который выбрасывается вместе с панелью.
+  const die = parseDieId(model.id)
+  let rolling = false
+  if (die) {
+    canvas.title = `Тап — бросить ${die}`
+    attachTapToRoll(canvas, () => {
+      if (rolling) return
+      rolling = true
+      viewer.setSpinning(true)
+      void quickRoll(die).finally(() => {
+        rolling = false
+        viewer.setSpinning(false)
+      })
+    })
+  }
   canvas.addEventListener('dragover', (e) => e.preventDefault())
   canvas.addEventListener('drop', (e) => {
     e.preventDefault()

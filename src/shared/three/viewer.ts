@@ -14,6 +14,8 @@ export interface Viewer {
   resize: () => void
   update: () => void
   dispose: () => void
+  /** Косметическое кувыркание модели (только визуал; результат даёт физика). */
+  setSpinning: (on: boolean) => void
 }
 
 export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer => {
@@ -66,6 +68,13 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
   const loader = new GLTFLoader()
   let current: THREE.Object3D | null = null
   let disposed = false
+  let spinning = false
+  let spinSpeed = 0.12
+
+  const setSpinning = (on: boolean) => {
+    spinning = on && current !== null
+    if (on) spinSpeed = 0.12
+  }
 
   const fitToView = (root: THREE.Object3D) => {
     const box = new THREE.Box3().setFromObject(root)
@@ -154,6 +163,13 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
 
   const update = () => {
     if (disposed) return
+    if (spinning && current) {
+      // Кувырок модели, пока идёт физический бросок (скорость затухает)
+      current.rotation.x += spinSpeed
+      current.rotation.y += spinSpeed * 1.3
+      current.rotation.z += spinSpeed * 0.7
+      spinSpeed = Math.max(0.02, spinSpeed * 0.998)
+    }
     controls.update()
     renderer.render(scene, camera)
   }
@@ -175,5 +191,5 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     renderer.dispose()
   }
 
-  return { load, resize, update, dispose }
+  return { load, resize, update, dispose, setSpinning }
 }
