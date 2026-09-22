@@ -17,10 +17,12 @@ export const mountModelList = (container: HTMLElement): (() => void) => {
   actions.className = 'sidebarActions'
   const selectAllBtn = document.createElement('button')
   selectAllBtn.className = 'switchBtn'
+  selectAllBtn.id = 'selectAll'
   selectAllBtn.type = 'button'
   selectAllBtn.textContent = 'Все'
   const clearBtn = document.createElement('button')
   clearBtn.className = 'switchBtn'
+  clearBtn.id = 'clearAll'
   clearBtn.type = 'button'
   clearBtn.textContent = 'Ничего'
   actions.append(selectAllBtn, clearBtn)

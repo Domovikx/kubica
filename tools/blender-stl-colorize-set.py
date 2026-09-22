@@ -183,8 +183,8 @@ def digit_boxes(die):
                     nv = -nv
                 bv = normalize(Vector(v[vi]) - c)
                 bu = normalize(nv.cross(bv))
-                pos = (c + (Vector(v[vi]) - c) * 0.62) / inr
-                out.append((pos, nv, bu, bv, 5.0, vi + 1))
+                pos = (c + (Vector(v[vi]) - c) * 0.55) / inr
+                out.append((pos, nv, bu, bv, 4.5, vi + 1))
     else:
         # d6/d8/d10/d12/d20: цифра в центре грани, "вверх" = к первой вершине
         sizes = {'d6': 4.0, 'd8': 3.2, 'd10': 3.0, 'd12': 3.5, 'd20': 2.0}
@@ -203,6 +203,8 @@ def digit_boxes(die):
 
 SIZE = 16.0
 EDGE_R = 1.0
+# Печатные габариты: face-to-face, зеркало DIE_SIZES из dice_set.scad
+DIE_SIZES = {'d4': 10.0, 'd6': 16.0, 'd8': 12.0, 'd10': 16.0, 'd12': 17.5, 'd20': 17.5}
 
 STL = sys.argv[sys.argv.index('--') + 1]
 OUT = sys.argv[sys.argv.index('--') + 2]
@@ -242,7 +244,7 @@ for face in bm.faces:
 
 is_digit_die = DIE in ('d4', 'd6', 'd8', 'd10', 'd12', 'd20')
 boxes = digit_boxes(DIE) if is_digit_die else []
-s = SIZE / 2 - EDGE_R
+s = DIE_SIZES[DIE] / 2 - EDGE_R
 for face in bm.faces:
     c = sum((v.co for v in face.verts), Vector()) / len(face.verts)
     if is_digit_die:
