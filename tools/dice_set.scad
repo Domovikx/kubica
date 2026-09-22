@@ -185,8 +185,8 @@ module engrave(pos, nv, bu, bv, txt, size, under = false) {
         mirror([1, 0, 0])
           text(txt, size = size, halign = "center", valign = "center", font = FONT);
     if (under)
-      translate([u, v - size * 0.62, -0.1])
-        cube([size * 0.7, size * 0.16, DIGIT_DEPTH + 0.3]);
+      translate([u, v - size * 0.62, (DIGIT_DEPTH + 0.2) / 2 - 0.1])
+        cube([size * 0.7, size * 0.16, DIGIT_DEPTH + 0.3], center = true);
   }
 }
 
