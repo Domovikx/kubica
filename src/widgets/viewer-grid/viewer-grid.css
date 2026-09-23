@@ -75,6 +75,36 @@
   pointer-events: none;
 }
 
+/* Временный дебаг калибровки граней: кнопки поверх панели.
+   Стоит под верхом: низ экрана перекрыт фиксированным bottombar (z-index 10),
+   а у topbar pointer-events: none — верх кликабелен. */
+.faceDebug {
+  position: absolute;
+  top: 104px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+}
+
+.faceDebugBtn {
+  min-width: 30px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(20, 22, 26, 0.85);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.faceDebugBtn:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 .viewerOverlay {
   position: absolute;
   inset: 0;

@@ -253,6 +253,22 @@ export const faceNormals = (die: DieId): Vec3[] => {
   return rawFaces(die).map((f) => faceNormalOf(v, f))
 }
 
+/** Индексы вершин каждой грани (порядок = SCAD faces(); [0] — якорь цифры). */
+export const faceVertIndices = (die: DieId): number[][] => rawFaces(die).map((f) => [...f])
+
+/**
+ * Направление «верха цифры» на грани — зеркало digits_centered из dice_set.scad:
+ * цифра в центре грани, вверх — к первой вершине грани.
+ */
+export const digitUp = (die: DieId, fi: number): Vec3 => {
+  const v = normalizedVerts(die)
+  const f = rawFaces(die)[fi]
+  const c = centroidOf(v, f)
+  const up = sub(v[f[0]], c)
+  const l = norm(up)
+  return [up[0] / l, up[1] / l, up[2] / l]
+}
+
 /**
  * Треугольники граней с обмоткой наружу (для ConvexPolyhedron):
  * квады/пятиугольники режутся веером от вершины 0.

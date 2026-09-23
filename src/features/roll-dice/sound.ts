@@ -1,11 +1,11 @@
-// Минимальный синтезированный звук броска (AUDIO.md): грохот + «ток» остановки.
+// Минимальный синтезированный звук броска (AUDIO.md): стук костей + «ток» остановки.
 // Ноль аудиофайлов — всё через Web Audio API. AudioContext создаётся лениво
 // на первом жесте пользователя (требование автоплей-политик браузеров).
 const MUTE_KEY = 'dice-muted'
 
 let ctx: AudioContext | null = null
-let rattleNodes: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null =
-  null
+let rattleTimer: number | null = null
+let sharedNoise: AudioBuffer | null = null
 
 const ensureCtx = (): AudioContext | null => {
   try {
@@ -41,52 +41,84 @@ export const setMuted = (muted: boolean): void => {
 }
 
 const noiseBuffer = (ac: AudioContext): AudioBuffer => {
+  if (sharedNoise) return sharedNoise
   const len = ac.sampleRate
   const buf = ac.createBuffer(1, len, ac.sampleRate)
   const data = buf.getChannelData(0)
   for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+  sharedNoise = buf
   return buf
 }
 
-/** Старт грохота костей (вызывать на начале броска, только после жеста). */
-export const startRattle = (): void => {
-  if (isMuted()) return
-  const ac = ensureCtx()
-  if (!ac || rattleNodes) return
-  const src = ac.createBufferSource()
-  src.buffer = noiseBuffer(ac)
-  src.loop = true
-  const filter = ac.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.frequency.value = 2500
-  filter.Q.value = 0.8
-  const gain = ac.createGain()
-  gain.gain.value = 0.12
-  src.connect(filter).connect(gain).connect(ac.destination)
-  src.start()
-  rattleNodes = { src, filter, gain }
-}
-
-/** Стоп грохота (вызывать на остановке). */
-export const stopRattle = (): void => {
-  if (!rattleNodes || !ctx) return
+/** Один короткий стук кости: щелчок + корпус. */
+const playClack = (): void => {
+  if (!ctx || isMuted()) return
   try {
-    rattleNodes.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.03)
-    const nodes = rattleNodes
-    setTimeout(() => {
-      try {
-        nodes.src.stop()
-      } catch {
-        // уже остановлен
-      }
-      nodes.src.disconnect()
-      nodes.filter.disconnect()
-      nodes.gain.disconnect()
-    }, 150)
+    const ac = ctx
+    const t = ac.currentTime
+    const dur = 0.05 + Math.random() * 0.04
+
+    const src = ac.createBufferSource()
+    src.buffer = noiseBuffer(ac)
+    src.playbackRate.value = 0.8 + Math.random() * 0.7
+    const bp = ac.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 1400 + Math.random() * 2200
+    bp.Q.value = 1 + Math.random() * 0.8
+    const g = ac.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.22 + Math.random() * 0.14, t + 0.008)
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+    src.connect(bp)
+    bp.connect(g)
+    g.connect(ac.destination)
+    src.start(t, Math.random() * 0.5, dur + 0.05)
+    src.stop(t + dur + 0.05)
+    src.onended = () => {
+      src.disconnect()
+      bp.disconnect()
+      g.disconnect()
+    }
+
+    const osc = ac.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = 280 + Math.random() * 420
+    const og = ac.createGain()
+    og.gain.setValueAtTime(0.1 + Math.random() * 0.08, t)
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.07)
+    osc.connect(og)
+    og.connect(ac.destination)
+    osc.start(t)
+    osc.stop(t + 0.09)
+    osc.onended = () => {
+      osc.disconnect()
+      og.disconnect()
+    }
   } catch {
     // ignore
   }
-  rattleNodes = null
+}
+
+/** Старт стука костей (вызывать на начале броска, только после жеста). */
+export const startRattle = (): void => {
+  if (isMuted()) return
+  const ac = ensureCtx()
+  if (!ac || rattleTimer !== null) return
+  playClack()
+  const loop = (): void => {
+    if (rattleTimer === null) return
+    playClack()
+    rattleTimer = window.setTimeout(loop, 70 + Math.random() * 110)
+  }
+  rattleTimer = window.setTimeout(loop, 90)
+}
+
+/** Стоп стука (вызывать на остановке). */
+export const stopRattle = (): void => {
+  if (rattleTimer !== null) {
+    clearTimeout(rattleTimer)
+    rattleTimer = null
+  }
 }
 
 /** Глухой «ток» остановки кости. pitch зависит от размера (d20 ниже d6). */

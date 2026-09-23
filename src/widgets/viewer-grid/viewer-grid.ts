@@ -6,6 +6,7 @@ import {
   type Selection,
 } from '@/features/select-model/select-model'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
+import { quatForD4VertexUp, quatForValueToCamera } from '@/features/roll-dice/face-orient'
 import { createViewer, type Viewer } from '@/shared/three/viewer'
 import './viewer-grid.css'
 
@@ -71,6 +72,33 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
   section.append(canvas, label, info, overlay)
 
   const viewer = createViewer(canvas, overlay)
+
+  const die = parseDieId(model.id)
+
+  // Временный дебаг калибровки: кнопки граней — показать грань прямо в камеру.
+  // Стоит под верхом панели: низ перекрыт фиксированным bottombar (z-index 10).
+  if ((model.id === 'd4' || model.id === 'd6' || model.id === 'd20') && die !== null) {
+    const faces = model.id === 'd20' ? 20 : model.id === 'd6' ? 6 : 4
+    const debug = document.createElement('div')
+    debug.className = 'faceDebug'
+    for (let n = 1; n <= faces; n++) {
+      const btn = document.createElement('button')
+      btn.className = 'faceDebugBtn'
+      btn.type = 'button'
+      btn.textContent = String(n)
+      btn.title = `Показать грань ${n}`
+      btn.addEventListener('click', () => {
+        viewer.setSpinning(false)
+        viewer.settleTo(
+          die === 'd4'
+            ? quatForD4VertexUp(n, viewer.getViewDir())
+            : quatForValueToCamera(die, n, viewer.getViewDir()),
+        )
+      })
+      debug.appendChild(btn)
+    }
+    section.appendChild(debug)
+  }
   viewer.load(
     model.url,
     (tris) => {
@@ -81,9 +109,9 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       info.textContent = `${model.source} · не загрузилась`
     },
   )
-  // Тап по кости = бросок (физика headless + косметический кувырок модели).
+  // Тап по кости = бросок: физика даёт значение, витрина дотягивает модель
+  // нужной гранью прямо в камеру (d4 — вершина вверх).
   // Слушатели висят на canvas, который выбрасывается вместе с панелью.
-  const die = parseDieId(model.id)
   let rolling = false
   if (die) {
     canvas.title = `Тап — бросить ${die}`
@@ -91,10 +119,18 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       if (rolling) return
       rolling = true
       viewer.setSpinning(true)
-      void quickRoll(die).finally(() => {
-        rolling = false
-        viewer.setSpinning(false)
-      })
+      void quickRoll(die)
+        .then((result) => {
+          const target =
+            die === 'd4'
+              ? quatForD4VertexUp(result.value, viewer.getViewDir())
+              : quatForValueToCamera(die, result.value, viewer.getViewDir())
+          viewer.settleTo(target)
+        })
+        .finally(() => {
+          rolling = false
+          viewer.setSpinning(false)
+        })
     })
   }
   canvas.addEventListener('dragover', (e) => e.preventDefault())
@@ -126,7 +162,7 @@ export const mountViewerGrid = (
     for (const viewer of viewers) viewer.dispose()
     viewers = []
     container.innerHTML = ''
-    const defs = MODELS.filter((m) => selected.has(m.id))
+    const defs = MODELS.filter((m) => !m.reference && selected.has(m.id))
     // Раскладка: все выбранные — на одном экране без скролла.
     // Колонки/ряды задаются data-атрибутами (чистый CSS, без инлайн-стилей и !important)
     const n = defs.length
@@ -143,8 +179,8 @@ export const mountViewerGrid = (
     })
   }
 
-  // Первичный рендер — из текущего состояния стора
-  render(new Set(MODELS.filter((m) => isSelected(m.id)).map((m) => m.id)))
+  // Первичный рендер — из текущего состояния стора (без скрытых референсов)
+  render(new Set(MODELS.filter((m) => !m.reference && isSelected(m.id)).map((m) => m.id)))
   const unsubscribe = subscribeSelection(render)
 
   return {

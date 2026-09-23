@@ -2,7 +2,6 @@ import { MODELS } from '@/entities/model/models'
 import {
   clearSelection,
   isSelected,
-  selectAllModels,
   subscribeSelection,
   toggleModel,
 } from '@/features/select-model/select-model'
@@ -33,8 +32,10 @@ export const mountModelList = (container: HTMLElement): (() => void) => {
 
   container.append(title, actions, list)
 
+  // Референсные образцы CAD-стеков скрыты из основного UI
+  const visible = MODELS.filter((m) => !m.reference)
   const inputs: HTMLInputElement[] = []
-  for (const model of MODELS) {
+  for (const model of visible) {
     const label = document.createElement('label')
     label.className = 'modelItem'
     const input = document.createElement('input')
@@ -55,7 +56,10 @@ export const mountModelList = (container: HTMLElement): (() => void) => {
     inputs.push(input)
   }
 
-  const onSelectAll = () => selectAllModels()
+  const onSelectAll = () => {
+    // Только видимые: референсы остаются скрытыми
+    for (const model of visible) toggleModel(model.id, true)
+  }
   const onClear = () => clearSelection()
   selectAllBtn.addEventListener('click', onSelectAll)
   clearBtn.addEventListener('click', onClear)

@@ -5,6 +5,11 @@ export interface ModelDef {
   label: string
   url: string
   source: string
+  /**
+   * Образец для сравнения CAD-стеков (не наш игровой набор).
+   * Скрыт из основного UI; позже переедет на страницу референсов.
+   */
+  reference?: boolean
 }
 
 export const MODELS: ModelDef[] = [
@@ -13,18 +18,21 @@ export const MODELS: ModelDef[] = [
     label: 'D6 · FreeCAD (сравнение)',
     url: `${BASE}cad/cad-d6.glb`,
     source: 'FreeCAD 1.1.3',
+    reference: true,
   },
   {
     id: 'd6-openscad',
     label: 'D6 · OpenSCAD (сравнение)',
     url: `${BASE}cad/cad-d6-openscad.glb`,
     source: 'OpenSCAD 2021.01',
+    reference: true,
   },
   {
     id: 'd6-cadquery',
     label: 'D6 · CadQuery (сравнение)',
     url: `${BASE}cad/cad-d6-cadquery.glb`,
     source: 'CadQuery 2.8.0',
+    reference: true,
   },
   {
     id: 'd4',
@@ -54,4 +62,4 @@ export const MODELS: ModelDef[] = [
   },
 ]
 
-export const DEFAULT_SELECTED = ['d6-freecad', 'd20']
+export const DEFAULT_SELECTED = ['d6', 'd20']
