@@ -1,0 +1,94 @@
+.rollPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rollSteppers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rollStepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rollStepperCode {
+  min-width: 32px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.rollStepperBtn {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.rollStepperCount {
+  min-width: 24px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rollFormula {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.rollError {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #ff8a80;
+}
+
+.rollError[hidden] {
+  display: none;
+}
+
+.rollPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rollGo {
+  min-height: 48px;
+  font-size: 15px;
+}
+
+.rollGo:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rollTotal {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.rollTotal[hidden],
+.rollParts[hidden] {
+  display: none;
+}
+
+.rollParts {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

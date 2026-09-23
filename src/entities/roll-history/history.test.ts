@@ -87,4 +87,23 @@ describe('roll-history', () => {
     h.add(result())
     expect(h.list()).toHaveLength(1)
   })
+
+  it('пул с parts переживает персист, старые записи без parts читаются', () => {
+    const storage = memStorage()
+    const h1 = createHistoryStore(storage)
+    h1.add(result())
+    h1.add({
+      ...result({ at: 2000 }),
+      label: '2d20kh1',
+      parts: [
+        { die: 'd20', value: 17, display: '17', kept: true },
+        { die: 'd20', value: 3, display: '3', kept: false },
+      ],
+    })
+    const h2 = createHistoryStore(storage)
+    expect(h2.list()).toHaveLength(2)
+    expect(h2.list()[0].label).toBe('2d20kh1')
+    expect(h2.list()[0].parts).toHaveLength(2)
+    expect(h2.list()[1].parts).toBeUndefined()
+  })
 })

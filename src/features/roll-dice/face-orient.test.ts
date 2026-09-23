@@ -13,8 +13,8 @@ import {
   quatForD4VertexUp,
   quatForValueToCamera,
   toModelFrame,
-  type Vec3,
 } from './face-orient'
+import type { Vec3 } from '@/entities/dice-geometry/geometry'
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const norm = (v: Vec3): number => Math.hypot(v[0], v[1], v[2])

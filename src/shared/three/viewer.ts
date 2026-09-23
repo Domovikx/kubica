@@ -5,6 +5,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
 
 const VIEW_SIZE = 2.4
+/** Длительность дотяжки к грани результата (мс) — grid ставит поп/тук/вибро на её конец. */
+export const SETTLE_DURATION_MS = 450
+// Спин броска: ω(t) = SPIN_V0 · e^(−t/SPIN_TAU), стоп ниже SPIN_MIN.
+// Экспонента + стабильная ось = залипательный профиль спиннера (см. docs/JUICE.md).
+const SPIN_V0 = 15
+const SPIN_TAU = 0.65
+const SPIN_MIN = 0.4
 // Угол складки для сглаживания: скругления (двугранный угол ~5–10°) сглаживаются,
 // плоские грани и грани цифр (90°+) остаются чёткими
 const CREASE_ANGLE = Math.PI / 5
@@ -95,13 +102,22 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
   let current: THREE.Object3D | null = null
   let disposed = false
   let spinning = false
-  let spinSpeed = 0.12
-  let settling: { from: THREE.Quaternion; to: THREE.Quaternion; t: number } | null = null
+  let spinAxis = new THREE.Vector3(0, 1, 0)
+  let spinT = 0
+  let lastT = performance.now()
+  let settling: { from: THREE.Quaternion; to: THREE.Quaternion; elapsed: number } | null = null
 
   const setSpinning = (on: boolean) => {
     if (on) settling = null
     spinning = on && current !== null
-    if (on) spinSpeed = 0.12
+    if (on) {
+      spinT = 0
+      spinAxis = new THREE.Vector3(
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+      ).normalize()
+    }
   }
 
   const settleTo = (q: readonly [number, number, number, number]): void => {
@@ -115,7 +131,7 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
       current.quaternion.copy(to)
       return
     }
-    settling = { from, to, t: 0 }
+    settling = { from, to, elapsed: 0 }
   }
 
   const fitToView = (root: THREE.Object3D) => {
@@ -172,6 +188,9 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     }
     fitToView(root)
     smoothShade(root)
+    // Стартовый разворот 3/4: куб гранью в камеру выглядит плоским квадратом,
+    // а так сразу видно объём (на результат не влияет — settleTo абсолютный)
+    root.rotation.set(0.42, 0.62, 0)
     scene.add(root)
     current = root
     overlay.hidden = true
@@ -205,18 +224,25 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
 
   const update = () => {
     if (disposed) return
+    const now = performance.now()
+    const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000))
+    lastT = now
     if (spinning && current) {
-      // Кувырок модели, пока идёт физический бросок (скорость затухает)
-      current.rotation.x += spinSpeed
-      current.rotation.y += spinSpeed * 1.3
-      current.rotation.z += spinSpeed * 0.7
-      spinSpeed = Math.max(0.02, spinSpeed * 0.998)
+      // Экспоненциальное затухание вокруг стабильной оси (гироскоп спиннера)
+      spinT += dt
+      const speed = SPIN_V0 * Math.exp(-spinT / SPIN_TAU)
+      if (speed < SPIN_MIN) {
+        spinning = false
+      } else {
+        current.rotateOnAxis(spinAxis, speed * dt)
+      }
     } else if (settling && current) {
-      // Плавная дотяжка к физ-ориентации (~0.45 с, easeOutCubic)
-      settling.t = Math.min(1, settling.t + 1 / 28)
-      const e = 1 - Math.pow(1 - settling.t, 3)
+      // Дотяжка к грани результата — по времени, не зависит от Гц экрана
+      settling.elapsed += dt * 1000
+      const t = Math.min(1, settling.elapsed / SETTLE_DURATION_MS)
+      const e = 1 - Math.pow(1 - t, 3)
       current.quaternion.slerpQuaternions(settling.from, settling.to, e)
-      if (settling.t >= 1) settling = null
+      if (t >= 1) settling = null
     }
     controls.update()
     renderer.render(scene, camera)

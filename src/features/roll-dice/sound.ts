@@ -50,8 +50,8 @@ const noiseBuffer = (ac: AudioContext): AudioBuffer => {
   return buf
 }
 
-/** Один короткий стук кости: щелчок + корпус. */
-const playClack = (): void => {
+/** Один короткий стук кости: щелчок + корпус. intensity 1→0.35 — кость теряет энергию. */
+const playClack = (intensity: number): void => {
   if (!ctx || isMuted()) return
   try {
     const ac = ctx
@@ -67,7 +67,7 @@ const playClack = (): void => {
     bp.Q.value = 1 + Math.random() * 0.8
     const g = ac.createGain()
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.22 + Math.random() * 0.14, t + 0.008)
+    g.gain.exponentialRampToValueAtTime((0.22 + Math.random() * 0.14) * intensity, t + 0.008)
     g.gain.exponentialRampToValueAtTime(0.001, t + dur)
     src.connect(bp)
     bp.connect(g)
@@ -84,7 +84,7 @@ const playClack = (): void => {
     osc.type = 'triangle'
     osc.frequency.value = 280 + Math.random() * 420
     const og = ac.createGain()
-    og.gain.setValueAtTime(0.1 + Math.random() * 0.08, t)
+    og.gain.setValueAtTime((0.1 + Math.random() * 0.08) * intensity, t)
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.07)
     osc.connect(og)
     og.connect(ac.destination)
@@ -104,12 +104,15 @@ export const startRattle = (): void => {
   if (isMuted()) return
   const ac = ensureCtx()
   if (!ac || rattleTimer !== null) return
-  playClack()
+  const t0 = performance.now()
+  // Decrescendo: удары реже и тише — кость теряет энергию (см. docs/JUICE.md)
   const loop = (): void => {
     if (rattleTimer === null) return
-    playClack()
-    rattleTimer = window.setTimeout(loop, 70 + Math.random() * 110)
+    const elapsed = performance.now() - t0
+    playClack(Math.max(0.35, Math.exp(-elapsed / 1400)))
+    rattleTimer = window.setTimeout(loop, 70 + elapsed * 0.09 + Math.random() * 110)
   }
+  playClack(1)
   rattleTimer = window.setTimeout(loop, 90)
 }
 

@@ -1,5 +1,7 @@
 import { getHistoryStore, type HistoryEntry } from '@/entities/roll-history/history'
+import { parseNotation } from '@/entities/dice-notation/notation'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
+import { rollPool } from '@/features/dice-pool/pool'
 import { isMuted, setMuted } from '@/features/roll-dice/sound'
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import './roll-history.css'
@@ -61,7 +63,9 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
       value.textContent = entry.display
       const meta = document.createElement('span')
       meta.className = 'historyMeta'
-      meta.textContent = `${entry.die} · ${fmtTime(entry.at)}`
+      meta.textContent = entry.label
+        ? `${entry.label} · ${fmtTime(entry.at)}`
+        : `${entry.die} · ${fmtTime(entry.at)}`
       main.append(value, meta)
       main.disabled = pending.has(`${entry.at}:${i}`)
       main.addEventListener('click', () => {
@@ -69,9 +73,19 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
         if (pending.has(key)) return
         pending.add(key)
         main.disabled = true
-        void quickRoll(entry.die as DieId).finally(() => {
+        const done = () => {
           pending.delete(key)
-        })
+        }
+        // Пул перебрасывается пулом, одиночка — одиночкой
+        if (entry.label) {
+          try {
+            void rollPool(parseNotation(entry.label)).finally(done)
+          } catch {
+            done()
+          }
+        } else {
+          void quickRoll(entry.die as DieId).finally(done)
+        }
       })
       list.appendChild(row)
       row.appendChild(main)

@@ -1,6 +1,8 @@
 import { tickRolls } from '@/features/roll-dice/quick-roll'
+import { tickPoolWorld } from '@/features/dice-pool/pool'
 import { mountModelList } from '@/widgets/model-list/model-list'
 import { mountRollHistory } from '@/widgets/roll-history/roll-history'
+import { mountRollPanel } from '@/widgets/roll-panel/roll-panel'
 import { mountViewerGrid } from '@/widgets/viewer-grid/viewer-grid'
 
 export const mountHomePage = (): (() => void) => {
@@ -8,6 +10,10 @@ export const mountHomePage = (): (() => void) => {
   const viewers = document.getElementById('viewers') as HTMLElement
 
   const disposeList = mountModelList(sidebar)
+  const poolSection = document.createElement('div')
+  poolSection.className = 'sidebarSection'
+  sidebar.appendChild(poolSection)
+  const disposePool = mountRollPanel(poolSection)
   const historySection = document.createElement('div')
   historySection.className = 'sidebarSection'
   sidebar.appendChild(historySection)
@@ -25,6 +31,7 @@ export const mountHomePage = (): (() => void) => {
     // поэтому бросок просто ждёт возвращения вкладки, а не виснет.
     if (!document.hidden) {
       tickRolls()
+      tickPoolWorld()
       grid.update()
     }
     raf = requestAnimationFrame(animate)
@@ -35,6 +42,7 @@ export const mountHomePage = (): (() => void) => {
     cancelAnimationFrame(raf)
     window.removeEventListener('resize', onResize)
     disposeList()
+    disposePool()
     disposeHistory()
     grid.dispose()
   }

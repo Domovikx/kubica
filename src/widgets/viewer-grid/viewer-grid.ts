@@ -6,8 +6,9 @@ import {
   type Selection,
 } from '@/features/select-model/select-model'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
-import { quatForD4VertexUp, quatForValueToCamera } from '@/features/roll-dice/face-orient'
-import { createViewer, type Viewer } from '@/shared/three/viewer'
+import { isMuted, playThock, startRattle, stopRattle } from '@/features/roll-dice/sound'
+import { createViewer, SETTLE_DURATION_MS, type Viewer } from '@/shared/three/viewer'
+import { showResult } from '@/shared/ui/result-pop'
 import './viewer-grid.css'
 
 // Лимит дропа чужого .glb: защита от OOM на слабом железе (50 МБ)
@@ -21,6 +22,21 @@ const parseDieId = (id: string): DieId | null => {
   return ([4, 6, 8, 10, 12, 20] as const).includes(n as 4 | 6 | 8 | 10 | 12 | 20)
     ? (`d${n}` as DieId)
     : null
+}
+
+/** Минимальный спин витрины (мс): физика быстрее — поп не должен спойлерить. */
+const MIN_SPIN_MS = 2000
+
+/** Тактильный отклик на settle (вторичное подкрепление; глушится вместе со звуком). */
+const buzz = (die: DieId, value: number): void => {
+  try {
+    if (isMuted() || typeof navigator === 'undefined' || !('vibrate' in navigator)) return
+    if (die === 'd20' && value === 20) navigator.vibrate([30, 50, 30])
+    else if (die === 'd20' && value === 1) navigator.vibrate(80)
+    else navigator.vibrate(15)
+  } catch {
+    // Десктопы без вибромотора — тихо игнорируем
+  }
 }
 
 /** Тап (без драга) по канвасу = бросок. Порог отличает тап от вращения. */
@@ -109,8 +125,8 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       info.textContent = `${model.source} · не загрузилась`
     },
   )
-  // Тап по кости = бросок: физика даёт значение, витрина дотягивает модель
-  // нужной гранью прямо в камеру (d4 — вершина вверх).
+  // Тап по кости = бросок: физика даёт значение, витрина смакует спин,
+  // затем дотягивает нужную грань в камеру; поп/тук/вибро — в момент settle.
   // Слушатели висят на canvas, который выбрасывается вместе с панелью.
   let rolling = false
   if (die) {
@@ -119,15 +135,31 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       if (rolling) return
       rolling = true
       viewer.setSpinning(true)
-      void quickRoll(die)
+      startRattle()
+      const t0 = performance.now()
+      void quickRoll(die, { silent: true })
         .then((result) => {
-          const target =
-            die === 'd4'
-              ? quatForD4VertexUp(result.value, viewer.getViewDir())
-              : quatForValueToCamera(die, result.value, viewer.getViewDir())
-          viewer.settleTo(target)
+          // Физика готова раньше (~1.2 с) — ждём минимальный спин,
+          // иначе поп спойлерит результат до дотяжки
+          const wait = Math.max(0, MIN_SPIN_MS - (performance.now() - t0))
+          window.setTimeout(() => {
+            stopRattle()
+            viewer.settleTo(
+              die === 'd4'
+                ? quatForD4VertexUp(result.value, viewer.getViewDir())
+                : quatForValueToCamera(die, result.value, viewer.getViewDir()),
+            )
+            window.setTimeout(() => {
+              playThock(die)
+              buzz(die, result.value)
+              showResult(die, result.display)
+              rolling = false
+              viewer.setSpinning(false)
+            }, SETTLE_DURATION_MS)
+          }, wait)
         })
-        .finally(() => {
+        .catch(() => {
+          stopRattle()
           rolling = false
           viewer.setSpinning(false)
         })

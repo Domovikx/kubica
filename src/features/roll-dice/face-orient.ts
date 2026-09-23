@@ -28,10 +28,10 @@ import {
   faceVertIndices,
   normalizedVerts,
   type DieId,
+  type Vec3,
 } from '@/entities/dice-geometry/geometry'
+import type { Quat } from './readout'
 
-export type Vec3 = [number, number, number]
-export type Quat = [number, number, number, number]
 export type Mat3 = [[number, number, number], [number, number, number], [number, number, number]]
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]

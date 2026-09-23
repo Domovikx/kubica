@@ -23,20 +23,25 @@ export const tickRolls = (): void => {
   }
 }
 
-export const quickRoll = (die: DieId): Promise<RollResult> => {
+export const quickRoll = (die: DieId, opts?: { silent?: boolean }): Promise<RollResult> => {
+  const silent = opts?.silent ?? false
   const run = async (): Promise<RollResult> => {
     const store = createRollStore({
       roll: async (d) => (await getWorld()).roll(d),
     })
-    startRattle()
+    if (!silent) startRattle()
     try {
       const result = await store.roll(die)
-      playThock(die)
+      // История пишется всегда; поп и звук — только для бросков без витрины
+      // (тап с витриной показывает их в момент settle — см. viewer-grid)
       getHistoryStore().add(result)
-      showResult(die, result.display)
+      if (!silent) {
+        playThock(die)
+        showResult(die, result.display)
+      }
       return result
     } finally {
-      stopRattle()
+      if (!silent) stopRattle()
     }
   }
   const task = queue.then(run, run)
