@@ -247,6 +247,25 @@ export const vertexValue = (vi: number): number => vi + 1
 /** Масштаб тела для физики: центры сфер hull = normalized × s (зеркало body()). */
 export const bodyScale = (die: DieId): number => DIE_SIZES[die] / 2 - EDGE_R
 
+/**
+ * AABB-максимум физ-тела (нормированные вершины × s): витрина масштабирует
+ * измеренный bbox GLB к этому размеру. Инвариантно к осевым поворотам кадра
+ * (все наши калибровки — перестановки осей), поэтому точнее номинальных SIZE.
+ */
+export const physMaxDim = (die: DieId): number => {
+  const s = bodyScale(die)
+  let m = 0
+  for (const [x, y, z] of normalizedVerts(die)) {
+    const ax = Math.abs(x * s)
+    const ay = Math.abs(y * s)
+    const az = Math.abs(z * s)
+    if (ax > m) m = ax
+    if (ay > m) m = ay
+    if (az > m) m = az
+  }
+  return m * 2
+}
+
 /** Нормали граней (наружу) в нормированных координатах. */
 export const faceNormals = (die: DieId): Vec3[] => {
   const v = normalizedVerts(die)
@@ -291,3 +310,24 @@ export const outwardTriangles = (die: DieId): { verts: Vec3[]; tris: number[][] 
 
 export const DIE_IDS: DieId[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20']
 export const faceCount = (die: DieId): number => rawFaces(die).length
+
+/**
+ * Перевод вектора из кадра таблиц (SCAD Z-up) в кадр GLB-модели (Y-up).
+ * GLB из пайплайна dice_set.scad → STL → Blender → glTF лежат в кадре,
+ * повёрнутом на -90° about X (см. tools/blender-stl-to-glb.py).
+ * База — R_x(-90°): (x, y, z) -> (x, z, -y); d4 шла другим экспортом:
+ * её кадр (x,y,z)->(-x,z,y) решён из репорта 1→4, 2→3, 3→2.
+ * Живёт здесь (а не в face-orient), потому что кадр нужен и физике
+ * (тела cannon-es), и readout — иначе тело лежит плашмя, а меш на вершине,
+ * а поп показывает чужую грань.
+ */
+type FrameFix = (v: Vec3) => Vec3
+const MODEL_FIX: Record<DieId, FrameFix> = {
+  d4: (v) => [-v[0], v[2], v[1]],
+  d6: (v) => [v[0], v[2], -v[1]],
+  d8: (v) => [v[0], v[2], -v[1]],
+  d10: (v) => [v[0], v[2], -v[1]],
+  d12: (v) => [v[0], v[2], -v[1]],
+  d20: (v) => [v[0], v[2], -v[1]],
+}
+export const toModelFrame = (die: DieId, v: Vec3): Vec3 => MODEL_FIX[die](v)

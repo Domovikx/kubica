@@ -6,15 +6,15 @@ import {
   faceVertIndices,
   normalizedVerts,
   type DieId,
+  type Vec3,
 } from '@/entities/dice-geometry/geometry'
 import {
   applyQuatToVec,
   faceIndexForValue,
   quatForD4VertexUp,
-  quatForValueToCamera,
+  quatForValueUp,
   toModelFrame,
 } from './face-orient'
-import type { Vec3 } from '@/entities/dice-geometry/geometry'
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const norm = (v: Vec3): number => Math.hypot(v[0], v[1], v[2])
@@ -24,31 +24,33 @@ const screenUpOf = (v: Vec3, dir: Vec3): Vec3 => {
   return [v[0] - dir[0] * d, v[1] - dir[1] * d, v[2] - dir[2] * d]
 }
 
-describe('face-orient: грань в камеру + цифра вертикально', () => {
+describe('face-orient: грань плашмя вверх + цифра от зрителя', () => {
   const cam: Vec3 = [0.58, 0.36, 0.73]
-  const dir: Vec3 = [cam[0] / norm(cam), cam[1] / norm(cam), cam[2] / norm(cam)]
   const up: Vec3 = [0, 1, 0]
+  // Горизонталь «от зрителя»: туда должен смотреть верх цифры
+  const chL = Math.hypot(cam[0], cam[2])
+  const away: Vec3 = [-cam[0] / chL, 0, -cam[2] / chL]
 
   for (const die of ['d6', 'd8', 'd10', 'd12', 'd20'] as const) {
-    it(`${die}: каждая грань — в камеру, верх цифры — вверх экрана`, () => {
+    it(`${die}: каждая грань — строго вверх, верх цифры — от зрителя`, () => {
       const normals = faceNormals(die)
       normals.forEach((_, fi) => {
         const value = faceValue(die, fi)
-        const q = quatForValueToCamera(die, value, cam)
-        // Грань точно в камеру (в кадре модели)
+        const q = quatForValueUp(die, value, cam)
+        // Грань точно вверх (в кадре модели)
         const n = toModelFrame(die, normals[faceIndexForValue(die, value)])
         const w = applyQuatToVec(n, q)
-        expect(dot(w, cam) / (norm(w) * norm(cam))).toBeGreaterThan(0.999)
-        // Верх цифры строго вверх экрана (включая верхние/нижние грани)
+        expect(w[1] / norm(w)).toBeGreaterThan(0.999)
+        // Верх цифры — горизонтально от зрителя (включая верхние/нижние грани)
         const upDigit = applyQuatToVec(toModelFrame(die, digitUp(die, fi)), q)
-        const pDigit = screenUpOf(upDigit, dir)
-        const pUp = screenUpOf(up, dir)
-        expect(dot(pDigit, pUp) / (norm(pDigit) * norm(pUp))).toBeGreaterThan(0.999)
+        expect(Math.abs(upDigit[1])).toBeLessThan(0.01)
+        expect(dot(upDigit, away) / norm(upDigit)).toBeGreaterThan(0.999)
       })
     })
   }
 
   it('d4: вершина строго вверх, цифра — вверх экрана', () => {
+    const dir: Vec3 = [cam[0] / norm(cam), cam[1] / norm(cam), cam[2] / norm(cam)]
     const faces = faceVertIndices('d4')
     for (let value = 1; value <= 4; value++) {
       const q = quatForD4VertexUp(value, cam)

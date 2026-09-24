@@ -1,9 +1,13 @@
 // Чтение результата по финальной ориентации (кватернион [x, y, z, w]).
 // Чистая математика без three.js — тестируется моками.
+// ВАЖНО: всё в кадре МОДЕЛИ (toModelFrame): тело cannon-es строится из
+// MODEL-вершин и меш показывает MODEL-геометрию — читать в CAD-кадре
+// значило бы врать на 90° (тело плашмя, поп с чужой грани).
 import {
   faceNormals,
   faceValue,
   normalizedVerts,
+  toModelFrame,
   vertexValue,
   type DieId,
 } from '@/entities/dice-geometry/geometry'
@@ -25,9 +29,9 @@ const rotateByQuat = (v: [number, number, number], q: Quat): [number, number, nu
   ]
 }
 
-/** Индекс верхней грани (макс. проекция нормали на +Y). */
+/** Индекс верхней грани (макс. проекция нормали на +Y). Нормали — кадр модели. */
 export const topFaceIndex = (die: DieId, quat: Quat): number => {
-  const normals = faceNormals(die)
+  const normals = faceNormals(die).map((n) => toModelFrame(die, n))
   let best = 0
   let bestDot = -Infinity
   normals.forEach((n, fi) => {
@@ -41,9 +45,9 @@ export const topFaceIndex = (die: DieId, quat: Quat): number => {
   return best
 }
 
-/** Индекс верхней вершины (только d4 — цифры у вершин). */
+/** Индекс верхней вершины (только d4 — цифры у вершин). Вершины — кадр модели. */
 export const topVertexIndex = (quat: Quat): number => {
-  const verts = normalizedVerts('d4')
+  const verts = normalizedVerts('d4').map((v) => toModelFrame('d4', v))
   let best = 0
   let bestY = -Infinity
   verts.forEach((v, vi) => {

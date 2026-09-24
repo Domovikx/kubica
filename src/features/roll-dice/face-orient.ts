@@ -1,8 +1,6 @@
-// Ориентация результата гранью в камеру (чистая математика, без three.js).
-// Практика 3D-дайсов: физ-бросок даёт значение, витрина дотягивает модель
-// так, чтобы нужная грань смотрела прямо в камеру, а цифра была строго
-// вертикально, затем slerp (ср. three.js Quaternion.setFromUnitVectors,
-// setFromRotationMatrix, slerpQuaternions).
+// Ориентация результата: грань строго горизонтально вверх (+Y — кость лежит
+// плашмя как настоящая, грань на столе), верх цифры — от зрителя. Затем slerp
+// (ср. three.js setFromRotationMatrix, slerpQuaternions).
 //
 // Привязка цифры — из генератора, а не эвристика: dice_set.scad кладёт цифру
 // в центр грани «верхом» к первой вершине грани (digits_centered), у d4 —
@@ -21,18 +19,25 @@
 // Exact fit: det=+1, ортогональность ~1e-16, невязка 0.0000° — регрессия в тесте.
 // Пайплайн у всего набора общий, поэтому фикс общий для всех костей;
 // если для какой-то кости разойдётся — станет per-die таблицей.
+// САМ ФИКС ЖИВЁТ В geometry.ts (toModelFrame): он нужен и физике, и readout —
+// весь тракт обязан работать в кадре модели, иначе тело лежит плашмя,
+// а меш стоит на вершине и поп врёт.
 import {
   digitUp,
   faceNormals,
   faceValue,
   faceVertIndices,
   normalizedVerts,
+  toModelFrame,
   type DieId,
   type Vec3,
 } from '@/entities/dice-geometry/geometry'
 import type { Quat } from './readout'
 
 export type Mat3 = [[number, number, number], [number, number, number], [number, number, number]]
+
+/** Реэкспорт кадра модели (источник — geometry.ts; тест тянет отсюда). */
+export { toModelFrame } from '@/entities/dice-geometry/geometry'
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const cross = (a: Vec3, b: Vec3): Vec3 => [
@@ -45,22 +50,6 @@ const normalize = (v: Vec3): Vec3 => {
   const l = norm(v)
   return l < 1e-12 ? [0, 1, 0] : [v[0] / l, v[1] / l, v[2] / l]
 }
-
-/** Перевод вектора из кадра geometry.ts в кадр GLB-модели.
- * База — R_x(-90°): SCAD Z-up против Y-up (см. шапку). d4 шла другим экспортом:
- * её кадр (x,y,z)->(-x,z,y) решён из репорта 1→4, 2→3, 3→2 (exact fit, det=+1,
- * прогноз 4→1 — регрессия в тесте). Остальные кости — тем же пайплайном, что d20.
- */
-type FrameFix = (v: Vec3) => Vec3
-const MODEL_FIX: Record<DieId, FrameFix> = {
-  d4: (v) => [-v[0], v[2], v[1]],
-  d6: (v) => [v[0], v[2], -v[1]],
-  d8: (v) => [v[0], v[2], -v[1]],
-  d10: (v) => [v[0], v[2], -v[1]],
-  d12: (v) => [v[0], v[2], -v[1]],
-  d20: (v) => [v[0], v[2], -v[1]],
-}
-export const toModelFrame = (die: DieId, v: Vec3): Vec3 => MODEL_FIX[die](v)
 
 /** Кратчайший поворот вектора a в b (аналог THREE.Quaternion.setFromUnitVectors). */
 export const quatFromUnitVectors = (a: Vec3, b: Vec3): Quat => {
@@ -162,32 +151,21 @@ export const faceIndexForValue = (die: DieId, value: number): number => {
 }
 
 /**
- * Кватернион: грань со значением value смотрит прямо в dirWorld (направление
- * на камеру), верх цифры — строго вверх экрана (без вырожденных случаев:
- * верх цифры всегда ⊥ нормали грани).
+ * Кватернион: грань со значением value лежит строго горизонтально (нормаль в +Y,
+ * как у настоящей лежащей кости), верх цифры — от зрителя (читается со своей
+ * стороны). viewDir нужен только для разворота цифры правильной стороной.
  */
-export const quatForValueToCamera = (
-  die: Exclude<DieId, 'd4'>,
-  value: number,
-  dirWorld: Vec3,
-  screenUp: Vec3 = [0, 1, 0],
-): Quat => {
+export const quatForValueUp = (die: Exclude<DieId, 'd4'>, value: number, viewDir: Vec3): Quat => {
   const fi = faceIndexForValue(die, value)
   const zL = normalize(toModelFrame(die, faceNormals(die)[fi]))
   const yL = normalize(toModelFrame(die, digitUp(die, fi)))
   const xL = normalize(cross(yL, zL))
-  const zW = normalize(dirWorld)
-  const candidates: Vec3[] = [screenUp, [0, 0, 1], [1, 0, 0]]
-  let yW: Vec3 = [0, 1, 0]
-  for (const c of candidates) {
-    const cn = normalize(c)
-    const d = dot(cn, zW)
-    const p: Vec3 = [cn[0] - zW[0] * d, cn[1] - zW[1] * d, cn[2] - zW[2] * d]
-    if (norm(p) > 1e-6) {
-      yW = normalize(p)
-      break
-    }
-  }
+  const zW: Vec3 = [0, 1, 0]
+  const vd = normalize(viewDir)
+  const upDot = dot(vd, zW)
+  let ch: Vec3 = [vd[0] - zW[0] * upDot, vd[1] - zW[1] * upDot, vd[2] - zW[2] * upDot]
+  if (norm(ch) < 1e-6) ch = [0, 0, 1]
+  const yW = normalize([-ch[0], -ch[1], -ch[2]])
   const xW = normalize(cross(yW, zW))
   return quatFromBases(xL, yL, zL, xW, yW, zW)
 }

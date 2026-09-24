@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { parseNotation } from '@/entities/dice-notation/notation'
 import { createWorldDriver, simulatePool, type PoolDriver } from './pool'
 import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
+import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
 
 /** Детерминированный драйвер: значения выдаются по очереди вызовов. */
 const stubDriver = (values: number[]): PoolDriver => {
@@ -85,10 +86,12 @@ describe('pool: d100 через RNG (до 2.5)', () => {
 describe('pool: живой физмир (интеграция, приёмка 2.2)', () => {
   it('Fireball 8d6: 8 значений, сумма сходится', async () => {
     const world = await createPhysicsWorld()
-    // В node нет rAF-цикла приложения — качаем мир вручную через интервал
-    const pump = setInterval(() => world.tick(), 0)
+    // В node нет rAF-цикла приложения — качаем мир синхронно (быстро, без таймеров)
     try {
-      const result = await simulatePool(parseNotation('8d6'), createWorldDriver(world), '8d6')
+      const result = await pumpUntilSettled(
+        world,
+        simulatePool(parseNotation('8d6'), createWorldDriver(world), '8d6'),
+      )
       expect(result.parts).toHaveLength(8)
       expect(result.parts.every((p) => p.kept)).toBe(true)
       for (const p of result.parts) {
@@ -97,7 +100,6 @@ describe('pool: живой физмир (интеграция, приёмка 2.
       }
       expect(result.total).toBe(result.parts.reduce((s, p) => s + p.value, 0))
     } finally {
-      clearInterval(pump)
       world.dispose()
     }
   }, 60000)

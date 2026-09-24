@@ -4,7 +4,7 @@
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import { getHistoryStore } from '@/entities/roll-history/history'
 import { showResult } from '@/shared/ui/result-pop'
-import { createPhysicsWorld, type PhysicsWorld } from './physics'
+import { createPhysicsWorld, type PhysicsWorld, type StepCallback } from './physics'
 import { createRollStore, type RollResult } from './roll-store'
 import { playThock, startRattle, stopRattle } from './sound'
 
@@ -23,11 +23,32 @@ export const tickRolls = (): void => {
   }
 }
 
-export const quickRoll = (die: DieId, opts?: { silent?: boolean }): Promise<RollResult> => {
+export const quickRoll = (
+  die: DieId,
+  opts?: {
+    silent?: boolean
+    power?: number
+    onStep?: StepCallback
+    onCollide?: (intensity: number) => void
+    spawnPos?: [number, number, number]
+    spawnQuat?: [number, number, number, number]
+    fling?: { x: number; z: number }
+    area?: number
+  },
+): Promise<RollResult> => {
   const silent = opts?.silent ?? false
+  const power = opts?.power ?? 1
   const run = async (): Promise<RollResult> => {
     const store = createRollStore({
-      roll: async (d) => (await getWorld()).roll(d),
+      roll: async (d) =>
+        (await getWorld()).roll(d, {
+          power,
+          onStep: opts?.onStep,
+          onCollide: opts?.onCollide,
+          area: opts?.area,
+          fling: opts?.fling,
+          spawn: opts?.spawnPos ? { pos: opts.spawnPos, quat: opts.spawnQuat } : undefined,
+        }),
     })
     if (!silent) startRattle()
     try {

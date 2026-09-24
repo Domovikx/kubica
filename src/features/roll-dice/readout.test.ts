@@ -3,6 +3,7 @@ import {
   faceNormals,
   faceValue,
   normalizedVerts,
+  toModelFrame,
   vertexValue,
   type DieId,
 } from '@/entities/dice-geometry/geometry'
@@ -10,8 +11,15 @@ import { displayValue, readRoll, topFaceIndex, topVertexIndex, type Quat } from 
 
 const IDENTITY: Quat = [0, 0, 0, 1]
 
+// Тестовая сторона — тоже кадр модели (как глаз и физика): сравниваем readout
+// с MODEL-нормалями, иначе тест проверяет CAD-враки вместо истины.
+const modelNormals = (die: DieId): Array<[number, number, number]> =>
+  faceNormals(die).map((n) => toModelFrame(die, n))
+const modelVerts = (): Array<[number, number, number]> =>
+  normalizedVerts('d4').map((v) => toModelFrame('d4', v))
+
 const maxYNormals = (die: DieId): number => {
-  const normals = faceNormals(die)
+  const normals = modelNormals(die)
   let best = 0
   let bestY = -Infinity
   normals.forEach((n, fi) => {
@@ -46,7 +54,7 @@ describe('readout: верхняя грань/вершина', () => {
       return [axis[0] * s, axis[1] * s, axis[2] * s, Math.cos(half)]
     }
     for (const die of ['d6', 'd8', 'd12', 'd20'] as DieId[]) {
-      const normals = faceNormals(die)
+      const normals = modelNormals(die)
       const seen = new Set<number>()
       normals.forEach((n, fi) => {
         expect(topFaceIndex(die, quatToUp(n))).toBe(fi)
@@ -72,7 +80,7 @@ describe('readout: верхняя грань/вершина', () => {
   })
 
   it('d4: верхняя вершина identity — вершина с макс. Y', () => {
-    const verts = normalizedVerts('d4')
+    const verts = modelVerts()
     let best = 0
     let bestY = -Infinity
     verts.forEach((v, vi) => {

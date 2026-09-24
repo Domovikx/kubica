@@ -125,7 +125,7 @@ export const stopRattle = (): void => {
 }
 
 /** Глухой «ток» остановки кости. pitch зависит от размера (d20 ниже d6). */
-export const playThock = (die: string): void => {
+export const playThock = (die: string, gain = 0.35): void => {
   if (isMuted()) return
   const ac = ensureCtx()
   if (!ac) return
@@ -133,10 +133,10 @@ export const playThock = (die: string): void => {
   const osc = ac.createOscillator()
   osc.type = 'sine'
   osc.frequency.value = base
-  const gain = ac.createGain()
-  gain.gain.setValueAtTime(0.35, ac.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18)
-  osc.connect(gain).connect(ac.destination)
+  const gainNode = ac.createGain()
+  gainNode.gain.setValueAtTime(gain, ac.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18)
+  osc.connect(gainNode).connect(ac.destination)
   osc.start()
   osc.stop(ac.currentTime + 0.2)
 }
