@@ -123,9 +123,6 @@ export const tickPoolWorld = (): void => {
   }
 }
 
-const breakdown = (result: PoolResult): string =>
-  result.parts.map((p) => (p.kept ? p.display : `(${p.display})`)).join(' ')
-
 /** Бросок пула: общий ленивый физмир + очередь (как quickRoll для одиночных). */
 export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> => {
   const run = async (): Promise<PoolResult> => {
@@ -147,7 +144,7 @@ export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> =>
         label: result.label,
         parts: result.parts,
       })
-      showResult(result.label, String(result.total), breakdown(result))
+      showResult(result.label, String(result.total), undefined, result.parts)
       return result
     } finally {
       stopRattle()

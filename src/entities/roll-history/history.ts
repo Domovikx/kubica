@@ -20,6 +20,14 @@ export interface PoolPart {
   kept: boolean
 }
 
+/**
+ * Текстовая разбивка пула (pure, без DOM): по строке на часть.
+ * Удержанная — как есть, сброшенная — в скобках: `[7, 19]` → `['(7)', '19']`.
+ * Визуальное приглушение — классами в виджетах; скринридеру — через aria.
+ */
+export const formatParts = (parts: readonly PoolPart[]): string[] =>
+  parts.map((p) => (p.kept ? p.display : `(${p.display})`))
+
 export interface HistoryEntry {
   die: DieId
   value: number

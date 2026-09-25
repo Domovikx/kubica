@@ -1,4 +1,4 @@
-import { getHistoryStore, type HistoryEntry } from '@/entities/roll-history/history'
+import { formatParts, getHistoryStore, type HistoryEntry } from '@/entities/roll-history/history'
 import { parseNotation } from '@/entities/dice-notation/notation'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
 import { rollPool } from '@/features/dice-pool/pool'
@@ -67,6 +67,20 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
         ? `${entry.label} · ${fmtTime(entry.at)}`
         : `${entry.die} · ${fmtTime(entry.at)}`
       main.append(value, meta)
+      // Разбивка пула 2.3: части текстом (скобки = сброшена) + классы kept/drop.
+      // Реролл — тем же выражением пула (label), одиночка — одиночкой (ниже).
+      if (entry.parts && entry.parts.length > 0) {
+        const parts = document.createElement('span')
+        parts.className = 'historyParts'
+        const texts = formatParts(entry.parts)
+        entry.parts.forEach((p, i) => {
+          const s = document.createElement('span')
+          s.className = p.kept ? 'partKept' : 'partDrop'
+          s.textContent = texts[i]
+          parts.appendChild(s)
+        })
+        main.appendChild(parts)
+      }
       main.disabled = pending.has(`${entry.at}:${i}`)
       main.addEventListener('click', () => {
         const key = `${entry.at}:${i}`

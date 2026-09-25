@@ -40,12 +40,18 @@ export interface Viewer {
    */
   settleTo: (q: readonly [number, number, number, number], onDone?: () => void) => void
   /**
-   * Презентация результата: медленный доворот на месте к грани (≤0.6 с,
-   * ease-in-out, без хопа и слайдов). Только yaw-эстетика «верх цифры от зрителя» —
-   * поза и время остановки уже дала физика. Пропускать при !settled (cocked —
-   * честно оставляем как легло).
+   * Презентация результата: медленный доворот на месте (никакой физики внутри).
+   * Плоскую — строго вокруг Y (плоская не наклоняется ни на градус, ≤0.55 с);
+   * наклонённую (lay-flat после tilt-guard сетки, full=true) — полным slerp
+   * к плоской цели короткой дугой, медленно (durMs ~0.9 с), чтобы читалось
+   * осознанной укладкой дилера, а не рывком.
    */
-  presentResult: (q: readonly [number, number, number, number], onDone?: () => void) => void
+  presentResult: (
+    q: readonly [number, number, number, number],
+    onDone?: () => void,
+    durMs?: number,
+    full?: boolean,
+  ) => void
   /** Луч в кость по клиентским координатам: тап мимо кости — не бросок. */
   pickDie: (clientX: number, clientY: number) => boolean
   /** Текущая поза модели (для бесшовного спавна нового броска оттуда где лежит). */
@@ -275,9 +281,14 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
   const raycaster = new THREE.Raycaster()
 
   // Презентация результата: медленный доворот на месте (никакой физики внутри).
+  // full=false: чистый yaw (плоская не наклоняется); full=true: полный slerp
+  // короткой дугой (lay-flat наклонённой к плоской цели).
   let present: {
     from: THREE.Quaternion
     deltaYaw: number
+    to: THREE.Quaternion
+    full: boolean
+    baseY: number
     onDone: (() => void) | null
     t: number
     dur: number
@@ -293,6 +304,8 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
   const presentResult = (
     q: readonly [number, number, number, number],
     onDone?: () => void,
+    durMs = 550,
+    full = false,
   ): void => {
     if (!current || disposed) return
     const to = new THREE.Quaternion(q[0], q[1], q[2], q[3]).normalize()
@@ -311,9 +324,12 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     present = {
       from: current.quaternion.clone(),
       deltaYaw,
+      to,
+      full,
+      baseY: current.position.y,
       onDone: onDone ?? null,
       t: 0,
-      dur: 0.55,
+      dur: Math.max(0.2, durMs / 1000),
     }
   }
 
@@ -587,15 +603,21 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
         const liftY = grab.base.y + unitSize * 0.25
         current.position.y += (liftY - current.position.y) * Math.min(1, dt * 8)
       }
-      // Презентация результата: медленный доворот на месте строго вокруг Y,
-      // ease-in-out. Поза и момент остановки — от физики; это только yaw-эстетика,
-      // плоская не наклоняется ни на градус.
+      // Презентация результата: медленный доворот на месте, ease-in-out.
+      // Поза и момент остановки — от физики; yaw — эстетика, lay-flat (full) —
+      // осознанная укладка наклонённой плашмя. Плоская не наклоняется ни на градус.
       if (present) {
         present.t += dt
         const k = Math.min(1, present.t / present.dur)
         const e = k * k * (3 - 2 * k)
-        tmpQ.setFromAxisAngle(UP_Y, present.deltaYaw * e)
-        current.quaternion.copy(tmpQ.multiply(present.from))
+        if (present.full) {
+          current.quaternion.slerpQuaternions(present.from, present.to, e)
+          // Чуть приподнимаем в середине укладки: углы не скребут фетр
+          current.position.y = present.baseY + unitSize * 0.06 * Math.sin(Math.PI * Math.min(1, k))
+        } else {
+          tmpQ.setFromAxisAngle(UP_Y, present.deltaYaw * e)
+          current.quaternion.copy(tmpQ.multiply(present.from))
+        }
         if (k >= 1) {
           const done = present.onDone
           present = null

@@ -12,6 +12,7 @@ import {
   type Selection,
 } from '@/features/select-model/select-model'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
+import { snapFlat } from '@/features/roll-dice/physics'
 import {
   applyQuatToVec,
   faceIndexForValue,
@@ -324,8 +325,11 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
               ? quatForD4VertexUp(result.value, viewer.getViewDir())
               : quatForValueUp(die, result.value, viewer.getViewDir())
           // Доворот — только почти-плоской: меряем НАКЛОН (не полный угол —
-          // yaw всегда большой, это и правит презентация). Наклонённую трогать
-          // нельзя: был бы магнит-рывок.
+          // yaw всегда большой, это и правит презентация). Наклонённую КЛАДЁМ
+          // плашмя осознанно и медленно (lay-flat, двумя фазами: сначала
+          // ближайшая плоская, затем yaw цифры) — граничные кейсы (ребро,
+          // борт) больше не создают спорных ситуаций. Значение при этом
+          // не меняется: грань-лидер остаётся верхней.
           const upRaw: readonly [number, number, number] =
             die === 'd4'
               ? normalizedVerts('d4')[result.value - 1]
@@ -335,13 +339,42 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
             result.quat as Quat,
           )
           const upLen = Math.hypot(upWorld[0], upWorld[1], upWorld[2]) || 1
-          if (Math.acos(Math.min(1, upWorld[1] / upLen)) > 0.06) {
-            rolling = false
+          const tilt = Math.acos(Math.min(1, Math.max(-1, upWorld[1] / upLen)))
+          if (tilt < 0.035) {
+            viewer.presentResult(target, () => {
+              rolling = false
+            })
             return
           }
-          viewer.presentResult(target, () => {
-            rolling = false
-          })
+          if (tilt < 0.26) {
+            // До 15°: сначала snap (та же грань ровно, без смены значения),
+            // затем yaw цифры. Короткие дуги, без размашистых замахов.
+            const snap = snapFlat(die, result.quat)
+            viewer.presentResult(
+              snap,
+              () =>
+                viewer.presentResult(
+                  target,
+                  () => {
+                    rolling = false
+                  },
+                  450,
+                ),
+              450,
+              true,
+            )
+            return
+          }
+          // Сильный наклон (у борта и т.п.): медленно кладём сразу на грань
+          // значения — долго (0.9 с), зато однозначно.
+          viewer.presentResult(
+            target,
+            () => {
+              rolling = false
+            },
+            900,
+            true,
+          )
         })
         .catch(() => {
           stopRattle()

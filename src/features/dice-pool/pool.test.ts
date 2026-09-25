@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseNotation } from '@/entities/dice-notation/notation'
+import { formatParts } from '@/entities/roll-history/history'
 import { createWorldDriver, simulatePool, type PoolDriver } from './pool'
 import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
 import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
@@ -22,6 +23,17 @@ describe('pool: keep/drop и сумма', () => {
     expect(result.parts).toHaveLength(2)
     expect(result.parts.map((p) => p.kept)).toEqual([false, true])
     expect(result.label).toBe('2d20kh1')
+  })
+
+  it('приёмка 2.3: advantage [7, 19] → поп «19 [(7) 19]», 7 сброшена', async () => {
+    const result = await simulatePool(parseNotation('2d20kh1'), stubDriver([7, 19]))
+    expect(result.total).toBe(19)
+    expect(result.parts.map((p) => [p.display, p.kept])).toEqual([
+      ['7', false],
+      ['19', true],
+    ])
+    // Текстовая строка попа: сумма + разбивка (визуально 7 приглушена классом)
+    expect(`${result.total} [${formatParts(result.parts).join(' ')}]`).toBe('19 [(7) 19]')
   })
 
   it('4d6dl1 суммирует без минимума', async () => {
