@@ -24,7 +24,7 @@ bsdf.inputs['Roughness'].default_value = 0.35
 pips = bpy.data.materials.new('D6_pips')
 pips.use_nodes = True
 bsdf2 = pips.node_tree.nodes['Principled BSDF']
-bsdf2.inputs['Base Color'].default_value = (0.937, 0.192, 0.141, 1.0)
+bsdf2.inputs['Base Color'].default_value = (1.0, 1.0, 1.0, 1.0)
 bsdf2.inputs['Roughness'].default_value = 0.3
 
 obj.data.materials.append(body)

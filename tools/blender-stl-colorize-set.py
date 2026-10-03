@@ -7,7 +7,7 @@ from mathutils import Vector
 
 # Использование: blender --background --python blender-stl-colorize-set.py -- STL OUT DIE
 # DIE: d4|d6|d8|d10|d12|d20
-# Красит грани-впадины (пипсы/цифры) красным, тело — тёмным графитом.
+# Красит грани-впадины (пипсы/цифры) белым, тело — тёмным графитом.
 # Определение: грань принадлежит пипсу, если её центр лежит на поверхности
 # сферы-пипса (расстояние до центра пипса ≈ PIP_R). Тело так не бывает:
 # плоские грани на расстоянии 0.6 от центра пипса (не 1.4).
@@ -187,7 +187,7 @@ def digit_boxes(die):
                 out.append((pos, nv, bu, bv, 4.5, vi + 1))
     else:
         # d6/d8/d10/d12/d20: цифра в центре грани, "вверх" = к первой вершине
-        sizes = {'d6': 4.0, 'd8': 3.2, 'd10': 3.0, 'd12': 3.5, 'd20': 2.0}
+        sizes = {'d6': 6.0, 'd8': 3.84, 'd10': 4.5, 'd12': 4.2, 'd20': 3.8}
         size = sizes[die]
         for fi in range(n):
             c = centroid(v, f[fi])
@@ -222,7 +222,7 @@ bsdf.inputs['Roughness'].default_value = 0.35
 pips = bpy.data.materials.new('D_pips')
 pips.use_nodes = True
 bsdf2 = pips.node_tree.nodes['Principled BSDF']
-bsdf2.inputs['Base Color'].default_value = (0.937, 0.192, 0.141, 1.0)
+bsdf2.inputs['Base Color'].default_value = (1.0, 1.0, 1.0, 1.0)
 bsdf2.inputs['Roughness'].default_value = 0.3
 
 obj.data.materials.append(body)
@@ -248,7 +248,7 @@ s = DIE_SIZES[DIE] / 2 - EDGE_R
 for face in bm.faces:
     c = sum((v.co for v in face.verts), Vector()) / len(face.verts)
     if is_digit_die:
-        # цифры: грань красная, если её центр внутри бокса какой-либо
+        # цифры: грань белая, если её центр внутри бокса какой-либо
         # цифры (в плоскости грани, в пределах глифа) и утоплен ниже плоскости грани.
         # pos/nv/bu/bv — в нормированных координатах (inradius=1), масштаб = s.
         # Двузначные числа шире: half_u с запасом; подчёркивание 6/9 уходит ниже.

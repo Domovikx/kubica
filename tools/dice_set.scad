@@ -180,11 +180,11 @@ TEXT_FN = 64;
 // Для FDM-печати нужен минимум 0.4–0.5 мм (иначе заплывает) — вернуть DIGIT_DEPTH = 0.5.
 DIGIT_DEPTH = 0.1;
 DIGIT_SIZE_D4 = 4.5;
-DIGIT_SIZE_D6 = 4.0;
-DIGIT_SIZE_D8 = 3.2;
-DIGIT_SIZE_D10 = 3.0;
-DIGIT_SIZE_D12 = 3.5;
-DIGIT_SIZE_D20 = 2.0;
+DIGIT_SIZE_D6 = 6.0;
+DIGIT_SIZE_D8 = 3.84;
+DIGIT_SIZE_D10 = 4.5;
+DIGIT_SIZE_D12 = 4.2;
+DIGIT_SIZE_D20 = 3.8;
 
 function digit_size(die) =
   die == "d4" ? DIGIT_SIZE_D4
