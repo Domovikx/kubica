@@ -1,0 +1,627 @@
+/* Мобайл-фёрст стол (?m=1, макет F): поле главное, дока нет. */
+body[data-mode='mtable'] .sidebar,
+body[data-mode='mtable'] .topbar,
+body[data-mode='mtable'] .bottombar {
+  display: none;
+}
+
+/*
+ * Тело зафиксировано: фокус на инпуте шторки (формула/имя сета) иначе
+ * скроллит документ вбок через scrollIntoView — вёрстка «уезжает» влево.
+ * Экрану скролл не нужен (поле на весь экран, списки скроллятся внутри).
+ */
+body[data-mode='mtable'] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+body[data-mode='mtable'] .viewers {
+  /* Блочная колонка во весь экран: базовый grid с авто-строкой схлопывал
+     .mtable до высоты контента (558 вместо 900) — камера считалась криво. */
+  display: block;
+  margin-left: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/*
+ * Ничто не скроллит колонку: фокус на инпуте шторки программно крутил
+ * scrollLeft у #viewers (вбок на ~118px — та самая «кривизна»).
+ * clip (а не hidden) запрещает и программный скролл; списки внутри
+ * (шторка, чипы, меню) скроллятся сами.
+ */
+body[data-mode='mtable'] .viewers,
+body[data-mode='mtable'] .mtable {
+  overflow: hidden;
+  overflow: clip;
+  overscroll-behavior: none;
+}
+
+/* Поп не нужен: итог визуально нигде (SR — .mtableLive), история — в меню. */
+body[data-mode='mtable'] .result {
+  display: none;
+}
+
+/* Экстремумы разбивки в истории: 1 — провал грани, макс — золото. */
+.mtableHrow .partMin {
+  color: #ff8a7a;
+  font-weight: 800;
+}
+
+.mtableHrow .partMax {
+  color: #ffd166;
+  font-weight: 800;
+}
+
+.mtable {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.mtableCanvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Жесты поля (тап/вращение кости) — скроллить тут нечего (поле на весь экран). */
+  touch-action: none;
+  cursor: grab;
+}
+
+.mtableCanvas:active {
+  cursor: grabbing;
+}
+
+.mtableHead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+}
+
+.mtableTitle {
+  font-size: 16px;
+  font-weight: 800;
+  flex: 1;
+}
+
+.mtableIcon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #f0f2f5;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mtableIcon:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mtableIcon:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mtableIcon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+/* Чипы пресетов — теперь в меню-бургере (секция «Пресеты», обёртка .mtableSets). */
+.mtableChip {
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #1d2026;
+  color: #f0f2f5;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mtableChip:hover {
+  background: #242832;
+}
+
+.mtableChip.on {
+  background: #ef3124;
+  color: #fff;
+}
+
+.mtableHredo {
+  color: #9aa0aa;
+  font-size: 15px;
+  margin-left: 2px;
+}
+
+.mtableToast {
+  position: absolute;
+  /* Низ свободен (кнопок нет): тост — у самого низа поля. */
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(20, 22, 26, 0.94);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mtableToast[hidden] {
+  display: none;
+}
+
+/* Хинт-статус по центру: пусто — кнопка без chrome, грузится — disabled. */
+button.mtableHint {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.mtableHint:disabled {
+  cursor: default;
+}
+
+.mtableWide + .mtableWide {
+  margin-top: 8px;
+}
+
+/* Бесшовный фон: колонка растворяется в странице (никакого letterbox). */
+body[data-mode='mtable'] {
+  background: #0a0b0e;
+}
+
+/* Десктоп: колонка во всю ширину — никакого «телефона на столе»,
+   низ остаётся центрированной полосой. */
+@media (min-width: 1024px) {
+  .mtable {
+    max-width: none;
+  }
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Хинт-статус по центру: пусто — кнопка без chrome, грузится — disabled. */
+.mtableHint {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  margin: 0;
+  padding: 0 24px;
+  color: #9aa0aa;
+  font-size: 15px;
+  text-align: center;
+}
+
+/* Итог броска — только для скринридера (невидим, но озвучивается). */
+.mtableLive {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Кнопка набора в шапке: текст «2d4 d12» / «+ Кости» (сумма броска — на бургере). */
+.mtableAdd {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 0 10px;
+}
+
+/* Сумма броска на бургере: крупный шрифт (читается без очков). */
+.mtableBurger {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.mtableBackdrop {
+  position: absolute;
+  inset: 0;
+  /* Выше глобального .result-попа (z-index 10), иначе поп висит над меню. */
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* display:flex в классах ниже перебивает UA-стиль [hidden] — возвращаем. */
+.mtableSheet[hidden],
+.mtableDrawer[hidden],
+.mtablePresets[hidden],
+.mtableBackdrop[hidden] {
+  display: none;
+}
+
+.mtableSheet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 21;
+  width: min(360px, 92%);
+  display: flex;
+  flex-direction: column;
+  background: #121419;
+  border-right: 1px solid #2a2e36;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Панель пресетов — тот же левый слайд, что и шторка/дровер. */
+.mtablePresets {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 21;
+  width: min(360px, 92%);
+  display: flex;
+  flex-direction: column;
+  background: #121419;
+  border-right: 1px solid #2a2e36;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* На телефонах/узких экранах боковые меню — во всю ширину (боковой зазор не нужен). */
+@media (max-width: 600px) {
+  .mtableDrawer,
+  .mtableSheet,
+  .mtablePresets {
+    width: 100%;
+    border-right: none;
+  }
+}
+
+.mtableSheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 6px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mtableSheetHead > span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mtableRows {
+  overflow-y: auto;
+}
+
+.mtableRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #1d2026;
+}
+
+.mtableRow.on .mtableGlyph {
+  color: #ef3124;
+}
+
+.mtableGlyph {
+  display: flex;
+  width: 34px;
+  justify-content: center;
+  color: #c9cdd4;
+  flex-shrink: 0;
+}
+
+.mtableName {
+  font-weight: 800;
+  width: 40px;
+}
+
+.mtableDesc {
+  font-size: 12px;
+  color: #9aa0aa;
+  flex: 1;
+}
+
+.mtableStep {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: #22262e;
+  color: #f0f2f5;
+  font-size: 20px;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mtableStep:hover {
+  background: #2a2f38;
+}
+
+.mtableStep:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.mtableN {
+  font-weight: 800;
+  min-width: 28px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.mtableFormulaRow {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px 4px;
+}
+
+.mtableFormula {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background: #1d2026;
+  color: #f0f2f5;
+  font-family: inherit;
+  /* 16px: iOS Safari не включает авто-зум на фокусе (тот тоже «кривит» UI). */
+  font-size: 16px;
+  min-width: 0;
+}
+
+.mtableOk {
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: #ef3124;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mtableOk:disabled {
+  opacity: 0.45;
+}
+
+.mtableDrawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 21;
+  width: min(340px, 88%);
+  display: flex;
+  flex-direction: column;
+  background: #121419;
+  border-right: 1px solid #2a2e36;
+}
+
+.mtableDrawerBody {
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Тонкий кастомный скролл в меню и шторке (нативный ползунок широкий и яркий). */
+.mtableDrawerBody,
+.mtableRows {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3f49 transparent;
+}
+
+.mtableDrawerBody::-webkit-scrollbar,
+.mtableRows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mtableDrawerBody::-webkit-scrollbar-thumb,
+.mtableRows::-webkit-scrollbar-thumb {
+  background: #3a3f49;
+  border-radius: 999px;
+}
+
+.mtableDrawerBody::-webkit-scrollbar-track,
+.mtableRows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mtableSection {
+  padding: 6px 14px 14px;
+  border-bottom: 1px solid #1d2026;
+}
+
+.mtableSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.mtableSectionTitle {
+  display: block;
+  padding: 8px 0;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.mtableLink {
+  border: none;
+  background: transparent;
+  color: #9aa0aa;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mtableLink:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.mtableHist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mtableEmpty {
+  color: #9aa0aa;
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.mtableHrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: #1d2026;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 9px 12px;
+  color: #f0f2f5;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mtableHv {
+  color: #ef3124;
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.mtableHmeta {
+  color: #9aa0aa;
+  font-size: 12px;
+}
+
+.mtableHp {
+  margin-left: auto;
+  color: #9aa0aa;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+
+.mtableSets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mtableSetChip {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #1d2026;
+}
+
+.mtableSetLabel {
+  border: none;
+  background: transparent;
+  color: #f0f2f5;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 4px 8px 12px;
+  cursor: pointer;
+}
+
+.mtableSetX {
+  border: none;
+  background: transparent;
+  color: #9aa0aa;
+  font-size: 16px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.mtableWide {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  background: #1d2026;
+  color: #f0f2f5;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mtableWide:hover {
+  background: #242832;
+}
+
+.mtableWide svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* Выбранный режим силы броска — плоский акцент. */
+.mtableWide.on {
+  background: #ef3124;
+  color: #fff;
+}
+
+.mtableAbout {
+  font-size: 13px;
+  color: #9aa0aa;
+  margin: 0;
+  line-height: 1.5;
+}
