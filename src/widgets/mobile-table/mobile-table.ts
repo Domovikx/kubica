@@ -646,9 +646,17 @@ export const mountMobileTable = (
   const refreshChrome = (counts: TableCounts) => {
     const total = totalCount(counts)
     const phase = syncPhase(total)
-    // На бургере — сумма последнего броска (не считать в уме); броска нет — ≡.
-    if (lastResult) burger.textContent = String(lastResult.total)
-    else burger.innerHTML = menuIcon()
+    // На бургере — сумма последнего броска; пока кости летят — лоадер (не кнопка).
+    if (rolling) {
+      burger.innerHTML = '<span class="mtableSpin"></span>'
+      burger.disabled = true
+      burger.setAttribute('aria-busy', 'true')
+    } else {
+      burger.disabled = false
+      burger.removeAttribute('aria-busy')
+      if (lastResult) burger.textContent = String(lastResult.total)
+      else burger.innerHTML = menuIcon()
+    }
     const short = shortSet(counts)
     diceBtn.textContent = total > 0 ? short : '+ Кости'
     diceBtn.setAttribute('aria-label', total > 0 ? `Выбор костей: ${short}` : 'Выбор костей')

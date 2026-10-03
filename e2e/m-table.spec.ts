@@ -59,10 +59,15 @@ test('пара d4+d6: тап по кости бросает, история ра
       { timeout: 5000 },
     )
     .catch(() => undefined)
+  // Пока кости летят — на бургере лоадер (disabled), не кнопка меню/суммы.
+  if ((await page.locator('.mtable').getAttribute('data-phase')) === 'rolling') {
+    await expect(page.locator('.mtableBurger .mtableSpin')).toHaveCount(1)
+    await expect(page.locator('.mtableBurger')).toBeDisabled()
+  }
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'ready', { timeout: 90000 })
-  // История — строками в меню-бургере (drawer скрыт, но в DOM).
+  // После броска бургер снова кнопка с суммой (лоадер убран).
+  await expect(page.locator('.mtableBurger .mtableSpin')).toHaveCount(0)
   await expect(page.locator('.mtableHrow')).toHaveCount(1)
-  // После броска бургер показывает сумму (не надо считать в уме).
   await expect(page.locator('.mtableIcon[aria-label="Меню"]')).toHaveText(/^\d+$/)
   // Итог визуально нигде — но скринридер его озвучил («d4 d6: 5 · 3 2»).
   await expect(page.locator('.mtableLive')).toHaveText(/^.+: \d+/)

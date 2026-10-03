@@ -94,6 +94,7 @@ body[data-mode='mtable'] .result {
   font-size: 16px;
   font-weight: 800;
   flex: 1;
+  text-align: right;
 }
 
 .mtableIcon {
@@ -249,6 +250,30 @@ input:focus-visible {
 .mtableBurger {
   font-size: 20px;
   font-weight: 800;
+}
+
+/* Пока кости летят — на бургере лоадер вместо кнопки меню/суммы. */
+.mtableSpin {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(240, 242, 245, 0.25);
+  border-top-color: #ef3124;
+  border-radius: 50%;
+  animation: mtableSpin 0.7s linear infinite;
+}
+
+@keyframes mtableSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mtableIcon:disabled {
+  cursor: default;
+}
+
+.mtableIcon:disabled:hover {
+  background: transparent;
 }
 
 .mtableBackdrop {
