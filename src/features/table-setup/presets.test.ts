@@ -3,8 +3,11 @@ import {
   BUILT_IN_PRESETS,
   deleteCustomPreset,
   formulaToCounts,
+  hideBuiltIn,
   loadCustomPresets,
+  loadHiddenBuiltIns,
   saveCustomPreset,
+  uniquePresetName,
 } from './presets'
 import { emptyCounts, totalCount } from './table-setup'
 
@@ -46,5 +49,20 @@ describe('table presets', () => {
     expect(loadCustomPresets(s).length).toBe(2)
     deleteCustomPreset('Моя пачка', s)
     expect(loadCustomPresets(s).map((p) => p.name)).toEqual(['Вторая'])
+  })
+
+  it('скрытые встроенные: hide/load, без дублей', () => {
+    const s = memStorage()
+    expect(loadHiddenBuiltIns(s)).toEqual([])
+    hideBuiltIn('d100', s)
+    hideBuiltIn('d100', s)
+    hideBuiltIn('Атака d20 d6', s)
+    expect(loadHiddenBuiltIns(s)).toEqual(['d100', 'Атака d20 d6'])
+  })
+
+  it('uniquePresetName: первое свободное «Сет N»', () => {
+    expect(uniquePresetName([])).toBe('Сет 1')
+    expect(uniquePresetName([{ name: 'Сет 1' }])).toBe('Сет 2')
+    expect(uniquePresetName([{ name: 'Сет 1' }, { name: 'Сет 3' }])).toBe('Сет 2')
   })
 })

@@ -30,6 +30,7 @@ export const BUILT_IN_PRESETS: readonly TablePreset[] = [
 ]
 
 const CUSTOM_KEY = 'kubica-presets-v1'
+const HIDDEN_KEY = 'kubica-presets-hidden-v1'
 const MAX_CUSTOM = 12
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -120,4 +121,43 @@ export const deleteCustomPreset = (name: string, storage?: StorageLike): TablePr
     // ignore
   }
   return list
+}
+
+/** Встроенные, которые пользователь удалил удержанием (переживают reload). */
+export const loadHiddenBuiltIns = (storage?: StorageLike): string[] => {
+  const store = storage ?? memFallback()
+  try {
+    const raw = store?.getItem(HIDDEN_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((n): n is string => typeof n === 'string' && !!n.trim())
+      .map((n) => n.trim().slice(0, 24))
+      .slice(0, 24)
+  } catch {
+    return []
+  }
+}
+
+export const hideBuiltIn = (name: string, storage?: StorageLike): string[] => {
+  const store = storage ?? memFallback()
+  const list = loadHiddenBuiltIns(store)
+  const clean = name.trim().slice(0, 24)
+  if (!clean || list.includes(clean)) return list
+  const next = [...list, clean]
+  try {
+    store?.setItem(HIDDEN_KEY, JSON.stringify(next))
+  } catch {
+    // ignore
+  }
+  return next
+}
+
+/** Свободное имя для нового сета: «Сет 1», «Сет 2», … (первое не занятое). */
+export const uniquePresetName = (existing: readonly { name: string }[]): string => {
+  const names = new Set(existing.map((p) => p.name))
+  let i = 1
+  while (names.has(`Сет ${i}`)) i += 1
+  return `Сет ${i}`
 }
