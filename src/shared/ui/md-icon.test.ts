@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { closeIcon, menuIcon, presetsIcon, soundIcon, vibrationIcon } from './md-icon'
+import { clearAllIcon, closeIcon, menuIcon, presetsIcon, soundIcon, vibrationIcon } from './md-icon'
 
 describe('md-icon', () => {
   it('звук вкл/выкл — разные path, currentColor', () => {
@@ -26,5 +26,10 @@ describe('md-icon', () => {
   it('пресеты — валидный svg', () => {
     expect(presetsIcon()).toContain('<svg')
     expect(presetsIcon()).not.toBe(menuIcon())
+  })
+
+  it('убрать всё — валидный svg, не крестик', () => {
+    expect(clearAllIcon()).toContain('<svg')
+    expect(clearAllIcon()).not.toBe(closeIcon())
   })
 })

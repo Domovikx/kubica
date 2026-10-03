@@ -373,6 +373,11 @@ input:focus-visible {
   background: transparent;
 }
 
+/* «Убрать все» — иконка в шапке шторки; тускнеет, когда на столе пусто. */
+.mtableSheetClear:disabled {
+  opacity: 0.3;
+}
+
 .mtableBackdrop {
   position: absolute;
   inset: 0;

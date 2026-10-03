@@ -57,7 +57,7 @@ import {
   uniquePresetName,
 } from '@/features/table-setup/presets'
 import { createTable, type Table } from '@/shared/three/table'
-import { closeIcon, menuIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
+import { clearAllIcon, closeIcon, menuIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
 import { hideResult } from '@/shared/ui/result-pop'
 import { glassHalves, TABLE_HALF_X, TABLE_HALF_Z } from '@/shared/arena/arena'
@@ -193,9 +193,11 @@ export const mountMobileTable = (
   const sheetTitle = document.createElement('span')
   sheetTitle.textContent = 'Выбор костей'
   const sheetClear = document.createElement('button')
-  sheetClear.className = 'mtableLink'
+  sheetClear.className = 'mtableIcon mtableSheetClear'
   sheetClear.type = 'button'
-  sheetClear.textContent = 'Убрать все'
+  sheetClear.innerHTML = clearAllIcon()
+  sheetClear.title = 'Убрать все'
+  sheetClear.setAttribute('aria-label', 'Убрать все')
   sheetClear.addEventListener('click', () => {
     activeSet = null
     setup.clear()
