@@ -1,5 +1,5 @@
-// Мобайл-фёрст стол (?m=1, макет F): дока нет, шторка «+ Кости» с SVG-рядами,
-// бургер-меню (история/сеты/звук/инфо), поле — главное. Физика/стор — те же.
+// Мобайл-фёрст стол (?m=1, макет F): дока нет, шторка «+ Кости» (пресеты-глифы
+// + SVG-ряды степперов), бургер-меню (история/сила/звук/инфо), поле — главное.
 import { DIE_IDS, faceValue, physMaxDim, type DieId } from '@/entities/dice-geometry/geometry'
 import {
   formatLabel,
@@ -50,11 +50,14 @@ import {
 import {
   BUILT_IN_PRESETS,
   deleteCustomPreset,
+  hideBuiltIn,
   loadCustomPresets,
+  loadHiddenBuiltIns,
   saveCustomPreset,
+  uniquePresetName,
 } from '@/features/table-setup/presets'
 import { createTable, type Table } from '@/shared/three/table'
-import { closeIcon, menuIcon, presetsIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
+import { closeIcon, menuIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
 import { hideResult } from '@/shared/ui/result-pop'
 import { glassHalves, TABLE_HALF_X, TABLE_HALF_Z } from '@/shared/arena/arena'
@@ -127,18 +130,12 @@ export const mountMobileTable = (
   burger.type = 'button'
   burger.innerHTML = menuIcon()
   burger.setAttribute('aria-label', 'Меню')
-  // «+ Кости» — набор («2d4 d12»), пусто — «+ Кости»; сумма броска — на бургере;
-  // пресеты — отдельная кнопка (панель быстрого выбора).
+  // «+ Кости» — набор («2d4 d12»), пусто — «+ Кости»; сумма броска — на бургере.
   const diceBtn = document.createElement('button')
   diceBtn.className = 'mtableIcon mtableAdd'
   diceBtn.type = 'button'
   diceBtn.textContent = '+ Кости'
   diceBtn.setAttribute('aria-label', 'Выбор костей')
-  const presetsBtn = document.createElement('button')
-  presetsBtn.className = 'mtableIcon'
-  presetsBtn.type = 'button'
-  presetsBtn.innerHTML = presetsIcon()
-  presetsBtn.setAttribute('aria-label', 'Пресеты')
   const title = document.createElement('span')
   title.className = 'mtableTitle'
   title.textContent = 'Kubica'
@@ -156,8 +153,8 @@ export const mountMobileTable = (
     syncSound()
     syncDrawerSound()
   })
-  // Порядок в шапке: набор, пресеты, бургер (сумма), заголовок, звук.
-  head.append(diceBtn, presetsBtn, burger, title, soundBtn)
+  // Порядок в шапке: набор, бургер (сумма/лоадер), заголовок, звук.
+  head.append(diceBtn, burger, title, soundBtn)
 
   const applyCounts = (counts: TableCounts) => {
     setup.clear()
@@ -173,7 +170,7 @@ export const mountMobileTable = (
   const hint = document.createElement('button')
   hint.className = 'mtableHint'
   hint.type = 'button'
-  hint.textContent = 'Жми «+ Кости» или пресет — кости лягут на стол'
+  hint.textContent = 'Жми «+ Кости» — пресеты и выбор костей внутри'
   hint.hidden = true
   hint.addEventListener('click', () => openSheet())
 
@@ -199,7 +196,11 @@ export const mountMobileTable = (
   sheetClear.className = 'mtableLink'
   sheetClear.type = 'button'
   sheetClear.textContent = 'Убрать все'
-  sheetClear.addEventListener('click', () => setup.clear())
+  sheetClear.addEventListener('click', () => {
+    activeSet = null
+    setup.clear()
+    renderPresets()
+  })
   const sheetClose = document.createElement('button')
   sheetClose.className = 'mtableIcon'
   sheetClose.type = 'button'
@@ -207,7 +208,6 @@ export const mountMobileTable = (
   sheetClose.setAttribute('aria-label', 'Закрыть выбор костей')
   sheetHead.append(sheetTitle, sheetClear, sheetClose)
   const rows = document.createElement('div')
-  rows.className = 'mtableRows'
   const rowCounts = new Map<DieId, HTMLSpanElement>()
   const rowRoots = new Map<DieId, HTMLElement>()
   for (const die of DIE_IDS) {
@@ -242,7 +242,6 @@ export const mountMobileTable = (
     rowCounts.set(die, count)
     rowRoots.set(die, row)
   }
-  sheet.append(sheetHead, rows)
 
   // --- Бургер-меню ---
   const drawer = document.createElement('div')
@@ -294,50 +293,8 @@ export const mountMobileTable = (
   histList.className = 'mtableHist'
   histSection.append(histHead, histList)
 
-  // Пресеты (бывшая лента чипов над полем) — в меню: обёртка-пилюли,
-  // тап применяет набор и закрывает меню (кости сразу видно).
-  const preSection = document.createElement('div')
-  preSection.className = 'mtableSection'
-  const preTitle = document.createElement('span')
-  preTitle.className = 'mtableSectionTitle'
-  preTitle.textContent = 'Пресеты'
-  const preList = document.createElement('div')
-  preList.className = 'mtableSets'
-  const presetChips: Array<{ btn: HTMLButtonElement; counts: TableCounts }> = []
-  for (const p of BUILT_IN_PRESETS) {
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.className = 'mtableChip'
-    btn.textContent = p.name
-    btn.title = p.formula
-    btn.addEventListener('click', () => {
-      applyCounts(p.counts)
-      closeOverlays()
-    })
-    preList.appendChild(btn)
-    presetChips.push({ btn, counts: p.counts })
-  }
-  preSection.append(preTitle, preList)
-
-  const setSection = document.createElement('div')
-  setSection.className = 'mtableSection'
-  const setTitle = document.createElement('span')
-  setTitle.className = 'mtableSectionTitle'
-  setTitle.textContent = 'Мои сеты'
-  const saveRow = document.createElement('div')
-  saveRow.className = 'mtableFormulaRow'
-  const saveName = document.createElement('input')
-  saveName.className = 'mtableFormula'
-  saveName.type = 'text'
-  saveName.placeholder = 'Имя сета…'
-  saveName.maxLength = 24
-  saveName.setAttribute('aria-label', 'Имя своего набора')
-  const saveBtn = document.createElement('button')
-  saveBtn.className = 'mtableOk'
-  saveBtn.type = 'button'
-  saveBtn.textContent = '+ Сет'
-  const setList = document.createElement('div')
-  setList.className = 'mtableSets'
+  // --- Пресеты в шторке: сверху быстрые наборы, ниже свои; чипы — только
+  // состав костями (без подписей), тап применяет, удержание 3 с удаляет. ---
   const toast = document.createElement('div')
   toast.className = 'mtableToast'
   toast.hidden = true
@@ -351,68 +308,212 @@ export const mountMobileTable = (
     }, 2200)
   }
 
-  const renderSets = () => {
-    setList.innerHTML = ''
-    const customs = loadCustomPresets()
-    if (customs.length === 0) {
-      const empty = document.createElement('p')
-      empty.className = 'mtableEmpty'
-      empty.textContent = 'Пока нет — набери стол и сохрани выше'
-      setList.appendChild(empty)
-      return
-    }
-    for (const p of customs) {
-      const chip = document.createElement('span')
-      chip.className = 'mtableSetChip'
-      const label = document.createElement('button')
-      label.type = 'button'
-      label.className = 'mtableSetLabel'
-      label.textContent = p.name
-      label.addEventListener('click', () => {
-        applyCounts(p.counts)
-        closeOverlays()
-      })
-      const del = document.createElement('button')
-      del.type = 'button'
-      del.className = 'mtableSetX'
-      del.textContent = '×'
-      del.setAttribute('aria-label', `Удалить ${p.name}`)
-      del.addEventListener('click', () => {
-        deleteCustomPreset(p.name)
-        renderSets()
-      })
-      chip.append(label, del)
-      setList.appendChild(chip)
-    }
-  }
-  saveBtn.addEventListener('click', () => {
-    const name = saveName.value.trim() || `Сет ${loadCustomPresets().length + 1}`
-    saveCustomPreset(name, setup.get())
-    saveName.value = ''
-    renderSets()
-    showToast(`Сет «${name}» сохранён`)
-  })
-  saveRow.append(saveName, saveBtn)
-  setSection.append(setTitle, saveRow, setList)
+  const preBlock = document.createElement('div')
+  preBlock.className = 'mtablePreBlock'
+  const fastCap = document.createElement('span')
+  fastCap.className = 'mtablePreCap'
+  fastCap.textContent = 'Быстрые'
+  const fastList = document.createElement('div')
+  fastList.className = 'mtableSets mtableFast'
+  const mineCap = document.createElement('span')
+  mineCap.className = 'mtablePreCap'
+  mineCap.textContent = 'Мои'
+  const mineList = document.createElement('div')
+  mineList.className = 'mtableSets mtableMine'
+  const preHint = document.createElement('p')
+  preHint.className = 'mtablePreHint'
+  preHint.textContent = 'Тап — набор · удерживай 3 с — удалить'
+  const preEmpty = document.createElement('p')
+  preEmpty.className = 'mtableEmpty'
+  preEmpty.textContent = 'Пока нет — набери кости и жми «Сохранить сет»'
+  preEmpty.hidden = true
+  preBlock.append(fastCap, fastList, mineCap, mineList, preHint, preEmpty)
 
-  // --- Панель пресетов: отдельная кнопка в шапке (быстрые наборы + свои сеты) ---
-  const presetsPanel = document.createElement('div')
-  presetsPanel.className = 'mtablePresets'
-  presetsPanel.hidden = true
-  const presetsHead = document.createElement('div')
-  presetsHead.className = 'mtableSheetHead'
-  const presetsTitle = document.createElement('span')
-  presetsTitle.textContent = 'Пресеты'
-  const presetsClose = document.createElement('button')
-  presetsClose.className = 'mtableIcon'
-  presetsClose.type = 'button'
-  presetsClose.innerHTML = closeIcon()
-  presetsClose.setAttribute('aria-label', 'Закрыть пресеты')
-  presetsHead.append(presetsTitle, presetsClose)
-  const presetsBody = document.createElement('div')
-  presetsBody.className = 'mtableDrawerBody'
-  presetsBody.append(preSection, setSection)
-  presetsPanel.append(presetsHead, presetsBody)
+  // Выделенный сет: «Сохранить» перезаписывает его; без выделения — создаёт новый.
+  let activeSet: string | null = null
+  let chipEls: HTMLButtonElement[] = []
+  const BUILT_IN_NAMES = new Set(BUILT_IN_PRESETS.map((p) => p.name))
+
+  /** Отображаемые наборы: встроенные (с учётом своих переопределений) + свои. */
+  const displaySets = (): {
+    fast: Array<{ name: string; counts: TableCounts }>
+    mine: Array<{ name: string; counts: TableCounts }>
+  } => {
+    const customs = loadCustomPresets()
+    const hidden = new Set(loadHiddenBuiltIns())
+    const shadow = new Map(
+      customs.filter((p) => BUILT_IN_NAMES.has(p.name)).map((p) => [p.name, p.counts]),
+    )
+    const fast = BUILT_IN_PRESETS.filter((p) => !hidden.has(p.name)).map((p) => ({
+      name: p.name,
+      counts: shadow.get(p.name) ?? p.counts,
+    }))
+    const mine = customs
+      .filter((p) => !BUILT_IN_NAMES.has(p.name))
+      .map((p) => ({ name: p.name, counts: p.counts }))
+    return { fast, mine }
+  }
+
+  /** Удержание чипа 3 с — удаление; отпустил раньше — это тап (выбор набора). */
+  const HOLD_MS = 3000
+  let holdFired = false
+
+  const deleteSet = (name: string): void => {
+    deleteCustomPreset(name)
+    if (BUILT_IN_NAMES.has(name)) hideBuiltIn(name)
+    if (activeSet === name) activeSet = null
+    vibrate(35)
+    showToast('Набор удалён')
+    renderPresets()
+    refreshChrome(setup.get())
+  }
+
+  const toggleSelect = (name: string, counts: TableCounts): void => {
+    if (activeSet === name) {
+      activeSet = null
+    } else {
+      activeSet = name
+      applyCounts(counts)
+    }
+    renderPresets()
+    refreshChrome(setup.get())
+  }
+
+  const makeChip = (name: string, counts: TableCounts): HTMLButtonElement => {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'mtableChip'
+    btn.dataset.set = name
+    const label = shortSet(counts)
+    btn.title = label
+    btn.setAttribute('aria-label', `Набор: ${label}`)
+    btn.classList.toggle('on', activeSet === name)
+    btn.setAttribute('aria-pressed', String(activeSet === name))
+    const fill = document.createElement('span')
+    fill.className = 'mtableChipFill'
+    const dice = document.createElement('span')
+    dice.className = 'mtableChipDice'
+    for (const die of DIE_IDS) {
+      const n = counts[die] ?? 0
+      if (n <= 0) continue
+      const g = document.createElement('span')
+      g.className = 'mtableChipDie'
+      g.innerHTML = dieGlyph(die)
+      if (n > 1) {
+        const x = document.createElement('span')
+        x.className = 'mtableChipN'
+        x.textContent = `×${n}`
+        g.appendChild(x)
+      }
+      dice.appendChild(g)
+    }
+    const count = document.createElement('span')
+    count.className = 'mtableChipCount'
+    count.setAttribute('aria-hidden', 'true')
+    count.textContent = '3'
+    btn.append(fill, dice, count)
+
+    let raf = 0
+    let startAt = 0
+    const endHold = (): void => {
+      cancelAnimationFrame(raf)
+      btn.classList.remove('holding')
+      fill.style.width = '0%'
+    }
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      startAt = performance.now()
+      btn.classList.add('holding')
+      count.textContent = '3'
+      try {
+        btn.setPointerCapture(e.pointerId)
+      } catch {
+        // синтетические события (тесты) — живём без захвата
+      }
+      const tick = (): void => {
+        const p = Math.min(1, (performance.now() - startAt) / HOLD_MS)
+        fill.style.width = `${(p * 100).toFixed(1)}%`
+        count.textContent = String(Math.max(1, Math.ceil((1 - p) * (HOLD_MS / 1000))))
+        if (p >= 1) {
+          endHold()
+          holdFired = true
+          window.setTimeout(() => {
+            holdFired = false
+          }, 600)
+          deleteSet(name)
+          return
+        }
+        raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    })
+    btn.addEventListener('pointerup', endHold)
+    btn.addEventListener('pointercancel', endHold)
+    btn.addEventListener('click', () => {
+      if (holdFired) return
+      toggleSelect(name, counts)
+    })
+    btn.addEventListener('contextmenu', (e) => e.preventDefault())
+    return btn
+  }
+
+  const renderPresets = (): void => {
+    const { fast, mine } = displaySets()
+    fastList.innerHTML = ''
+    mineList.innerHTML = ''
+    chipEls = []
+    for (const s of fast) {
+      const c = makeChip(s.name, s.counts)
+      fastList.appendChild(c)
+      chipEls.push(c)
+    }
+    for (const s of mine) {
+      const c = makeChip(s.name, s.counts)
+      mineList.appendChild(c)
+      chipEls.push(c)
+    }
+    fastCap.hidden = fast.length === 0
+    mineCap.hidden = mine.length === 0
+    mineList.hidden = mine.length === 0
+    preEmpty.hidden = fast.length + mine.length > 0
+  }
+
+  // Одна кнопка сохранения: выделенный сет — перезапись, без выделения — новый.
+  const saveRow = document.createElement('div')
+  saveRow.className = 'mtableFormulaRow'
+  const saveBtn = document.createElement('button')
+  saveBtn.className = 'mtableOk'
+  saveBtn.type = 'button'
+  saveBtn.textContent = 'Сохранить сет'
+  saveRow.appendChild(saveBtn)
+  saveBtn.addEventListener('click', () => {
+    const counts = setup.get()
+    if (rolling || totalCount(counts) === 0) return
+    if (activeSet) {
+      saveCustomPreset(activeSet, counts)
+      showToast('Набор обновлён')
+    } else {
+      const { fast, mine } = displaySets()
+      const dup = [...fast, ...mine].find((s) => sameCounts(s.counts, counts))
+      if (dup) {
+        activeSet = dup.name
+        showToast('Такой набор уже есть')
+      } else {
+        const name = uniquePresetName(loadCustomPresets())
+        saveCustomPreset(name, counts)
+        activeSet = name
+        showToast('Набор сохранён')
+      }
+    }
+    vibrate(15)
+    renderPresets()
+    refreshChrome(setup.get())
+  })
+
+  const sheetBody = document.createElement('div')
+  sheetBody.className = 'mtableRows'
+  sheetBody.append(preBlock, rows, saveRow)
+  sheet.append(sheetHead, sheetBody)
 
   const sndSection = document.createElement('div')
   sndSection.className = 'mtableSection'
@@ -486,36 +587,26 @@ export const mountMobileTable = (
   drawerBody.append(histSection, pwSection, sndSection, aboutSection)
   drawer.append(drawerHead, drawerBody)
 
-  section.append(canvas, head, hint, live, backdrop, sheet, drawer, presetsPanel, toast)
+  section.append(canvas, head, hint, live, backdrop, sheet, drawer, toast)
   container.appendChild(section)
 
   const openSheet = () => {
     drawer.hidden = true
-    presetsPanel.hidden = true
     sheet.hidden = false
     backdrop.hidden = false
     section.classList.add('sheetOpen')
+    renderPresets()
     sheetClose.focus()
   }
   const openDrawer = () => {
     sheet.hidden = true
-    presetsPanel.hidden = true
     drawer.hidden = false
     backdrop.hidden = false
     drawerClose.focus()
   }
-  const openPresets = () => {
-    sheet.hidden = true
-    drawer.hidden = true
-    presetsPanel.hidden = false
-    backdrop.hidden = false
-    renderSets()
-    presetsClose.focus()
-  }
   const closeOverlays = () => {
     sheet.hidden = true
     drawer.hidden = true
-    presetsPanel.hidden = true
     backdrop.hidden = true
     section.classList.remove('sheetOpen')
   }
@@ -525,13 +616,9 @@ export const mountMobileTable = (
   }
   document.addEventListener('keydown', onKey)
   diceBtn.addEventListener('click', () => (sheet.hidden ? openSheet() : closeOverlays()))
-  presetsBtn.addEventListener('click', () =>
-    presetsPanel.hidden ? openPresets() : closeOverlays(),
-  )
   burger.addEventListener('click', () => (drawer.hidden ? openDrawer() : closeOverlays()))
   sheetClose.addEventListener('click', closeOverlays)
   drawerClose.addEventListener('click', closeOverlays)
-  presetsClose.addEventListener('click', closeOverlays)
   backdrop.addEventListener('click', closeOverlays)
 
   const renderHistory = (entries: readonly HistoryEntry[]) => {
@@ -667,7 +754,7 @@ export const mountMobileTable = (
       hint.hidden = false
       hint.disabled = false
     } else if (total === 0) {
-      hint.textContent = 'Жми «+ Кости» или пресет — кости лягут на стол'
+      hint.textContent = 'Жми «+ Кости» — пресеты и выбор костей внутри'
       hint.hidden = false
       hint.disabled = false
     } else if (phase === 'loading') {
@@ -692,9 +779,12 @@ export const mountMobileTable = (
       if (plus instanceof HTMLButtonElement)
         plus.disabled = rolling || n >= MAX_PER_DIE || total >= MAX_TOTAL
     }
-    for (const { btn, counts: preset } of presetChips) {
-      btn.classList.toggle('on', total > 0 && sameCounts(counts, preset))
+    for (const btn of chipEls) {
+      const on = btn.dataset.set === activeSet
+      btn.classList.toggle('on', on)
+      btn.setAttribute('aria-pressed', String(on))
     }
+    saveBtn.textContent = activeSet ? 'Обновить набор' : 'Сохранить сет'
     saveBtn.disabled = rolling || total === 0
   }
 
@@ -757,7 +847,7 @@ export const mountMobileTable = (
   })
   const unsubHistory = history.subscribe((entries) => renderHistory(entries))
   syncInstances(setup.get())
-  renderSets()
+  renderPresets()
 
   // flick умер вместе с зарядкой (drag на кнопке): сила — из меню, разлёт — угловой.
   const throwAll = (powerBoost = 0): void => {

@@ -128,11 +128,16 @@ body[data-mode='mtable'] .result {
   height: 24px;
 }
 
-/* Чипы пресетов — теперь в меню-бургере (секция «Пресеты», обёртка .mtableSets). */
+/* Чипы пресетов в шторке: только состав костями (без подписей), тап — выбор,
+   удержание 3 с — удаление (прогресс-заливка + отсчёт). */
 .mtableChip {
+  position: relative;
+  overflow: hidden;
   flex-shrink: 0;
-  min-height: 38px;
-  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
   border: none;
   border-radius: 999px;
   background: #1d2026;
@@ -142,6 +147,9 @@ body[data-mode='mtable'] .result {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mtableChip:hover {
@@ -151,6 +159,95 @@ body[data-mode='mtable'] .result {
 .mtableChip.on {
   background: #ef3124;
   color: #fff;
+}
+
+.mtableChipFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.mtableChipDice {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mtableChipDie {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.mtableChipDie svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.mtableChipN {
+  font-size: 11px;
+  font-weight: 800;
+  color: #9aa0aa;
+}
+
+.mtableChip.on .mtableChipN {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.mtableChipCount {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.mtableChip.holding .mtableChipCount {
+  display: flex;
+}
+
+/* Пресет-блок в шторке: две группы + подсказка про удержание. */
+.mtablePreBlock {
+  padding: 6px 14px 8px;
+  border-bottom: 1px solid #1d2026;
+}
+
+.mtablePreCap {
+  display: block;
+  padding: 6px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa0aa;
+}
+
+/* display:block перебивает UA-[hidden] — возвращаем (как у .mtableSheet). */
+.mtablePreCap[hidden] {
+  display: none;
+}
+
+.mtablePreHint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #9aa0aa;
+}
+
+.mtablePreBlock .mtableEmpty {
+  margin: 8px 0 0;
 }
 
 .mtableHredo {
@@ -287,7 +384,6 @@ input:focus-visible {
 /* display:flex в классах ниже перебивает UA-стиль [hidden] — возвращаем. */
 .mtableSheet[hidden],
 .mtableDrawer[hidden],
-.mtablePresets[hidden],
 .mtableBackdrop[hidden] {
   display: none;
 }
@@ -306,26 +402,10 @@ input:focus-visible {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Панель пресетов — тот же левый слайд, что и шторка/дровер. */
-.mtablePresets {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 21;
-  width: min(360px, 92%);
-  display: flex;
-  flex-direction: column;
-  background: #121419;
-  border-right: 1px solid #2a2e36;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
 /* На телефонах/узких экранах боковые меню — во всю ширину (боковой зазор не нужен). */
 @media (max-width: 600px) {
   .mtableDrawer,
-  .mtableSheet,
-  .mtablePresets {
+  .mtableSheet {
     width: 100%;
     border-right: none;
   }
@@ -349,7 +429,10 @@ input:focus-visible {
   text-overflow: ellipsis;
 }
 
+/* Тело шторки (пресеты + степперы + сохранение) — одна прокрутка. */
 .mtableRows {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -419,20 +502,6 @@ input:focus-visible {
   padding: 12px 14px 4px;
 }
 
-.mtableFormula {
-  flex: 1;
-  min-height: 44px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 12px;
-  background: #1d2026;
-  color: #f0f2f5;
-  font-family: inherit;
-  /* 16px: iOS Safari не включает авто-зум на фокусе (тот тоже «кривит» UI). */
-  font-size: 16px;
-  min-width: 0;
-}
-
 .mtableOk {
   min-height: 44px;
   padding: 0 18px;
@@ -449,6 +518,11 @@ input:focus-visible {
 
 .mtableOk:disabled {
   opacity: 0.45;
+}
+
+/* Сохранение занимает всю строку (инпута имени больше нет). */
+.mtableFormulaRow .mtableOk {
+  flex: 1;
 }
 
 .mtableDrawer {
@@ -580,35 +654,6 @@ input:focus-visible {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
-}
-
-.mtableSetChip {
-  display: inline-flex;
-  align-items: center;
-  border: none;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #1d2026;
-}
-
-.mtableSetLabel {
-  border: none;
-  background: transparent;
-  color: #f0f2f5;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 8px 4px 8px 12px;
-  cursor: pointer;
-}
-
-.mtableSetX {
-  border: none;
-  background: transparent;
-  color: #9aa0aa;
-  font-size: 16px;
-  padding: 8px 10px;
-  cursor: pointer;
 }
 
 .mtableWide {

@@ -29,11 +29,15 @@ test('пустой стол: хинт, две менюшки шапки, кно�
   await page.locator('.mtableAdd').click()
   await expect(page.locator('.mtableSheet')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Убрать все' })).toBeVisible()
+  // Пресеты живут в шторке: чипы-глифы без подписей, тап применяет и НЕ закрывает.
+  const firstChip = page.locator('.mtableFast .mtableChip').first()
+  await expect(firstChip).toBeVisible()
+  await firstChip.click()
+  await expect(page.locator('.mtableSheet')).toBeVisible()
+  await expect(page.locator('.mtableAdd')).toHaveText('2d20')
+  await expect(firstChip).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Обновить набор' })).toBeVisible()
   await page.getByLabel('Закрыть выбор костей').click()
-  // Отдельная кнопка пресетов в шапке открывает свою панель.
-  await page.locator('.mtableIcon[aria-label="Пресеты"]').click()
-  await expect(page.locator('.mtablePresets')).toBeVisible()
-  await page.getByLabel('Закрыть пресеты').click()
   expect(errors).toEqual([])
 })
 
@@ -98,5 +102,38 @@ test('шит: степперы считают, минус на нуле молч
   await page.getByRole('button', { name: 'Убрать все' }).click()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'empty')
   await expect(page.locator('.mtableHint')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('сеты: сохранить → изменить → обновить, удержание 3 с удаляет', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/?m=1')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  await page.locator('.mtableAdd').click()
+  // Пустой стол — сохранять нечего.
+  await expect(page.getByRole('button', { name: 'Сохранить сет' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Добавить d8' }).click()
+  await page.getByRole('button', { name: 'Сохранить сет' }).click()
+  // Новый сет появился в «Мои» и сразу выделен (кнопка → «Обновить набор»).
+  const mineChip = page.locator('.mtableMine .mtableChip')
+  await expect(mineChip).toHaveCount(1)
+  await expect(mineChip.first()).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Обновить набор' })).toBeEnabled()
+  // Меняем состав → «Обновить набор» перезаписывает выделенный сет.
+  await page.getByRole('button', { name: 'Добавить d6' }).click()
+  await page.getByRole('button', { name: 'Обновить набор' }).click()
+  await expect(mineChip.first()).toHaveAttribute('aria-label', 'Набор: d6 d8')
+  // Удержание 3.2 с — удаление (прогресс+отсчёт, затем чип исчезает).
+  const box = await mineChip.first().boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
+  await page.mouse.down()
+  await expect(mineChip.first().locator('.mtableChipCount')).toBeVisible()
+  await page.waitForTimeout(3300)
+  await page.mouse.up()
+  await expect(mineChip).toHaveCount(0)
+  await expect(page.locator('.mtableToast')).toHaveText('Набор удалён')
+  // Удалён выделенный сет → кнопка снова «Сохранить сет».
+  await expect(page.getByRole('button', { name: 'Сохранить сет' })).toBeEnabled()
   expect(errors).toEqual([])
 })
