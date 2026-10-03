@@ -197,6 +197,18 @@ export const mountMobileTable = (
   live.dataset.testid = 'mtable-live'
   live.setAttribute('role', 'status')
 
+  // Футер расшифровки: только чтение (тапы летят сквозь него на поле),
+  // скринридеру итог уже озвучивает живой регион выше.
+  const foot = document.createElement('div')
+  foot.className = 'mtableFoot'
+  foot.dataset.testid = 'mtable-foot'
+  foot.hidden = true
+  foot.setAttribute('aria-hidden', 'true')
+  const footParts = document.createElement('span')
+  footParts.className = 'mtableFootParts'
+  footParts.dataset.testid = 'mtable-foot-parts'
+  foot.appendChild(footParts)
+
   const backdrop = document.createElement('div')
   backdrop.className = 'mtableBackdrop'
   backdrop.dataset.testid = 'mtable-backdrop'
@@ -662,7 +674,7 @@ export const mountMobileTable = (
   drawerBody.append(histSection, pwSection, sndSection, aboutSection)
   drawer.append(drawerHead, drawerBody)
 
-  section.append(canvas, head, hint, live, backdrop, sheet, drawer, toast)
+  section.append(canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
   container.appendChild(section)
 
   const openSheet = () => {
@@ -810,11 +822,12 @@ export const mountMobileTable = (
     return phase
   }
 
-  /** Состав набора: кнопка в шапке («2d4 d12»), счётчик — по центру бургера. */
+  /** Состав набора — на кнопке («2d4 d12»), цифра суммы — на бургере, расшифровка — в футере. */
   const refreshChrome = (counts: TableCounts) => {
     const total = totalCount(counts)
     const phase = syncPhase(total)
-    // На бургере — сумма последнего броска; пока кости летят — лоадер (не кнопка).
+    // На кнопке-бургере — только цифра суммы; расшифровка — в футере внизу.
+    // Пока кости летят — лоадер (не кнопка).
     if (rolling) {
       burger.innerHTML = '<span class="mtableSpin" data-testid="mtable-spin"></span>'
       burger.disabled = true
@@ -824,6 +837,17 @@ export const mountMobileTable = (
       burger.removeAttribute('aria-busy')
       if (lastResult) burger.textContent = String(lastResult.total)
       else burger.innerHTML = menuIcon()
+    }
+    // Сумма — акцентным цветом, иконка меню и лоадер — обычным.
+    burger.classList.toggle('hasSum', !rolling && lastResult !== null)
+    // Футер: расшифровка пробелами («4 4 4 2 7 8 3 4 6 1»).
+    if (lastResult && !rolling) {
+      const breakdown = formatParts(lastResult.parts).join(' ')
+      footParts.textContent = breakdown
+      foot.hidden = false
+      foot.title = breakdown
+    } else {
+      foot.hidden = true
     }
     const short = shortSet(counts)
     diceBtn.textContent = total > 0 ? short : '+ Кости'

@@ -366,16 +366,47 @@ input:focus-visible {
 
 /* Кнопка набора в шапке: текст «2d4 d12» / «+ Кости» (сумма броска — на бургере). */
 .mtableAdd {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   white-space: nowrap;
   padding: 0 10px;
 }
 
-/* Сумма броска на бургере: крупный шрифт (читается без очков). */
+/* Цифра суммы на бургере: шрифт как у кнопки набора, цвет акцентный. */
 .mtableBurger {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
+}
+
+.mtableBurger.hasSum {
+  color: #ef3124;
+}
+
+/* Футер расшифровки: части пробелами в одну строку, по низу экрана.
+   Только чтение: тапы летят сквозь него на поле. */
+.mtableFoot {
+  position: absolute;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  max-width: calc(100% - 24px);
+  padding: 6px 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.mtableFoot[hidden] {
+  display: none;
+}
+
+.mtableFootParts {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 18px;
+  font-weight: 800;
+  color: #9aa0aa;
 }
 
 /* Пока кости летят — на бургере лоадер вместо кнопки меню/суммы. */
@@ -422,25 +453,30 @@ input:focus-visible {
   display: none;
 }
 
+/* Шторка «+ Кости» — центрированная карточка, как меню-бургер. */
 .mtableSheet {
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 21;
-  width: min(360px, 92%);
+  width: min(360px, calc(100% - 48px));
+  max-height: calc(100% - 48px);
   display: flex;
   flex-direction: column;
   background: #121419;
-  border-right: 1px solid #2a2e36;
+  border: 1px solid #2a2e36;
+  border-radius: 14px;
+  overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
+  animation: mtablePop 0.16s ease-out;
 }
 
-/* На телефонах/узких экранах меню-кости — во всю ширину. */
+/* Узкие экраны: карточка шире (поля 12px). */
 @media (max-width: 600px) {
   .mtableSheet {
-    width: 100%;
-    border-right: none;
+    width: calc(100% - 24px);
+    max-height: calc(100% - 32px);
   }
 }
 
