@@ -1,6 +1,6 @@
 ---
 name: ui-review
-description: Playwright UI review of the dice table (?m=1, ?table): screenshots on mobile/tablet/desktop, console errors, geometry checks, throw marathon, verdict with UX advice. Use when the user says проведи ревью, посмотри UI, UI review, проверь экран, кривой UI, or asks for UX feedback with evidence.
+description: Playwright UI review of the dice table (root /): screenshots on mobile/tablet/desktop, console errors, geometry checks, throw marathon, verdict with UX advice. Use when the user says проведи ревью, посмотри UI, UI review, проверь экран, кривой UI, or asks for UX feedback with evidence.
 ---
 
 # UI Review (Playwright)
@@ -32,10 +32,10 @@ mobile/tablet/desktop, веб-ассёрты, изоляция контекст�
 node .opencode/skills/ui-review/scripts/review.mjs [--throws N] [--out ./tmp/shots/ui-review]
 ```
 
-It covers routes `?m=1`, `?table`, `?glass=d4,d6` on viewports 390×844, 768×900, 1280×800 and prints
-a JSON summary (screenshots, console/page errors, geometry checks, per-throw timings,
-`[table] overlap after settle` warnings). Default `--throws 2` on `?m=1` only (SwiftShader is slow:
-a pair takes ~10 s, an 8-pack minutes — keep marathons small).
+It covers the table at `/` on viewports 390×844, 768×900, 1280×800 and prints a JSON summary
+(screenshots, console/page errors, geometry checks, per-throw timings,
+`[table] overlap after settle` warnings). Default `--throws 2` (SwiftShader is slow: a pair takes
+~10 s, an 8-pack minutes — keep marathons small).
 
 If the script fails, read its error first: a strict-mode violation or a timeout is usually a product
 bug (element hidden behind an overlay, button never enabled), not a script bug. Report it as a

@@ -37,25 +37,19 @@ const geometry = () =>
       }
     }
     const btns = {}
-    for (const s of ['.mtableAdd', '.mtableIcon', '.gtableThrow']) {
+    for (const s of ['.mtableAdd', '.mtableIcon']) {
       const b = r(s)
       if (b && b.w > 0) btns[s] = { ...b, min: Math.min(b.w, b.h) }
     }
-    const cv = document.querySelector('.mtableCanvas') || document.querySelector('.gtableCanvas')
+    const cv = document.querySelector('.mtableCanvas')
     const cbox = cv ? cv.getBoundingClientRect() : null
     return {
       hScroll: document.scrollingElement.scrollWidth > window.innerWidth + 1,
       mtableX: r('.mtable')?.x ?? null,
       canvas: cbox ? { w: Math.round(cbox.width), h: Math.round(cbox.height) } : null,
       buttons: btns,
-      // ?m=1: кнопки броска нет — фаза стола; legacy glass — текст кнопки.
+      // Стол: кнопки броска нет — фаза стола.
       phase: document.querySelector('.mtable')?.getAttribute('data-phase') ?? null,
-      throwText:
-        document
-          .querySelector('.gtableThrow')
-          ?.textContent?.replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 60) ?? null,
     }
   })
 
@@ -79,7 +73,7 @@ try {
       if (t.includes('overlap after settle'))
         summary.overlaps.push(`[${vp.tag}] ${t.slice(0, 120)}`)
     })
-    await page.goto(`${BASE}/?m=1`, { waitUntil: 'load' })
+    await page.goto(`${BASE}/`, { waitUntil: 'load' })
     await page.waitForSelector('.mtableCanvas', { timeout: 20000 })
     await page.waitForTimeout(2500)
     await page.screenshot({ path: `${OUT}/${vp.tag}-m-empty.png` })
@@ -87,7 +81,7 @@ try {
     await page.close()
   }
 
-  // Pair on ?m=1 via steppers + marathon (mobile viewport).
+  // Pair на столе via steppers + marathon (mobile viewport).
   page = await browser.newPage({
     viewport: { width: 390, height: 844 },
     isMobile: true,
@@ -101,7 +95,7 @@ try {
     if (m.type() === 'error') summary.errors.push(`[marathon] console: ${t.slice(0, 150)}`)
     if (t.includes('overlap after settle')) summary.overlaps.push(`[marathon] ${t.slice(0, 120)}`)
   })
-  await page.goto(`${BASE}/?m=1`, { waitUntil: 'load' })
+  await page.goto(`${BASE}/`, { waitUntil: 'load' })
   await page.waitForSelector('.mtableCanvas', { timeout: 20000 })
   await page.waitForTimeout(1500)
   await page.locator('.mtableAdd').click()
@@ -150,29 +144,9 @@ try {
   await page.screenshot({ path: `${OUT}/mob-m-landed.png` })
   summary.geometry['mob-m-landed'] = await geometry()
   await page.close()
-
-  // Glass pair (legacy table) on desktop.
-  page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-  page.on('pageerror', (e) => summary.errors.push(`[glass] pageerror: ${String(e).slice(0, 150)}`))
-  page.on('console', (m) => {
-    if (m.type() === 'error') summary.errors.push(`[glass] console: ${m.text().slice(0, 150)}`)
-  })
-  await page.goto(`${BASE}/?glass=d4,d6`, { waitUntil: 'load' })
-  await page.waitForSelector('.gtableCanvas', { timeout: 20000 })
-  await page.waitForTimeout(6000)
-  await page.screenshot({ path: `${OUT}/desk-glass-pair.png` })
-  summary.geometry['desk-glass-pair'] = await geometry()
-  await page.close()
 } finally {
   await browser.close()
 }
 
-summary.shots = [
-  'mob-m-empty',
-  'tab-m-empty',
-  'desk-m-empty',
-  'mob-m-pair',
-  'mob-m-landed',
-  'desk-glass-pair',
-]
+summary.shots = ['mob-m-empty', 'tab-m-empty', 'desk-m-empty', 'mob-m-pair', 'mob-m-landed']
 console.log(JSON.stringify(summary, null, 1))

@@ -84,7 +84,6 @@ export const quickRoll = (
     try {
       const result = await store.roll(die)
       // История пишется всегда; поп и звук — только для бросков без витрины
-      // (тап с витриной показывает их в момент settle — см. viewer-grid)
       const mapped = opts?.mapHistory?.(result)
       getHistoryStore().add(
         mapped ? { ...result, value: mapped.value, display: mapped.display } : result,

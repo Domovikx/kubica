@@ -127,7 +127,7 @@ export const labelTableResult = (results: readonly TableDieResult[]): TableLabel
 
 /**
  * Одна запись истории + один поп с частями (паттерн пула 2.3).
- * opts.pop=false — без попа (mtable показывает итог на кнопке броска).
+ * opts.pop=false — без попа (стол итог не показывает, только озвучивает SR).
  */
 export const commitTableResult = (
   results: readonly TableDieResult[],

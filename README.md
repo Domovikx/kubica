@@ -34,7 +34,7 @@
 ```text
 FreeCAD/OpenSCAD/CadQuery → STL
     → tools/blender-stl-colorize.py / blender-stl-colorize-set.py (материалы + нормали + GLB)
-    → index.html (three.js: 3 панели CAD-сравнения + 6 панелей набора)
+    → index.html (three.js: стол Kubica — набор d4–d20, бросок тапом по кости)
 ```
 
 - `tools/freecad-build-d6.py` — сборка D6 через MCP-инструменты FreeCAD (куб → филе → 21 сфера-пипс
@@ -67,7 +67,7 @@ FreeCAD/OpenSCAD/CadQuery → STL
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173/
+npm run dev        # http://localhost:5173/kubica/ — стол сразу, без параметров
 npm run build      # сборка dist/
 ```
 

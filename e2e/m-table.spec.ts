@@ -1,4 +1,4 @@
-// ?m=1: пустое состояние, набор через формулу, бросок тапом по кости,
+// Стол (корень /): пустое состояние, набор через степперы, бросок тапом по кости,
 // история в меню-бургере, итог — только для скринридера (.mtableLive).
 import { expect, test, type Page } from '@playwright/test'
 
@@ -20,7 +20,7 @@ const diePoint = (page: Page) =>
 
 test('пустой стол: хинт, две менюшки шапки, кнопки броска нет', async ({ page }) => {
   const errors = collectErrors(page)
-  await page.goto('/?m=1')
+  await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   await expect(page.locator('.mtableHint')).toBeVisible()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'empty')
@@ -43,7 +43,7 @@ test('пустой стол: хинт, две менюшки шапки, кно�
 
 test('пара d4+d6: тап по кости бросает, история растёт, итог озвучен SR', async ({ page }) => {
   const errors = collectErrors(page)
-  await page.goto('/?m=1')
+  await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   await page.locator('.mtableAdd').click()
   await page.getByRole('button', { name: 'Добавить d4' }).click()
@@ -80,7 +80,7 @@ test('пара d4+d6: тап по кости бросает, история ра
 
 test('шит: степперы считают, минус на нуле молчит, «убрать все» чистит', async ({ page }) => {
   const errors = collectErrors(page)
-  await page.goto('/?m=1')
+  await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   await page.locator('.mtableAdd').click()
   // Минус на нуле disabled (до набора).
@@ -107,7 +107,7 @@ test('шит: степперы считают, минус на нуле молч
 
 test('сеты: сохранить → изменить → обновить, удержание с паузой удаляет', async ({ page }) => {
   const errors = collectErrors(page)
-  await page.goto('/?m=1')
+  await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   await page.locator('.mtableAdd').click()
   // Пустой стол — сохранять нечего.

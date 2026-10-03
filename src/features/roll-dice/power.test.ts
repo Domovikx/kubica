@@ -17,7 +17,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('power: сила броска ?m=1 (меню вместо зарядки)', () => {
+describe('power: сила броска стола (меню вместо зарядки)', () => {
   it('дефолт — Обычный (пустое хранилище)', () => {
     expect(throwPower()).toBe('normal')
     expect(throwPowerBoost()).toBe(0)
