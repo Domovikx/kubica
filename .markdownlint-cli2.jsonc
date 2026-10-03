@@ -14,5 +14,5 @@
     "MD009": { "br_spaces": 2, "strict": false },
   },
   "globs": ["**/*.md"],
-  "ignores": ["node_modules/**", "dist/**", "debug/**", "tools/**"],
+  "ignores": ["node_modules/**", ".opencode/**", "dist/**", "debug/**", "tmp/**", "tools/**"],
 }

@@ -2,6 +2,10 @@
 node_modules/
 dist/
 
+# Playwright Test
+*test-results*
+*playwright-report*
+
 # Python venv (FreeCAD MCP, CadQuery MCP)
 tools/*venv*/
 tools/freecad-venv/
@@ -13,8 +17,8 @@ tools/openscad/
 
 # Отладка и временное
 debug/
-**/debug/**
-*.log
+*debug*
+*log*
 
 # Windows
 Thumbs.db
@@ -32,5 +36,5 @@ dice_20.glb
 tools/blender-mcp/
 # Локальная временная папка (расчёты, черновики, артефакты сессий)
 # Сам каталог трекается через .gitkeep, содержимое — нет
-tmp/*
-!tmp/.gitkeep
+*tmp*
+

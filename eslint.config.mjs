@@ -5,7 +5,14 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'debug/**', 'tools/*venv*/**', 'tools/openscad/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'debug/**',
+      'tmp/**',
+      'tools/*venv*/**',
+      'tools/openscad/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
