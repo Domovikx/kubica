@@ -1,4 +1,9 @@
-import { formatParts, getHistoryStore, type HistoryEntry } from '@/entities/roll-history/history'
+import {
+  formatLabel,
+  formatParts,
+  getHistoryStore,
+  type HistoryEntry,
+} from '@/entities/roll-history/history'
 import { parseNotation } from '@/entities/dice-notation/notation'
 import { quickRoll } from '@/features/roll-dice/quick-roll'
 import { rollPool } from '@/features/dice-pool/pool'
@@ -64,7 +69,7 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
       const meta = document.createElement('span')
       meta.className = 'historyMeta'
       meta.textContent = entry.label
-        ? `${entry.label} · ${fmtTime(entry.at)}`
+        ? `${formatLabel(entry.label)} · ${fmtTime(entry.at)}`
         : `${entry.die} · ${fmtTime(entry.at)}`
       main.append(value, meta)
       // Разбивка пула 2.3: части текстом (скобки = сброшена) + классы kept/drop.
