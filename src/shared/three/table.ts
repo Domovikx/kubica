@@ -1,0 +1,627 @@
+// Общий стеклянный стол: одна сцена/камера снизу, N костей-мешей.
+// Сознательно повторяет настройку сцены viewer.ts (свет/кадр/твины), а не
+// переиспользует Viewer: одиночные витрины — эталоны, их не рефакторим.
+// Консолидация в stage-фабрику — follow-up 2.7.
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
+import { GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
+
+const CREASE_ANGLE = Math.PI / 5
+
+export interface TablePose {
+  pos: [number, number, number]
+  quat: [number, number, number, number]
+}
+
+interface DieView {
+  root: THREE.Object3D
+  unitSize: number
+  /** Центр кости в локальных координатах root (для пивота spinDie). */
+  localCenter: THREE.Vector3
+  present: {
+    from: THREE.Quaternion
+    to: THREE.Quaternion
+    baseY: number
+    hopAmp: number
+    onDone: (() => void) | null
+    t: number
+    dur: number
+  } | null
+  glide: {
+    fromX: number
+    fromZ: number
+    toX: number
+    toZ: number
+    onDone: (() => void) | null
+    t: number
+    dur: number
+  } | null
+}
+
+export interface Table {
+  /** Положить кость на стол (слот XZ, низ ровно на y=0). */
+  addDie: (
+    id: string,
+    url: string,
+    opts?: {
+      physSize?: number
+      slot?: readonly [number, number]
+      initialQuat?: readonly [number, number, number, number]
+    },
+    onLoad?: () => void,
+    onError?: () => void,
+  ) => void
+  removeDie: (id: string) => void
+  hasDie: (id: string) => boolean
+  /** Живая синхронизация с физ-телом (позиция + кватернион каждый тик). */
+  syncBody: (
+    id: string,
+    pos: readonly [number, number, number],
+    q: readonly [number, number, number, number],
+  ) => void
+  /** Одно движение сразу на финальную позу (низ ровно + цифра прямо). */
+  presentTo: (
+    id: string,
+    q: readonly [number, number, number, number],
+    onDone?: () => void,
+    durMs?: number,
+  ) => void
+  /** Плавный возврат в слот по полу (поза не трогается). */
+  glideTo: (id: string, x: number, z: number, onDone?: () => void, durMs?: number) => void
+  /** Луч в любую кость: тап мимо костей — не бросок. */
+  pickAny: (clientX: number, clientY: number) => boolean
+  /** Луч в конкретную кость: id инстанса (key) или null. */
+  pickDieId: (clientX: number, clientY: number) => string | null
+  /**
+   * Точка экрана над любой костью (сетка пикселей от центра → raycast).
+   * Для тестов/чекеров: тап по кости без угадывания координат ±48px.
+   */
+  findDiePoint: () => { x: number; y: number } | null
+  /**
+   * Трекбол-вращение кости вокруг ЕЁ центра (все 3 оси; dx/dy — пиксели драга).
+   * Чисто визуальный осмотр: физика и результат не трогаются. Игнорируется во
+   * время present/glide — их onDone-цепочки (результат → разъезд → rolling=false)
+   * обязаны дойти до конца, иначе стол навсегда залипнет в «Бросаем…».
+   */
+  spinDie: (id: string, dxPx: number, dyPx: number) => void
+  /**
+   * Приглушить кость до первого броска (грани есть, но «не горят» —
+   * иначе цифры читаются как состоявшийся результат).
+   */
+  dimDie: (id: string, dimmed: boolean) => void
+  getPose: (id: string) => TablePose | null
+  getViewDir: () => [number, number, number]
+  /** Пересчитать кадр под новый размер пачки (без пересоздания сцены). */
+  setFit: (hx: number, hz: number) => void
+  /**
+   * Плавно вернуть камеру в дефолт (после броска: юзер крутил/зумил —
+   * стол сам встаёт ровно). Контролы на время доводки глушим.
+   */
+  resetView: (onDone?: () => void, durMs?: number) => void
+  resize: () => void
+  update: () => void
+  dispose: () => void
+}
+
+export const createTable = (
+  canvas: HTMLCanvasElement,
+  opts?: { hx?: number; hz?: number; orbit?: boolean },
+): Table => {
+  // Кадр под конкретную пачку (по умолчанию — под 1–2 кости).
+  // Это НЕ границы физики (те щедрые и фиксированные — см. TABLE_HALF_*):
+  // камера обязана держать кости крупно при любом N.
+  let fitHx = opts?.hx ?? GLASS_HALF_X
+  let fitHz = opts?.hz ?? GLASS_HALF_Z
+  const setFit = (hx: number, hz: number): void => {
+    fitHx = hx
+    fitHz = hz
+    frameCamera()
+  }
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+    stencil: false,
+    powerPreference: 'high-performance',
+  })
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  // Теней нет: принимать нечего (поверхности нет), только цена на мобайле.
+  renderer.shadowMap.enabled = false
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.15
+
+  const scene = new THREE.Scene()
+  const bgCanvas = document.createElement('canvas')
+  bgCanvas.width = 2
+  bgCanvas.height = 256
+  const bgCtx = bgCanvas.getContext('2d')
+  if (bgCtx) {
+    const grad = bgCtx.createLinearGradient(0, 0, 0, 256)
+    grad.addColorStop(0, '#23262d')
+    grad.addColorStop(0.55, '#14161a')
+    grad.addColorStop(1, '#0a0b0e')
+    bgCtx.fillStyle = grad
+    bgCtx.fillRect(0, 0, 2, 256)
+    const bgTex = new THREE.CanvasTexture(bgCanvas)
+    bgTex.colorSpace = THREE.SRGBColorSpace
+    scene.background = bgTex
+  } else {
+    scene.background = new THREE.Color(0x14161a)
+  }
+
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+  scene.environmentIntensity = 0.55
+
+  // Камера строго под столом (вид снизу вверх). Эпсилон по Z против
+  // вырождения up-вектора.
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 500)
+  camera.position.set(0, -60, 0.01)
+
+  const controls = new OrbitControls(camera, canvas)
+  controls.target.set(0, 1.2, 0)
+  controls.enableDamping = true
+  controls.dampingFactor = 0.08
+  controls.enablePan = false
+  // Витрина: поле не вращаем (постановочный ракурс). mtable (?m=1) разрешает
+  // орбиту — стол можно подвигать; тап от драга отличаем порогом 8px/500мс.
+  controls.enableRotate = opts?.orbit === true
+  // В орбите разрешаем небольшой наклон (иначе стол не «подвигать»,
+  // только крутить). Презентация доводит цифры под текущий ракурс сама.
+  controls.minPolarAngle = opts?.orbit === true ? Math.PI - 0.6 : Math.PI - 0.05
+  controls.maxPolarAngle = Math.PI
+  controls.zoomSpeed = 0.8
+  controls.autoRotate = false
+
+  // Студийный свет + подсветка снизу (камера-наблюдатель видит нижние грани).
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x4a4f5a, 0.45))
+  const key = new THREE.DirectionalLight(0xfff1e0, 2.2)
+  key.position.set(-10, 15, 7.5)
+  scene.add(key)
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.5)
+  fill.position.set(12, 4.5, 10)
+  scene.add(fill)
+  const rim = new THREE.DirectionalLight(0xffffff, 1.1)
+  rim.position.set(4.5, 10, -12)
+  scene.add(rim)
+  const under = new THREE.DirectionalLight(0xffe9d0, 1.4)
+  under.position.set(6, -12, 8)
+  scene.add(under)
+
+  const loader = new GLTFLoader()
+  const dice = new Map<string, DieView>()
+  let disposed = false
+  // Кэш шаблонов GLB по URL: пачка 8d6 грузит файл один раз, инстансы —
+  // клоны (иначе 8 сетевых загрузок и кнопка долго disabled без фидбека).
+  // Геометрия общая, материалы клонируем под инстанс (подсветка kept/dropped
+  // в 2.8 не должна красить всех близнецов сразу).
+  const templateCache = new Map<string, Promise<THREE.Object3D>>()
+  const loadTemplate = (url: string): Promise<THREE.Object3D> => {
+    const hit = templateCache.get(url)
+    if (hit) return hit
+    const p = new Promise<THREE.Object3D>((resolve, reject) => {
+      loader.load(
+        url,
+        (gltf) => {
+          const src = gltf.scene.children.length === 1 ? gltf.scene.children[0] : gltf.scene
+          src.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              const smoothed = toCreasedNormals(child.geometry, CREASE_ANGLE)
+              child.geometry.dispose()
+              child.geometry = smoothed
+            }
+          })
+          resolve(src)
+        },
+        undefined,
+        () => reject(new Error(`table: GLB не загрузился: ${url}`)),
+      )
+    })
+    templateCache.set(url, p)
+    return p
+  }
+  let lastT = performance.now()
+  const raycaster = new THREE.Raycaster()
+
+  // Дом камеры (дефолт orbit-режима): frameCamera его обновляет,
+  // resetView плавно возвращает.
+  const home = {
+    pos: new THREE.Vector3(0, -60, 0.01),
+    target: new THREE.Vector3(0, 1.2, 0),
+  }
+  let camTween: {
+    fromPos: THREE.Vector3
+    fromTarget: THREE.Vector3
+    onDone: (() => void) | null
+    t: number
+    dur: number
+  } | null = null
+
+  const frameCamera = () => {
+    // Вписываем содержимое стола целиком (границы физики невидимы и шире —
+    // их в кадр не тянем, иначе кости станут микробами).
+    const aspect = camera.aspect || 1
+    const need = Math.max(2 * fitHz, (2 * fitHx) / aspect)
+    const dist = Math.max(
+      20,
+      (need * 0.5 * 1.25) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)),
+    )
+    controls.target.set(0, 1.2, 0)
+    controls.minDistance = dist * 0.55
+    controls.maxDistance = dist * 1.4
+    camera.position.set(0, -dist, 0.01)
+    home.pos.copy(camera.position)
+    home.target.copy(controls.target)
+  }
+
+  const resetView: Table['resetView'] = (onDone, durMs = 700) => {
+    if (disposed) {
+      onDone?.()
+      return
+    }
+    if (
+      camera.position.distanceToSquared(home.pos) < 1e-4 &&
+      controls.target.distanceToSquared(home.target) < 1e-4
+    ) {
+      onDone?.()
+      return
+    }
+    controls.enabled = false
+    camTween = {
+      fromPos: camera.position.clone(),
+      fromTarget: controls.target.clone(),
+      onDone: onDone ?? null,
+      t: 0,
+      dur: Math.max(0.2, durMs / 1000),
+    }
+  }
+
+  const disposeDie = (view: DieView) => {
+    scene.remove(view.root)
+    // Геометрия — общая из кэша шаблонов (её не трогаем), материалы инстанса —
+    // клоны (dispose безопасен, соседних близнецов не гасит).
+    view.root.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material]
+        for (const m of mats) m.dispose()
+      }
+    })
+  }
+
+  const addDie: Table['addDie'] = (id, url, opts, onLoad, onError) => {
+    void loadTemplate(url).then(
+      (template) => {
+        if (disposed) return
+        // Перестройка набора пересоздаёт меши: старый инстанс убираем первым,
+        // иначе два тела с одним id висят в сцене до колбэка.
+        if (dice.has(id)) {
+          const stale = dice.get(id)
+          if (stale) disposeDie(stale)
+          dice.delete(id)
+        }
+        const old = dice.get(id)
+        if (old) disposeDie(old)
+        const root = template.clone(true)
+        root.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.material = Array.isArray(child.material)
+              ? child.material.map((m) => m.clone())
+              : child.material.clone()
+          }
+        })
+        // Масштаб в размер физ-тела (как витрина: измеренный bbox → physSize).
+        const box0 = new THREE.Box3().setFromObject(root)
+        const size0 = box0.getSize(new THREE.Vector3())
+        const maxDim = Math.max(size0.x, size0.y, size0.z) || 1
+        const unitSize = opts?.physSize && opts.physSize > 0 ? opts.physSize : 2.4
+        root.scale.setScalar(unitSize / maxDim)
+        if (opts?.initialQuat) {
+          root.quaternion.set(
+            opts.initialQuat[0],
+            opts.initialQuat[1],
+            opts.initialQuat[2],
+            opts.initialQuat[3],
+          )
+        }
+        // Низ ровно на y=0, XZ в слот.
+        const box = new THREE.Box3().setFromObject(root)
+        const center = box.getCenter(new THREE.Vector3())
+        root.position.x = (opts?.slot?.[0] ?? 0) - center.x * root.scale.x
+        root.position.z = (opts?.slot?.[1] ?? 0) - center.z * root.scale.x
+        root.position.y -= box.min.y
+        scene.add(root)
+        // Центр геометрии в локальном пространстве root: пивот трекбола,
+        // чтобы кость вращалась вокруг себя, а не уезжала.
+        root.updateWorldMatrix(true, true)
+        const localCenter = new THREE.Box3()
+          .setFromObject(root)
+          .getCenter(new THREE.Vector3())
+          .applyMatrix4(new THREE.Matrix4().copy(root.matrixWorld).invert())
+        dice.set(id, { root, unitSize, localCenter, present: null, glide: null })
+        frameCamera()
+        onLoad?.()
+      },
+      () => {
+        if (!disposed) onError?.()
+      },
+    )
+  }
+
+  const removeDie: Table['removeDie'] = (id) => {
+    const view = dice.get(id)
+    if (!view) return
+    disposeDie(view)
+    dice.delete(id)
+  }
+
+  const syncBody: Table['syncBody'] = (id, pos, q) => {
+    const view = dice.get(id)
+    if (!view || disposed) return
+    view.present = null
+    view.glide = null
+    view.root.position.set(pos[0], pos[1], pos[2])
+    view.root.quaternion.set(q[0], q[1], q[2], q[3])
+  }
+
+  const presentTo: Table['presentTo'] = (id, q, onDone, durMs = 650) => {
+    const view = dice.get(id)
+    if (!view || disposed) {
+      onDone?.()
+      return
+    }
+    const to = new THREE.Quaternion(q[0], q[1], q[2], q[3]).normalize()
+    if (view.root.quaternion.angleTo(to) < 0.035) {
+      view.root.quaternion.copy(to)
+      onDone?.()
+      return
+    }
+    view.glide = null
+    view.present = {
+      from: view.root.quaternion.clone(),
+      to,
+      baseY: view.root.position.y,
+      hopAmp: view.unitSize * 0.06,
+      onDone: onDone ?? null,
+      t: 0,
+      dur: Math.max(0.2, durMs / 1000),
+    }
+  }
+
+  const glideTo: Table['glideTo'] = (id, x, z, onDone, durMs = 500) => {
+    const view = dice.get(id)
+    if (!view || disposed) {
+      onDone?.()
+      return
+    }
+    if (Math.hypot(x - view.root.position.x, z - view.root.position.z) < 1e-3) {
+      onDone?.()
+      return
+    }
+    view.present = null
+    view.glide = {
+      fromX: view.root.position.x,
+      fromZ: view.root.position.z,
+      toX: x,
+      toZ: z,
+      onDone: onDone ?? null,
+      t: 0,
+      dur: Math.max(0.2, durMs / 1000),
+    }
+  }
+
+  const DIM_KEY = 'kubicaDimOrig'
+  const dimDie: Table['dimDie'] = (id, dimmed) => {
+    const view = dice.get(id)
+    if (!view || disposed) return
+    view.root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      for (const m of mats) {
+        const mat = m as THREE.MeshStandardMaterial
+        if (!('color' in mat) || mat.color === undefined) continue
+        const ud = mat.userData as Record<string, unknown>
+        if (dimmed) {
+          if (typeof ud[DIM_KEY] !== 'number') ud[DIM_KEY] = mat.color.getHex()
+          const orig = new THREE.Color(ud[DIM_KEY] as number)
+          // Тело — в плоский графит, а цифры (белые / legacy-красные) лишь притухают:
+          // иначе кость выглядит сломанной болванкой без граней.
+          const isRedDigit = orig.r > 0.5 && orig.r > orig.g * 1.6 && orig.r > orig.b * 1.6
+          const isWhiteDigit = orig.r > 0.8 && orig.g > 0.8 && orig.b > 0.8
+          const isDigit = isRedDigit || isWhiteDigit
+          if (isDigit) mat.color.copy(orig).multiplyScalar(0.45)
+          else mat.color.setHex(0x4a4d55)
+        } else if (typeof ud[DIM_KEY] === 'number') {
+          mat.color.setHex(ud[DIM_KEY] as number)
+        }
+      }
+    })
+  }
+
+  const pickDieId: Table['pickDieId'] = (clientX, clientY) => {
+    if (disposed) return null
+    const rect = canvas.getBoundingClientRect()
+    const nx = ((clientX - rect.left) / rect.width) * 2 - 1
+    const ny = -(((clientY - rect.top) / rect.height) * 2 - 1)
+    raycaster.setFromCamera({ x: nx, y: ny } as THREE.Vector2, camera)
+    for (const [id, view] of dice) {
+      if (raycaster.intersectObject(view.root, true).length > 0) return id
+    }
+    return null
+  }
+
+  const pickAny: Table['pickAny'] = (clientX, clientY) => pickDieId(clientX, clientY) !== null
+
+  const findDiePoint: Table['findDiePoint'] = () => {
+    if (disposed || dice.size === 0) return null
+    const rect = canvas.getBoundingClientRect()
+    const step = 16
+    const order = (len: number): number[] => {
+      const a: number[] = []
+      for (let v = step / 2; v < len; v += step) a.push(v)
+      const c = len / 2
+      return a.sort((p, q) => Math.abs(p - c) - Math.abs(q - c))
+    }
+    for (const dx of order(rect.width)) {
+      for (const dy of order(rect.height)) {
+        const x = rect.left + dx
+        const y = rect.top + dy
+        if (pickDieId(x, y)) return { x, y }
+      }
+    }
+    return null
+  }
+
+  // Трекбол кости: дельта-поворот вокруг ЕЁ геометрического центра в мире.
+  // Ось — в кадре камеры (как grabMove витрины): drag вправо крутит кость
+  // «как пальцем по поверхности». Позиция пивотится вместе с кватернионом,
+  // чтобы центр не уезжал (локальный origin GLB ≈ центру, но не полагаемся).
+  const spinTmpC = new THREE.Vector3()
+  const spinTmpO = new THREE.Vector3()
+  const spinDQ = new THREE.Quaternion()
+  const spinDie: Table['spinDie'] = (id, dxPx, dyPx) => {
+    const view = dice.get(id)
+    if (!view || disposed || view.present || view.glide) return
+    const angle = 0.008 * Math.hypot(dxPx, dyPx)
+    if (angle < 1e-6) return
+    camera.updateMatrixWorld()
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0)
+    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1)
+    const axis = new THREE.Vector3().addScaledVector(right, -dyPx).addScaledVector(up, dxPx)
+    if (axis.lengthSq() < 1e-12) return
+    spinDQ.setFromAxisAngle(axis.normalize(), angle)
+    const s = view.root.scale.x
+    const center = spinTmpC
+      .copy(view.localCenter)
+      .multiplyScalar(s)
+      .applyQuaternion(view.root.quaternion)
+      .add(view.root.position)
+    const offset = spinTmpO.copy(view.root.position).sub(center).applyQuaternion(spinDQ)
+    view.root.quaternion.premultiply(spinDQ)
+    view.root.position.copy(center).add(offset)
+  }
+
+  const getPose: Table['getPose'] = (id) => {
+    const view = dice.get(id)
+    if (!view || disposed) return null
+    return {
+      pos: [view.root.position.x, view.root.position.y, view.root.position.z],
+      quat: [
+        view.root.quaternion.x,
+        view.root.quaternion.y,
+        view.root.quaternion.z,
+        view.root.quaternion.w,
+      ],
+    }
+  }
+
+  const getViewDir = (): [number, number, number] => {
+    const v = camera.position.clone().sub(controls.target)
+    const l = v.length() || 1
+    return [v.x / l, v.y / l, v.z / l]
+  }
+
+  const resize = () => {
+    if (disposed) return
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+    renderer.setSize(width, height, false)
+    camera.aspect = width / height
+    camera.updateProjectionMatrix()
+    frameCamera()
+  }
+
+  const update = () => {
+    if (disposed) return
+    const now = performance.now()
+    const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000))
+    lastT = now
+    for (const view of dice.values()) {
+      // Одно движение сразу на финал (full-slerp короткой дугой + лёгкий
+      // подскок в середине, чтобы углы не скребли пол).
+      if (view.present) {
+        view.present.t += dt
+        const k = Math.min(1, view.present.t / view.present.dur)
+        const e = k * k * (3 - 2 * k)
+        view.root.quaternion.slerpQuaternions(view.present.from, view.present.to, e)
+        // Чуть приподнимаем в середине: углы не скребут пол.
+        view.root.position.y =
+          view.present.baseY + view.present.hopAmp * Math.sin(Math.PI * Math.min(1, k))
+        if (k >= 1) {
+          view.root.position.y = view.present.baseY
+          const done = view.present.onDone
+          view.present = null
+          done?.()
+        }
+      }
+      if (view.glide) {
+        view.glide.t += dt
+        const k = Math.min(1, view.glide.t / view.glide.dur)
+        const e = k * k * (3 - 2 * k)
+        view.root.position.x = view.glide.fromX + (view.glide.toX - view.glide.fromX) * e
+        view.root.position.z = view.glide.fromZ + (view.glide.toZ - view.glide.fromZ) * e
+        if (k >= 1) {
+          const done = view.glide.onDone
+          view.glide = null
+          done?.()
+        }
+      }
+    }
+    if (camTween) {
+      camTween.t += dt
+      const k = Math.min(1, camTween.t / camTween.dur)
+      const e = k * k * (3 - 2 * k)
+      camera.position.lerpVectors(camTween.fromPos, home.pos, e)
+      controls.target.lerpVectors(camTween.fromTarget, home.target, e)
+      if (k >= 1) {
+        const done = camTween.onDone
+        camTween = null
+        controls.enabled = true
+        done?.()
+      }
+    }
+    controls.update()
+    renderer.render(scene, camera)
+  }
+
+  // Юзер схватил стол посреди возврата — доводку отменяем, руль возвращаем.
+  const cancelTween = () => {
+    if (camTween) {
+      camTween = null
+      controls.enabled = true
+    }
+  }
+  canvas.addEventListener('pointerdown', cancelTween)
+
+  const dispose = () => {
+    disposed = true
+    canvas.removeEventListener('pointerdown', cancelTween)
+    for (const view of dice.values()) disposeDie(view)
+    dice.clear()
+    controls.dispose()
+    renderer.dispose()
+  }
+
+  return {
+    addDie,
+    removeDie,
+    hasDie: (id) => dice.has(id),
+    syncBody,
+    presentTo,
+    glideTo,
+    pickAny,
+    pickDieId,
+    findDiePoint,
+    spinDie,
+    dimDie,
+    getPose,
+    getViewDir,
+    setFit,
+    resetView,
+    resize,
+    update,
+    dispose,
+  }
+}
