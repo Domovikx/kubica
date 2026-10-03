@@ -151,12 +151,19 @@ export const commitTableResult = (
 }
 
 /**
- * Раскладка слотов после settle (pure): кости разъезжаются в центр
- * с красивыми отступами. 1 → центр; 2 → пара по X; 3 → треугольник;
- * 4+ → два ряда. Шаг gap задаёт виджет по самой крупной кости пачки
- * (дефолт 22 — под д6 ~16 с воздухом).
+ * Раскладка слотов после settle (pure): каждый кубик — в условном квадрате
+ * (шаг gap по обеим осям, повёрнутый ромб влезает с запасом), квадраты
+ * компануются по пропорции экрана: широкий — широкие ряды (4d6 → в ряд),
+ * портрет — квадрат 2×2, узкий — колонка. opts.aspect = ширина/высота
+ * канваса (дефолт 1). 1 → центр; 2 → пара по X; 3 → треугольник;
+ * 4+ → сетка cols×rows, последний ряд центрируется. Шаг задаёт виджет
+ * по самой крупной кости пачки (с учётом поворота — ромб).
  */
-export const layoutSlots = (n: number, gap = 22): Array<{ x: number; z: number }> => {
+export const layoutSlots = (
+  n: number,
+  gap = 22,
+  opts?: { aspect?: number },
+): Array<{ x: number; z: number }> => {
   const half = gap / 2
   if (n <= 1) return [{ x: 0, z: 0 }]
   if (n === 2)
@@ -170,13 +177,32 @@ export const layoutSlots = (n: number, gap = 22): Array<{ x: number; z: number }
       { x: half, z: -gap * 0.3 },
       { x: 0, z: gap * 0.45 },
     ]
-  const slots: Array<{ x: number; z: number }> = []
-  const cols = Math.ceil(Math.sqrt(n))
+  const aspect = opts?.aspect && opts.aspect > 0 ? opts.aspect : 1
+  // Насколько кадр раскладки может быть вытянут против экрана: 2.5 даёт
+  // «в ряд» на 16:9 и уже, а портрет удерживает в квадрате/колонке.
+  const stretch = aspect * 2.5
+  let cols = 1
+  let best = -1
+  for (let c = 1; c <= n; c++) {
+    const rows = Math.ceil(n / c)
+    // Квадратные ячейки должны влезть и по высоте (кроме одного ряда).
+    if (rows > 1 && rows > Math.floor(c / aspect + 1e-6)) continue
+    if (c / rows > stretch) continue
+    const last = n % c
+    const fill = last === 0 ? 1 : last / c
+    const score = fill * 10 + c
+    if (score > best) {
+      best = score
+      cols = c
+    }
+  }
+  if (best < 0) cols = n
   const rows = Math.ceil(n / cols)
+  const slots: Array<{ x: number; z: number }> = []
   for (let r = 0; r < rows; r++) {
     const inRow = Math.min(cols, n - r * cols)
     for (let c = 0; c < inRow; c++) {
-      slots.push({ x: (c - (inRow - 1) / 2) * gap, z: (r - (rows - 1) / 2) * gap * 0.85 })
+      slots.push({ x: (c - (inRow - 1) / 2) * gap, z: (r - (rows - 1) / 2) * gap })
     }
   }
   return slots

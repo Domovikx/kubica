@@ -194,24 +194,30 @@ const attachDieGestures = (
 const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLElement => {
   const section = document.createElement('section')
   section.className = 'viewer'
+  section.dataset.testid = 'viewer'
 
   const canvas = document.createElement('canvas')
 
   const label = document.createElement('p')
   label.className = 'viewerLabel'
+  label.dataset.testid = 'viewer-label'
   label.textContent = model.id
 
   const info = document.createElement('p')
   info.className = 'viewerInfo'
+  info.dataset.testid = 'viewer-info'
 
   const overlay = document.createElement('div')
   overlay.className = 'viewerOverlay'
+  overlay.dataset.testid = 'viewer-overlay'
   overlay.hidden = true
   const title = document.createElement('p')
   title.className = 'viewerOverlayTitle'
+  title.dataset.testid = 'viewer-overlay-title'
   title.textContent = 'Модель не найдена'
   const hint = document.createElement('p')
   hint.className = 'viewerOverlayText'
+  hint.dataset.testid = 'viewer-overlay-text'
   hint.textContent = `Нужен ${model.url}`
   overlay.append(title, hint)
 

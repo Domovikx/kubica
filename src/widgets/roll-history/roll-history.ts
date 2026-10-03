@@ -22,12 +22,15 @@ const fmtTime = (at: number): string => {
 export const mountRollHistory = (container: HTMLElement): (() => void) => {
   const title = document.createElement('p')
   title.className = 'sidebarTitle'
+  title.dataset.testid = 'history-title'
   title.textContent = 'История бросков'
 
   const actions = document.createElement('div')
   actions.className = 'sidebarActions'
+  actions.dataset.testid = 'history-actions'
   const muteBtn = document.createElement('button')
   muteBtn.className = 'switchBtn'
+  muteBtn.dataset.testid = 'history-mute'
   muteBtn.type = 'button'
   const syncMute = () => {
     muteBtn.textContent = isMuted() ? 'Звук: выкл' : 'Звук: вкл'
@@ -35,12 +38,14 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
   syncMute()
   const clearBtn = document.createElement('button')
   clearBtn.className = 'switchBtn'
+  clearBtn.dataset.testid = 'history-clear'
   clearBtn.type = 'button'
   clearBtn.textContent = 'Очистить'
   actions.append(muteBtn, clearBtn)
 
   const list = document.createElement('div')
   list.className = 'historyList'
+  list.dataset.testid = 'history-list'
 
   container.append(title, actions, list)
 
@@ -52,6 +57,7 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
     if (entries.length === 0) {
       const empty = document.createElement('p')
       empty.className = 'historyEmpty'
+      empty.dataset.testid = 'history-empty'
       empty.textContent = 'Пока пусто — тапните по кости'
       list.appendChild(empty)
       return
@@ -59,15 +65,19 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
     entries.forEach((entry, i) => {
       const row = document.createElement('div')
       row.className = 'historyRow'
+      row.dataset.testid = 'history-row'
       const main = document.createElement('button')
       main.className = 'historyMain'
+      main.dataset.testid = 'history-main'
       main.type = 'button'
       main.title = 'Бросить ещё раз'
       const value = document.createElement('span')
       value.className = 'historyValue'
+      value.dataset.testid = 'history-value'
       value.textContent = entry.display
       const meta = document.createElement('span')
       meta.className = 'historyMeta'
+      meta.dataset.testid = 'history-meta'
       meta.textContent = entry.label
         ? `${formatLabel(entry.label)} · ${fmtTime(entry.at)}`
         : `${entry.die} · ${fmtTime(entry.at)}`
@@ -77,6 +87,7 @@ export const mountRollHistory = (container: HTMLElement): (() => void) => {
       if (entry.parts && entry.parts.length > 0) {
         const parts = document.createElement('span')
         parts.className = 'historyParts'
+        parts.dataset.testid = 'history-parts'
         const texts = formatParts(entry.parts)
         entry.parts.forEach((p, i) => {
           const s = document.createElement('span')

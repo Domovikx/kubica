@@ -11,8 +11,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: false,
   retries: 0,
-  reporter: 'html',
-  outputDir: 'test-results',
+  reporter: [['html', { outputFolder: 'tmp/playwright-report', open: 'on-failure' }]],
+  outputDir: 'tmp/test-results',
   use: {
     baseURL: 'http://127.0.0.1:5173/kubica',
     trace: 'on-first-retry',

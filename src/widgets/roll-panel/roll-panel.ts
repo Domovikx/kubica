@@ -20,32 +20,40 @@ export const mountRollPanel = (container: HTMLElement): (() => void) => {
 
   const root = document.createElement('section')
   root.className = 'rollPanel'
+  root.dataset.testid = 'roll-panel'
 
   const title = document.createElement('p')
   title.className = 'sidebarTitle'
+  title.dataset.testid = 'roll-title'
   title.textContent = 'Пул костей'
   root.appendChild(title)
 
   const stepBox = document.createElement('div')
   stepBox.className = 'rollSteppers'
+  stepBox.dataset.testid = 'roll-steppers'
   const countSpans = new Map<number, HTMLSpanElement>()
   for (const sides of STEPPERS) {
     const row = document.createElement('div')
     row.className = 'rollStepper'
+    row.dataset.testid = 'roll-stepper'
     const code = document.createElement('span')
     code.className = 'rollStepperCode'
+    code.dataset.testid = 'roll-stepper-code'
     code.textContent = `d${sides}`
     const minus = document.createElement('button')
     minus.className = 'switchBtn rollStepperBtn'
+    minus.dataset.testid = 'roll-stepper-minus'
     minus.type = 'button'
     minus.textContent = '−'
     minus.title = `Убрать d${sides}`
     minus.addEventListener('click', () => store.adjustDie(sides, -1))
     const count = document.createElement('span')
     count.className = 'rollStepperCount'
+    count.dataset.testid = 'roll-stepper-count'
     count.textContent = '0'
     const plus = document.createElement('button')
     plus.className = 'switchBtn rollStepperBtn'
+    plus.dataset.testid = 'roll-stepper-plus'
     plus.type = 'button'
     plus.textContent = '+'
     plus.title = `Добавить d${sides}`
@@ -58,6 +66,7 @@ export const mountRollPanel = (container: HTMLElement): (() => void) => {
 
   const formula = document.createElement('input')
   formula.className = 'rollFormula'
+  formula.dataset.testid = 'roll-formula'
   formula.type = 'text'
   formula.placeholder = '2d20kh1+5'
   formula.setAttribute('aria-label', 'Формула пула')
@@ -66,14 +75,17 @@ export const mountRollPanel = (container: HTMLElement): (() => void) => {
 
   const err = document.createElement('p')
   err.className = 'rollError'
+  err.dataset.testid = 'roll-error'
   err.hidden = true
   root.appendChild(err)
 
   const presetBox = document.createElement('div')
   presetBox.className = 'rollPresets'
+  presetBox.dataset.testid = 'roll-presets'
   for (const preset of PRESETS) {
     const btn = document.createElement('button')
     btn.className = 'switchBtn'
+    btn.dataset.testid = 'roll-preset'
     btn.type = 'button'
     btn.textContent = preset.name
     btn.title = preset.formula
@@ -84,6 +96,7 @@ export const mountRollPanel = (container: HTMLElement): (() => void) => {
 
   const rollBtn = document.createElement('button')
   rollBtn.className = 'switchBtn rollGo'
+  rollBtn.dataset.testid = 'roll-go'
   rollBtn.type = 'button'
   rollBtn.textContent = 'Бросить пул'
   rollBtn.addEventListener('click', () => {
@@ -93,9 +106,11 @@ export const mountRollPanel = (container: HTMLElement): (() => void) => {
 
   const total = document.createElement('p')
   total.className = 'rollTotal'
+  total.dataset.testid = 'roll-total'
   total.hidden = true
   const parts = document.createElement('p')
   parts.className = 'rollParts'
+  parts.dataset.testid = 'roll-parts'
   parts.hidden = true
   root.append(total, parts)
 

@@ -10,17 +10,21 @@ import './model-list.css'
 export const mountModelList = (container: HTMLElement): (() => void) => {
   const title = document.createElement('p')
   title.className = 'sidebarTitle'
+  title.dataset.testid = 'models-title'
   title.textContent = 'Модели'
 
   const actions = document.createElement('div')
   actions.className = 'sidebarActions'
+  actions.dataset.testid = 'models-actions'
   const selectAllBtn = document.createElement('button')
   selectAllBtn.className = 'switchBtn'
+  selectAllBtn.dataset.testid = 'models-select-all'
   selectAllBtn.id = 'selectAll'
   selectAllBtn.type = 'button'
   selectAllBtn.textContent = 'Все'
   const clearBtn = document.createElement('button')
   clearBtn.className = 'switchBtn'
+  clearBtn.dataset.testid = 'models-clear'
   clearBtn.id = 'clearAll'
   clearBtn.type = 'button'
   clearBtn.textContent = 'Ничего'
@@ -28,6 +32,7 @@ export const mountModelList = (container: HTMLElement): (() => void) => {
 
   const list = document.createElement('div')
   list.className = 'modelList'
+  list.dataset.testid = 'models-list'
   list.id = 'modelList'
 
   container.append(title, actions, list)
@@ -38,15 +43,18 @@ export const mountModelList = (container: HTMLElement): (() => void) => {
   for (const model of visible) {
     const label = document.createElement('label')
     label.className = 'modelItem'
+    label.dataset.testid = 'models-item'
     const input = document.createElement('input')
     input.type = 'checkbox'
     input.value = model.id
     input.checked = isSelected(model.id)
     const code = document.createElement('span')
     code.className = 'modelItemCode'
+    code.dataset.testid = 'models-item-code'
     code.textContent = model.id
     const text = document.createElement('span')
     text.className = 'modelItemLabel'
+    text.dataset.testid = 'models-item-label'
     text.textContent = model.label
     label.append(input, code, text)
     input.addEventListener('change', () => {

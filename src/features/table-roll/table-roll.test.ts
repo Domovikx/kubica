@@ -151,7 +151,7 @@ describe('layoutSlots: раскладка по центру', () => {
     ])
   })
 
-  it('3 → треугольник, 4+ → сетка без наложений (шаг ≥18)', () => {
+  it('3 → треугольник, 4+ → сетка без наложений (dist ≥ gap)', () => {
     expect(layoutSlots(3)).toHaveLength(3)
     for (const n of [4, 5, 6]) {
       const slots = layoutSlots(n)
@@ -159,9 +159,38 @@ describe('layoutSlots: раскладка по центру', () => {
       for (let i = 0; i < slots.length; i++) {
         for (let j = i + 1; j < slots.length; j++) {
           const dist = Math.hypot(slots[i].x - slots[j].x, slots[i].z - slots[j].z)
-          expect(dist).toBeGreaterThanOrEqual(18)
+          expect(dist).toBeGreaterThanOrEqual(22 - 1e-9)
         }
       }
     }
+  })
+
+  it('aspect: широкий кадр — 4 в ряд, портрет — 2×2', () => {
+    const wide = layoutSlots(4, 22, { aspect: 16 / 9 })
+    expect(wide.map((s) => s.z)).toEqual([0, 0, 0, 0])
+    const port = layoutSlots(4, 22, { aspect: 9 / 16 })
+    expect(new Set(port.map((s) => s.z)).size).toBe(2)
+    expect(new Set(port.map((s) => s.x)).size).toBe(2)
+  })
+
+  it('aspect: для любого кадра dist ≥ gap', () => {
+    const gap = 24
+    for (const aspect of [0.3, 0.5, 1, 16 / 9, 3]) {
+      for (const n of [4, 5, 6, 8]) {
+        const slots = layoutSlots(n, gap, { aspect })
+        expect(slots).toHaveLength(n)
+        for (let i = 0; i < slots.length; i++) {
+          for (let j = i + 1; j < slots.length; j++) {
+            const dist = Math.hypot(slots[i].x - slots[j].x, slots[i].z - slots[j].z)
+            expect(dist).toBeGreaterThanOrEqual(gap - 1e-9)
+          }
+        }
+      }
+    }
+  })
+
+  it('aspect ≤ 0 не роняет раскладку (fallback 1)', () => {
+    expect(layoutSlots(4, 22, { aspect: 0 })).toHaveLength(4)
+    expect(layoutSlots(4, 22, { aspect: NaN })).toHaveLength(4)
   })
 })

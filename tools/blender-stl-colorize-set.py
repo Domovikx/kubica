@@ -187,7 +187,7 @@ def digit_boxes(die):
                 out.append((pos, nv, bu, bv, 4.5, vi + 1))
     else:
         # d6/d8/d10/d12/d20: цифра в центре грани, "вверх" = к первой вершине
-        sizes = {'d6': 6.0, 'd8': 3.84, 'd10': 4.5, 'd12': 4.2, 'd20': 3.8}
+        sizes = {'d6': 6.0, 'd8': 3.84, 'd10': 4.5, 'd12': 4.2, 'd20': 3.42}
         size = sizes[die]
         for fi in range(n):
             c = centroid(v, f[fi])

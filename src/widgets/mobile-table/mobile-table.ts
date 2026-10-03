@@ -117,30 +117,37 @@ export const mountMobileTable = (
   container.innerHTML = ''
   const section = document.createElement('section')
   section.className = 'mtable'
+  section.dataset.testid = 'mtable'
 
   const canvas = document.createElement('canvas')
   canvas.className = 'mtableCanvas'
+  canvas.dataset.testid = 'mtable-canvas'
   // Декорация для SR: итог озвучивает кнопка (aria-live ниже).
   canvas.setAttribute('aria-hidden', 'true')
 
   const head = document.createElement('div')
   head.className = 'mtableHead'
+  head.dataset.testid = 'mtable-head'
   const burger = document.createElement('button')
   burger.className = 'mtableIcon mtableBurger'
+  burger.dataset.testid = 'mtable-burger'
   burger.type = 'button'
   burger.innerHTML = menuIcon()
   burger.setAttribute('aria-label', 'Меню')
   // «+ Кости» — набор («2d4 d12»), пусто — «+ Кости»; сумма броска — на бургере.
   const diceBtn = document.createElement('button')
   diceBtn.className = 'mtableIcon mtableAdd'
+  diceBtn.dataset.testid = 'mtable-add'
   diceBtn.type = 'button'
   diceBtn.textContent = '+ Кости'
   diceBtn.setAttribute('aria-label', 'Выбор костей')
   const title = document.createElement('span')
   title.className = 'mtableTitle'
+  title.dataset.testid = 'mtable-title'
   title.textContent = 'Kubica'
   const soundBtn = document.createElement('button')
   soundBtn.className = 'mtableIcon'
+  soundBtn.dataset.testid = 'mtable-sound'
   soundBtn.type = 'button'
   const syncSound = () => {
     soundBtn.innerHTML = soundIcon(isMuted())
@@ -153,8 +160,16 @@ export const mountMobileTable = (
     syncSound()
     syncDrawerSound()
   })
-  // Порядок в шапке: набор, бургер (сумма/лоадер), заголовок, звук.
-  head.append(diceBtn, burger, title, soundBtn)
+  // Шапка: управление (набор, бургер) по центру экрана, справа Kubica и звук.
+  const headCtl = document.createElement('div')
+  headCtl.className = 'mtableHeadCtl'
+  headCtl.dataset.testid = 'mtable-head-ctl'
+  headCtl.append(diceBtn, burger)
+  const headSide = document.createElement('div')
+  headSide.className = 'mtableHeadSide'
+  headSide.dataset.testid = 'mtable-head-side'
+  headSide.append(title, soundBtn)
+  head.append(headCtl, headSide)
 
   const applyCounts = (counts: TableCounts) => {
     setup.clear()
@@ -169,6 +184,7 @@ export const mountMobileTable = (
   // Хинт-статус по центру: пусто (кнопка → шит) / грузится / ошибка загрузки.
   const hint = document.createElement('button')
   hint.className = 'mtableHint'
+  hint.dataset.testid = 'mtable-hint'
   hint.type = 'button'
   hint.textContent = 'Жми «+ Кости» — пресеты и выбор костей внутри'
   hint.hidden = true
@@ -178,22 +194,27 @@ export const mountMobileTable = (
   // для скринридера — невидимый живой регион (бывший aria-live на кнопке).
   const live = document.createElement('div')
   live.className = 'mtableLive'
+  live.dataset.testid = 'mtable-live'
   live.setAttribute('role', 'status')
 
   const backdrop = document.createElement('div')
   backdrop.className = 'mtableBackdrop'
+  backdrop.dataset.testid = 'mtable-backdrop'
   backdrop.hidden = true
 
   // --- Шторка «+ Кости» ---
   const sheet = document.createElement('div')
   sheet.className = 'mtableSheet'
+  sheet.dataset.testid = 'mtable-sheet'
   sheet.hidden = true
   const sheetHead = document.createElement('div')
   sheetHead.className = 'mtableSheetHead'
+  sheetHead.dataset.testid = 'mtable-sheet-head'
   const sheetTitle = document.createElement('span')
   sheetTitle.textContent = 'Выбор костей'
   const sheetClear = document.createElement('button')
   sheetClear.className = 'mtableIcon mtableSheetClear'
+  sheetClear.dataset.testid = 'mtable-sheet-clear'
   sheetClear.type = 'button'
   sheetClear.innerHTML = clearAllIcon()
   sheetClear.title = 'Убрать все'
@@ -205,6 +226,7 @@ export const mountMobileTable = (
   })
   const sheetClose = document.createElement('button')
   sheetClose.className = 'mtableIcon'
+  sheetClose.dataset.testid = 'mtable-sheet-close'
   sheetClose.type = 'button'
   sheetClose.innerHTML = closeIcon()
   sheetClose.setAttribute('aria-label', 'Закрыть выбор костей')
@@ -215,26 +237,33 @@ export const mountMobileTable = (
   for (const die of DIE_IDS) {
     const row = document.createElement('div')
     row.className = 'mtableRow'
+    row.dataset.testid = 'mtable-row'
     const glyph = document.createElement('span')
     glyph.className = 'mtableGlyph'
+    glyph.dataset.testid = 'mtable-glyph'
     glyph.innerHTML = dieGlyph(die)
     const nm = document.createElement('span')
     nm.className = 'mtableName'
+    nm.dataset.testid = 'mtable-name'
     nm.textContent = die
     const ds = document.createElement('span')
     ds.className = 'mtableDesc'
+    ds.dataset.testid = 'mtable-desc'
     ds.textContent = DIE_HINTS[die]
     const minus = document.createElement('button')
     minus.className = 'mtableStep'
+    minus.dataset.testid = 'mtable-step-minus'
     minus.type = 'button'
     minus.textContent = '−'
     minus.setAttribute('aria-label', `Убрать ${die}`)
     minus.addEventListener('click', () => setup.add(die, -1))
     const count = document.createElement('span')
     count.className = 'mtableN'
+    count.dataset.testid = 'mtable-step-count'
     count.textContent = '0'
     const plus = document.createElement('button')
     plus.className = 'mtableStep'
+    plus.dataset.testid = 'mtable-step-plus'
     plus.type = 'button'
     plus.textContent = '+'
     plus.setAttribute('aria-label', `Добавить ${die}`)
@@ -248,28 +277,35 @@ export const mountMobileTable = (
   // --- Бургер-меню ---
   const drawer = document.createElement('div')
   drawer.className = 'mtableDrawer'
+  drawer.dataset.testid = 'mtable-drawer'
   drawer.hidden = true
   const drawerHead = document.createElement('div')
   drawerHead.className = 'mtableSheetHead'
+  drawerHead.dataset.testid = 'mtable-drawer-head'
   const drawerTitle = document.createElement('span')
   drawerTitle.textContent = 'Меню'
   const drawerClose = document.createElement('button')
   drawerClose.className = 'mtableIcon'
+  drawerClose.dataset.testid = 'mtable-drawer-close'
   drawerClose.type = 'button'
   drawerClose.innerHTML = closeIcon()
   drawerClose.setAttribute('aria-label', 'Закрыть меню')
   drawerHead.append(drawerTitle, drawerClose)
   const drawerBody = document.createElement('div')
   drawerBody.className = 'mtableDrawerBody'
+  drawerBody.dataset.testid = 'mtable-drawer-body'
 
   const histSection = document.createElement('div')
   histSection.className = 'mtableSection'
+  histSection.dataset.testid = 'mtable-history-section'
   const histHead = document.createElement('div')
   histHead.className = 'mtableSectionHead'
+  histHead.dataset.testid = 'mtable-history-head'
   const histTitle = document.createElement('span')
   histTitle.textContent = 'История'
   const histClear = document.createElement('button')
   histClear.className = 'mtableLink'
+  histClear.dataset.testid = 'mtable-link'
   histClear.type = 'button'
   histClear.textContent = 'Очистить'
   // Двухтап вместо confirm: первый тап взводит, второй — чистит.
@@ -293,12 +329,14 @@ export const mountMobileTable = (
   histHead.append(histTitle, histClear)
   const histList = document.createElement('div')
   histList.className = 'mtableHist'
+  histList.dataset.testid = 'mtable-hist'
   histSection.append(histHead, histList)
 
   // --- Пресеты в шторке: сверху быстрые наборы, ниже свои; чипы — только
   // состав костями (без подписей), тап применяет, удержание 3 с удаляет. ---
   const toast = document.createElement('div')
   toast.className = 'mtableToast'
+  toast.dataset.testid = 'mtable-toast'
   toast.hidden = true
   let toastTimer = 0
   const showToast = (msg: string): void => {
@@ -312,21 +350,28 @@ export const mountMobileTable = (
 
   const preBlock = document.createElement('div')
   preBlock.className = 'mtablePreBlock'
+  preBlock.dataset.testid = 'mtable-pre-block'
   const fastCap = document.createElement('span')
   fastCap.className = 'mtablePreCap'
+  fastCap.dataset.testid = 'mtable-fast-cap'
   fastCap.textContent = 'Быстрые'
   const fastList = document.createElement('div')
   fastList.className = 'mtableSets mtableFast'
+  fastList.dataset.testid = 'mtable-fast'
   const mineCap = document.createElement('span')
   mineCap.className = 'mtablePreCap'
+  mineCap.dataset.testid = 'mtable-mine-cap'
   mineCap.textContent = 'Мои'
   const mineList = document.createElement('div')
   mineList.className = 'mtableSets mtableMine'
+  mineList.dataset.testid = 'mtable-mine'
   const preHint = document.createElement('p')
   preHint.className = 'mtablePreHint'
+  preHint.dataset.testid = 'mtable-pre-hint'
   preHint.textContent = 'Тап — набор · удерживай 3 с — удалить'
   const preEmpty = document.createElement('p')
   preEmpty.className = 'mtableEmpty'
+  preEmpty.dataset.testid = 'mtable-preset-empty'
   preEmpty.textContent = 'Пока нет — набери кости и жми «Сохранить сет»'
   preEmpty.hidden = true
   preBlock.append(fastCap, fastList, mineCap, mineList, preHint, preEmpty)
@@ -389,6 +434,7 @@ export const mountMobileTable = (
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'mtableChip'
+    btn.dataset.testid = 'mtable-chip'
     btn.dataset.set = name
     const label = shortSet(counts)
     btn.title = label
@@ -397,17 +443,21 @@ export const mountMobileTable = (
     btn.setAttribute('aria-pressed', String(activeSet === name))
     const fill = document.createElement('span')
     fill.className = 'mtableChipFill'
+    fill.dataset.testid = 'mtable-chip-fill'
     const dice = document.createElement('span')
     dice.className = 'mtableChipDice'
+    dice.dataset.testid = 'mtable-chip-dice'
     for (const die of DIE_IDS) {
       const n = counts[die] ?? 0
       if (n <= 0) continue
       const g = document.createElement('span')
       g.className = 'mtableChipDie'
+      g.dataset.testid = 'mtable-chip-die'
       g.innerHTML = dieGlyph(die)
       if (n > 1) {
         const x = document.createElement('span')
         x.className = 'mtableChipN'
+        x.dataset.testid = 'mtable-chip-n'
         x.textContent = `×${n}`
         g.appendChild(x)
       }
@@ -415,6 +465,7 @@ export const mountMobileTable = (
     }
     const count = document.createElement('span')
     count.className = 'mtableChipCount'
+    count.dataset.testid = 'mtable-chip-count'
     count.setAttribute('aria-hidden', 'true')
     count.textContent = '3'
     btn.append(fill, dice, count)
@@ -492,8 +543,10 @@ export const mountMobileTable = (
   // Одна кнопка сохранения: выделенный сет — перезапись, без выделения — новый.
   const saveRow = document.createElement('div')
   saveRow.className = 'mtableFormulaRow'
+  saveRow.dataset.testid = 'mtable-formula-row'
   const saveBtn = document.createElement('button')
   saveBtn.className = 'mtableOk'
+  saveBtn.dataset.testid = 'mtable-ok'
   saveBtn.type = 'button'
   saveBtn.textContent = 'Сохранить сет'
   saveRow.appendChild(saveBtn)
@@ -523,16 +576,20 @@ export const mountMobileTable = (
 
   const sheetBody = document.createElement('div')
   sheetBody.className = 'mtableRows'
+  sheetBody.dataset.testid = 'mtable-rows'
   sheetBody.append(preBlock, rows, saveRow)
   sheet.append(sheetHead, sheetBody)
 
   const sndSection = document.createElement('div')
   sndSection.className = 'mtableSection'
+  sndSection.dataset.testid = 'mtable-sound-section'
   const sndTitle = document.createElement('span')
   sndTitle.className = 'mtableSectionTitle'
+  sndTitle.dataset.testid = 'mtable-sound-title'
   sndTitle.textContent = 'Звук и вибрация'
   const sndToggle = document.createElement('button')
   sndToggle.className = 'mtableWide'
+  sndToggle.dataset.testid = 'mtable-sound-toggle'
   sndToggle.type = 'button'
   const syncDrawerSound = () => {
     sndToggle.innerHTML = `${soundIcon(isMuted())}<span>${
@@ -547,6 +604,7 @@ export const mountMobileTable = (
   })
   const hapToggle = document.createElement('button')
   hapToggle.className = 'mtableWide'
+  hapToggle.dataset.testid = 'mtable-haptic-toggle'
   hapToggle.type = 'button'
   const syncHaptics = () => {
     hapToggle.innerHTML = `${vibrationIcon()}<span>${
@@ -563,12 +621,15 @@ export const mountMobileTable = (
   // Сила броска — вместо старой зарядки удержанием (кость = кнопка, сила = меню).
   const pwSection = document.createElement('div')
   pwSection.className = 'mtableSection'
+  pwSection.dataset.testid = 'mtable-power-section'
   const pwTitle = document.createElement('span')
   pwTitle.className = 'mtableSectionTitle'
+  pwTitle.dataset.testid = 'mtable-power-title'
   pwTitle.textContent = 'Сила броска'
   const pwBtns: HTMLButtonElement[] = THROW_POWERS.map((p) => {
     const b = document.createElement('button')
     b.className = 'mtableWide'
+    b.dataset.testid = 'mtable-wide'
     b.type = 'button'
     b.textContent = p.name
     b.addEventListener('click', () => {
@@ -586,11 +647,14 @@ export const mountMobileTable = (
 
   const aboutSection = document.createElement('div')
   aboutSection.className = 'mtableSection'
+  aboutSection.dataset.testid = 'mtable-about-section'
   const aboutTitle = document.createElement('span')
   aboutTitle.className = 'mtableSectionTitle'
+  aboutTitle.dataset.testid = 'mtable-about-title'
   aboutTitle.textContent = 'О проекте'
   const aboutText = document.createElement('p')
   aboutText.className = 'mtableAbout'
+  aboutText.dataset.testid = 'mtable-about'
   aboutText.textContent =
     'Kubica — точные кости D&D: d6 16 мм, набор d4–d20, грани N+1, честная физика. FreeCAD · OpenSCAD · CadQuery → Blender → three.js.'
   aboutSection.append(aboutTitle, aboutText)
@@ -637,6 +701,7 @@ export const mountMobileTable = (
     if (entries.length === 0) {
       const empty = document.createElement('p')
       empty.className = 'mtableEmpty'
+      empty.dataset.testid = 'mtable-history-empty'
       empty.textContent = 'Пока пусто — кинь кости'
       histList.appendChild(empty)
       return
@@ -645,18 +710,22 @@ export const mountMobileTable = (
     for (const entry of entries.slice(0, 5)) {
       const row = document.createElement('button')
       row.className = 'mtableHrow'
+      row.dataset.testid = 'mtable-hrow'
       row.type = 'button'
       row.title = 'Повторить этот набор'
       const v = document.createElement('span')
       v.className = 'mtableHv'
+      v.dataset.testid = 'mtable-hv'
       v.textContent = entry.display
       const meta = document.createElement('span')
       meta.className = 'mtableHmeta'
+      meta.dataset.testid = 'mtable-hmeta'
       meta.textContent = entry.label
         ? `${formatLabel(entry.label)} · ${fmtTime(entry.at)}`
         : fmtTime(entry.at)
       const parts = document.createElement('span')
       parts.className = 'mtableHp'
+      parts.dataset.testid = 'mtable-hp'
       if (entry.parts) {
         const texts = formatParts(entry.parts)
         entry.parts.forEach((p, i) => {
@@ -670,6 +739,7 @@ export const mountMobileTable = (
       }
       const redo = document.createElement('span')
       redo.className = 'mtableHredo'
+      redo.dataset.testid = 'mtable-hredo'
       redo.textContent = '↻'
       row.append(v, meta, parts, redo)
       row.addEventListener('click', () => reroll(entry))
@@ -746,7 +816,7 @@ export const mountMobileTable = (
     const phase = syncPhase(total)
     // На бургере — сумма последнего броска; пока кости летят — лоадер (не кнопка).
     if (rolling) {
-      burger.innerHTML = '<span class="mtableSpin"></span>'
+      burger.innerHTML = '<span class="mtableSpin" data-testid="mtable-spin"></span>'
       burger.disabled = true
       burger.setAttribute('aria-busy', 'true')
     } else {
@@ -839,9 +909,10 @@ export const mountMobileTable = (
     instances = next
     loadError = ''
     const biggest = instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0)
-    const gap = Math.max(22, biggest * 1.35)
+    const gap = Math.max(24, biggest * 1.55)
     // Без верхних чипов и нижней панели поле пустое: кости — в реальном центре кадра.
-    slots = layoutSlots(instances.length, gap).map((s) => ({ x: s.x, z: s.z }))
+    const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight)
+    slots = layoutSlots(instances.length, gap, { aspect }).map((s) => ({ x: s.x, z: s.z }))
     const maxX = slots.reduce((m, s) => Math.max(m, Math.abs(s.x)), 0)
     const maxZ = slots.reduce((m, s) => Math.max(m, Math.abs(s.z)), 0)
     const fit = glassHalves(maxX, maxZ)

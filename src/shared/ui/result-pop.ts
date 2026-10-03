@@ -9,6 +9,7 @@ const ensure = (): HTMLDivElement => {
   if (!el) {
     el = document.createElement('div')
     el.className = 'result'
+    el.dataset.testid = 'result'
     el.hidden = true
     el.setAttribute('role', 'status')
     el.addEventListener('click', hideResult)
@@ -33,14 +34,17 @@ export const showResult = (
   node.innerHTML = ''
   const labelEl = document.createElement('span')
   labelEl.className = 'resultLabel'
+  labelEl.dataset.testid = 'result-label'
   labelEl.textContent = label
   const valueEl = document.createElement('span')
   valueEl.className = 'resultValue'
+  valueEl.dataset.testid = 'result-value'
   valueEl.textContent = value
   node.append(labelEl, valueEl)
   if (parts && parts.length > 0) {
     const partsEl = document.createElement('div')
     partsEl.className = 'resultParts'
+    partsEl.dataset.testid = 'result-parts'
     partsEl.setAttribute('aria-hidden', 'true')
     for (const p of parts) {
       const s = document.createElement('span')
@@ -56,6 +60,7 @@ export const showResult = (
     if (sub) {
       const subEl = document.createElement('div')
       subEl.className = 'resultSum'
+      subEl.dataset.testid = 'result-sum'
       subEl.textContent = sub
       node.appendChild(subEl)
     }

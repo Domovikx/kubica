@@ -10,7 +10,7 @@ import {
   quatMul,
   quatYaw,
 } from '@/features/roll-dice/face-orient'
-import type { StepCallback } from '@/features/roll-dice/physics'
+import { diceOverlap, type DicePose, type StepCallback } from '@/features/roll-dice/physics'
 import { resolveD4Below, screenUpWorld } from '@/features/roll-dice/readout'
 import { isMuted, playThock, stopRattle } from '@/features/roll-dice/sound'
 import {
@@ -67,10 +67,13 @@ export const mountGlassTable = (
   container.innerHTML = ''
   const section = document.createElement('section')
   section.className = 'gtable'
+  section.dataset.testid = 'gtable-root'
   const canvas = document.createElement('canvas')
   canvas.className = 'gtableCanvas'
+  canvas.dataset.testid = 'gtable-canvas'
   const hint = document.createElement('p')
   hint.className = 'gtableHint'
+  hint.dataset.testid = 'gtable-hint'
   hint.textContent = 'Тапай по картам внизу — кости лягут на стол'
   hint.hidden = true
   // Верхняя панель — одна лента: чипы (встроенные + свои), формула,
@@ -78,6 +81,7 @@ export const mountGlassTable = (
   // (а отдельный ряд своих чипов налезал на поп результата).
   const presets = document.createElement('div')
   presets.className = 'gtablePresets'
+  presets.dataset.testid = 'gtable-presets'
   const applyCounts = (counts: TableCounts) => {
     setup.clear()
     for (const die of DIE_IDS) {
@@ -90,15 +94,18 @@ export const mountGlassTable = (
     for (const p of loadCustomPresets()) {
       const chip = document.createElement('span')
       chip.className = 'gtableChip custom'
+      chip.dataset.testid = 'gtable-chip-custom'
       const label = document.createElement('button')
       label.type = 'button'
       label.className = 'gtableChipLabel'
+      label.dataset.testid = 'gtable-chip-label'
       label.textContent = p.name
       label.title = 'Поставить набор'
       label.addEventListener('click', () => applyCounts(p.counts))
       const del = document.createElement('button')
       del.type = 'button'
       del.className = 'gtableChipX'
+      del.dataset.testid = 'gtable-chip-x'
       del.textContent = '×'
       del.title = 'Удалить набор'
       del.setAttribute('aria-label', `Удалить ${p.name}`)
@@ -114,6 +121,7 @@ export const mountGlassTable = (
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'gtableChip'
+    btn.dataset.testid = 'gtable-chip'
     btn.textContent = p.name
     btn.title = 'Поставить набор'
     btn.addEventListener('click', () => applyCounts(p.counts))
@@ -121,6 +129,7 @@ export const mountGlassTable = (
   }
   const formula = document.createElement('input')
   formula.className = 'gtableFormula'
+  formula.dataset.testid = 'gtable-formula'
   formula.type = 'text'
   formula.placeholder = '4d6 / d20+d6'
   formula.setAttribute('aria-label', 'Формула набора')
@@ -139,6 +148,7 @@ export const mountGlassTable = (
   })
   const saveName = document.createElement('input')
   saveName.className = 'gtableSaveName'
+  saveName.dataset.testid = 'gtable-save-name'
   saveName.type = 'text'
   saveName.placeholder = 'Мой сет…'
   saveName.setAttribute('aria-label', 'Имя своего набора')
@@ -146,6 +156,7 @@ export const mountGlassTable = (
   const saveBtn = document.createElement('button')
   saveBtn.type = 'button'
   saveBtn.className = 'gtableSaveBtn'
+  saveBtn.dataset.testid = 'gtable-save-btn'
   saveBtn.textContent = '+ Сет'
   saveBtn.title = 'Сохранить текущий стол как свой набор'
   saveBtn.addEventListener('click', () => {
@@ -158,13 +169,16 @@ export const mountGlassTable = (
   // Док: карты костей со счётчиками.
   const dock = document.createElement('div')
   dock.className = 'gtableDock'
+  dock.dataset.testid = 'gtable-dock'
   const cards = new Map<DieId, { root: HTMLElement; count: HTMLElement }>()
   for (const die of DIE_IDS) {
     const card = document.createElement('div')
     card.className = 'gtableCard'
+    card.dataset.testid = 'gtable-card'
     card.dataset.die = die
     const code = document.createElement('button')
     code.className = 'gtableCode'
+    code.dataset.testid = 'gtable-code'
     code.type = 'button'
     code.textContent = die.toUpperCase()
     code.title = `Добавить ${die}`
@@ -173,6 +187,7 @@ export const mountGlassTable = (
     })
     const minus = document.createElement('button')
     minus.className = 'gtableMinus'
+    minus.dataset.testid = 'gtable-minus'
     minus.type = 'button'
     minus.textContent = '−'
     minus.title = `Убрать ${die}`
@@ -181,9 +196,11 @@ export const mountGlassTable = (
     })
     const count = document.createElement('span')
     count.className = 'gtableCount'
+    count.dataset.testid = 'gtable-count'
     count.textContent = '0'
     const plus = document.createElement('button')
     plus.className = 'gtablePlus'
+    plus.dataset.testid = 'gtable-plus'
     plus.type = 'button'
     plus.textContent = '+'
     plus.title = `Добавить ${die}`
@@ -196,6 +213,7 @@ export const mountGlassTable = (
   }
   const throwBtn = document.createElement('button')
   throwBtn.className = 'gtableThrow'
+  throwBtn.dataset.testid = 'gtable-throw'
   throwBtn.type = 'button'
   throwBtn.disabled = true
   section.append(canvas, hint, presets, dock, throwBtn)
@@ -282,8 +300,9 @@ export const mountGlassTable = (
     // Слоты выше экранного центра (+Z = верх экрана снизу): док, пресеты
     // и кнопка перекрывают низ канваса, кости обязаны жить в видимой полосе.
     const biggest = instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0)
-    const gap = Math.max(22, biggest * 1.35)
-    slots = layoutSlots(instances.length, gap).map((s) => ({ x: s.x, z: s.z + 12 }))
+    const gap = Math.max(24, biggest * 1.55)
+    const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight)
+    slots = layoutSlots(instances.length, gap, { aspect }).map((s) => ({ x: s.x, z: s.z + 12 }))
     // Кадр — под размер пачки; физика щедрая и фиксированная.
     const maxX = slots.reduce((m, s) => Math.max(m, Math.abs(s.x)), 0)
     const maxZ = slots.reduce((m, s) => Math.max(m, Math.abs(s.z)), 0)
@@ -426,6 +445,22 @@ export const mountGlassTable = (
         void Promise.all(glides).then(() => {
           rolling = false
           refreshChrome(setup.get())
+          // Аудит посадки: тела в телах после разъезда быть не должно.
+          const poses = new Map<string, DicePose>()
+          for (const r of ordered) {
+            const pose = table.getPose(r.key)
+            if (pose) poses.set(r.key, { die: r.die, pos: pose.pos, quat: pose.quat })
+          }
+          const keys = [...poses.keys()]
+          for (let a = 0; a < keys.length; a++) {
+            for (let b = a + 1; b < keys.length; b++) {
+              const pa = poses.get(keys[a])
+              const pb = poses.get(keys[b])
+              if (pa && pb && diceOverlap(pa, pb)) {
+                console.warn(`[table] overlap after settle: ${keys[a]} × ${keys[b]}`)
+              }
+            }
+          }
         })
       })
     }

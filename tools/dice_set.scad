@@ -184,7 +184,7 @@ DIGIT_SIZE_D6 = 6.0;
 DIGIT_SIZE_D8 = 3.84;
 DIGIT_SIZE_D10 = 4.5;
 DIGIT_SIZE_D12 = 4.2;
-DIGIT_SIZE_D20 = 3.8;
+DIGIT_SIZE_D20 = 3.42;
 
 function digit_size(die) =
   die == "d4" ? DIGIT_SIZE_D4
