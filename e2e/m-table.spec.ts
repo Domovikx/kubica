@@ -105,7 +105,7 @@ test('шит: степперы считают, минус на нуле молч
   expect(errors).toEqual([])
 })
 
-test('сеты: сохранить → изменить → обновить, удержание 3 с удаляет', async ({ page }) => {
+test('сеты: сохранить → изменить → обновить, удержание с паузой удаляет', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/?m=1')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
@@ -123,13 +123,15 @@ test('сеты: сохранить → изменить → обновить, у
   await page.getByRole('button', { name: 'Добавить d6' }).click()
   await page.getByRole('button', { name: 'Обновить набор' }).click()
   await expect(mineChip.first()).toHaveAttribute('aria-label', 'Набор: d6 d8')
-  // Удержание 3.2 с — удаление (прогресс+отсчёт, затем чип исчезает).
+  // Нажатие не запускает отсчёт: первая секунда — пауза, затем отсчёт 3 с.
   const box = await mineChip.first().boundingBox()
   expect(box).not.toBeNull()
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
   await page.mouse.down()
-  await expect(mineChip.first().locator('.mtableChipCount')).toBeVisible()
-  await page.waitForTimeout(3300)
+  await expect(mineChip.first().locator('.mtableChipCount')).toHaveText('')
+  await page.waitForTimeout(1100)
+  await expect(mineChip.first().locator('.mtableChipCount')).toHaveText(/^[123]$/)
+  await page.waitForTimeout(3400)
   await page.mouse.up()
   await expect(mineChip).toHaveCount(0)
   await expect(page.locator('.mtableToast')).toHaveText('Набор удалён')

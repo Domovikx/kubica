@@ -354,8 +354,12 @@ export const mountMobileTable = (
     return { fast, mine }
   }
 
-  /** Удержание чипа 3 с — удаление; отпустил раньше — это тап (выбор набора). */
+  /**
+   * Чип: тап — выбор; удаление — удержание. Перед отсчётом пауза (нажатие не
+   * запускает таймер), затем отсчёт 3 с — отпустил в паузе, это тап.
+   */
   const HOLD_MS = 3000
+  const HOLD_GRACE_MS = 1000
   let holdFired = false
 
   const deleteSet = (name: string): void => {
@@ -424,14 +428,19 @@ export const mountMobileTable = (
       if (e.pointerType === 'mouse' && e.button !== 0) return
       startAt = performance.now()
       btn.classList.add('holding')
-      count.textContent = '3'
+      count.textContent = ''
       try {
         btn.setPointerCapture(e.pointerId)
       } catch {
         // синтетические события (тесты) — живём без захвата
       }
       const tick = (): void => {
-        const p = Math.min(1, (performance.now() - startAt) / HOLD_MS)
+        const el = performance.now() - startAt
+        if (el < HOLD_GRACE_MS) {
+          raf = requestAnimationFrame(tick)
+          return
+        }
+        const p = Math.min(1, (el - HOLD_GRACE_MS) / HOLD_MS)
         fill.style.width = `${(p * 100).toFixed(1)}%`
         count.textContent = String(Math.max(1, Math.ceil((1 - p) * (HOLD_MS / 1000))))
         if (p >= 1) {
