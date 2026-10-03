@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { bodyScale } from '@/entities/dice-geometry/geometry'
 import { readRoll, topFaceIndex, topVertexIndex } from './readout'
-import { createPhysicsWorld, snapFlat } from './physics'
+import { createPhysicsWorld, diceOverlap, snapFlat, type DicePose } from './physics'
 import { pumpUntilSettled } from './test-pump'
 import { quatFromUnitVectors } from './face-orient'
 import {
@@ -165,6 +166,122 @@ describe('physics (cannon-es, smoke)', () => {
       world.dispose()
     }
   }, 30000)
+
+  it('пара из одной точки не застывает друг в друге (separation)', async () => {
+    // Две кости из одной точки: глубокое начальное пересечение солвер
+    // разбрасывает, а тихое доталкивание в покое растаскивает separation.
+    // Инвариант: финальная дистанция центров не меньше 0.9 суммы инрадиусов.
+    const world = await createPhysicsWorld({ bounds: 'rect' })
+    try {
+      const last: Record<'a' | 'b', [number, number, number]> = {
+        a: [0, 0, 0],
+        b: [0, 0, 0],
+      }
+      const [a, b] = await pumpUntilSettled(
+        world,
+        Promise.all([
+          world.roll('d6', {
+            random: seeded(21),
+            spawn: { pos: [0, 8, 0] },
+            power: 0.4,
+            onStep: (s) => {
+              last.a = [...s.pos]
+            },
+          }),
+          world.roll('d6', {
+            random: seeded(22),
+            spawn: { pos: [0, 8, 0] },
+            power: 0.4,
+            onStep: (s) => {
+              last.b = [...s.pos]
+            },
+          }),
+        ]),
+      )
+      expect(a.settled).toBe(true)
+      expect(b.settled).toBe(true)
+      const dist = Math.hypot(last.a[0] - last.b[0], last.a[1] - last.b[1], last.a[2] - last.b[2])
+      expect(dist).toBeGreaterThanOrEqual(0.9 * 2 * bodyScale('d6'))
+    } finally {
+      world.dispose()
+    }
+  }, 60000)
+
+  it('осевая статика держит место: пачка не застывает друг в друге', async () => {
+    // keepStatic (общий стол, как rollTable): пачка идёт конкурентно в одном
+    // мире, осевшие становятся статикой до конца пачки. Инвариант: обе осели,
+    // дистанция легальна (стопка грань-в-грань — ок), внутри друг друга — нет.
+    // Пат-кейс «строго по оси сверху с малой силой» (баланс на углу) тут не
+    // проверяем: в проде его закрывает ретрай table-roll (max 2), а не физика.
+    const world = await createPhysicsWorld({ bounds: 'rect' })
+    try {
+      const last: Record<'a' | 'b', [number, number, number]> = {
+        a: [0, 0, 0],
+        b: [0, 0, 0],
+      }
+      const [a, b] = await pumpUntilSettled(
+        world,
+        Promise.all([
+          world.roll('d6', {
+            random: seeded(31),
+            spawn: { pos: [-11, 8, 0] },
+            power: 0.5,
+            keepStatic: true,
+            onStep: (s) => {
+              last.a = [...s.pos]
+            },
+          }),
+          world.roll('d6', {
+            random: seeded(32),
+            spawn: { pos: [11, 8, 0] },
+            power: 0.5,
+            keepStatic: true,
+            onStep: (s) => {
+              last.b = [...s.pos]
+            },
+          }),
+        ]),
+      )
+      expect(a.settled).toBe(true)
+      expect(b.settled).toBe(true)
+      const dist = Math.hypot(last.a[0] - last.b[0], last.a[1] - last.b[1], last.a[2] - last.b[2])
+      expect(dist).toBeGreaterThanOrEqual(0.9 * 2 * bodyScale('d6'))
+    } finally {
+      world.dispose()
+    }
+  }, 60000)
+
+  it('diceOverlap: врозь/касание — нет, внахлёст — да', () => {
+    const id: Quat = [0, 0, 0, 1]
+    const d6 = (x: number, y = 7, z = 0, quat: Quat = id): DicePose => ({
+      die: 'd6',
+      pos: [x, y, z],
+      quat,
+    })
+    const inR = bodyScale('d6')
+    // Далеко — нет
+    expect(diceOverlap(d6(0), d6(40))).toBe(false)
+    // Касание грань-в-грань ровно — нет
+    expect(diceOverlap(d6(0), d6(2 * inR))).toBe(false)
+    // Соосный сдвиг 4 (глубоко) — да
+    expect(diceOverlap(d6(0), d6(10))).toBe(true)
+    // Совпали полностью — да
+    expect(diceOverlap(d6(0), d6(0))).toBe(true)
+    // Вершинный путь: кольцо дистанций [12.6, 20), где дистанционный тест
+    // заведомо молчит (0.9 × 14 = 12.6) — ищем наклон, при котором угол
+    // реально входит в грань. Найденное true = сработал именно вершинный путь.
+    const yawPitch = (yawDeg: number, pitchDeg: number): Quat =>
+      qMulT(axisAngle([0, 1, 0], yawDeg), axisAngle([1, 0, 0], pitchDeg))
+    let found = 0
+    for (const yaw of [20, 45]) {
+      for (const pitch of [10, 20, 30]) {
+        for (const dist of [13, 15, 18]) {
+          if (diceOverlap(d6(0), d6(dist, 7, 0, yawPitch(yaw, pitch)))) found++
+        }
+      }
+    }
+    expect(found).toBeGreaterThan(0)
+  })
 
   it('все кости оседают до лимита (без застывания в полёте)', async () => {
     // Регрессия: большая арена + слабые потери = марафон к бортам до MAX_STEPS,

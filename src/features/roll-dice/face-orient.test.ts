@@ -12,7 +12,10 @@ import {
   applyQuatToVec,
   faceIndexForValue,
   quatForD4VertexUp,
+  quatForValueDown,
   quatForValueUp,
+  quatMul,
+  quatYaw,
   toModelFrame,
 } from './face-orient'
 
@@ -66,6 +69,41 @@ describe('face-orient: грань плашмя вверх + цифра от зр
       const pUp = screenUpOf(up, dir)
       expect(dot(pDigit, pUp) / (norm(pDigit) * norm(pUp))).toBeGreaterThan(0.999)
     }
+  })
+
+  it('низ: каждая грань — строго вниз, верх цифры — к зрителю (иначе вверх ногами)', () => {
+    // Камера под столом: взгляд снизу (0,-1,+eps). Верх экрана снизу — сторона
+    // зрителя (+Z), поэтому верх цифры обязан смотреть туда же.
+    const camDown: Vec3 = [0, -1, 0.01]
+    const chL = Math.hypot(camDown[0], camDown[2])
+    const toward: Vec3 = [camDown[0] / chL, 0, camDown[2] / chL]
+    for (const die of ['d6', 'd8', 'd10', 'd12', 'd20'] as const) {
+      const normals = faceNormals(die)
+      normals.forEach((_, fi) => {
+        const value = faceValue(die, fi)
+        const q = quatForValueDown(die, value, camDown)
+        const n = toModelFrame(die, normals[faceIndexForValue(die, value)])
+        const w = applyQuatToVec(n, q)
+        expect(w[1] / norm(w)).toBeLessThan(-0.999)
+        const upDigit = applyQuatToVec(toModelFrame(die, digitUp(die, fi)), q)
+        expect(Math.abs(upDigit[1])).toBeLessThan(0.01)
+        expect(dot(upDigit, toward) / norm(upDigit)).toBeGreaterThan(0.999)
+      })
+    }
+  })
+
+  it('quatMul/quatYaw: композиция yaw и поворот вектора', () => {
+    const id = quatMul(quatYaw(0.7), quatYaw(-0.7))
+    expect(id[3]).toBeCloseTo(1, 6)
+    expect(Math.hypot(id[0], id[1], id[2])).toBeLessThan(1e-6)
+    // yaw +90°: +X → −Z, +Z → +X
+    const q = quatYaw(Math.PI / 2)
+    const rx = applyQuatToVec([1, 0, 0], q)
+    expect(rx[0]).toBeCloseTo(0, 6)
+    expect(rx[2]).toBeCloseTo(-1, 6)
+    const rz = applyQuatToVec([0, 0, 1], q)
+    expect(rz[0]).toBeCloseTo(1, 6)
+    expect(rz[2]).toBeCloseTo(0, 6)
   })
 
   it('faceIndexForValue бросает на мусоре', () => {

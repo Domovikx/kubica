@@ -141,6 +141,24 @@ const quatFromBases = (xL: Vec3, yL: Vec3, zL: Vec3, xW: Vec3, yW: Vec3, zW: Vec
   return quatFromMatrix(m)
 }
 
+/**
+ * Произведение кватернионов a·b (применить b, затем a). Единичные на входе —
+ * единичный на выходе (с точностью до float).
+ */
+export const quatMul = (a: Quat, b: Quat): Quat => {
+  const [ax, ay, az, aw] = a
+  const [bx, by, bz, bw] = b
+  return [
+    aw * bx + ax * bw + ay * bz - az * by,
+    aw * by - ax * bz + ay * bw + az * bx,
+    aw * bz + ax * by - ay * bx + az * bw,
+    aw * bw - ax * bx - ay * by - az * bz,
+  ]
+}
+
+/** Поворот вокруг мирового Y (yaw-презентация, плоская не наклоняется). */
+export const quatYaw = (delta: number): Quat => [0, Math.sin(delta / 2), 0, Math.cos(delta / 2)]
+
 /** Индекс грани с нужным значением (d10: 0–9, остальные 1–N). Бросает при нет значения. */
 export const faceIndexForValue = (die: DieId, value: number): number => {
   const normals = faceNormals(die)
@@ -166,6 +184,28 @@ export const quatForValueUp = (die: Exclude<DieId, 'd4'>, value: number, viewDir
   let ch: Vec3 = [vd[0] - zW[0] * upDot, vd[1] - zW[1] * upDot, vd[2] - zW[2] * upDot]
   if (norm(ch) < 1e-6) ch = [0, 0, 1]
   const yW = normalize([-ch[0], -ch[1], -ch[2]])
+  const xW = normalize(cross(yW, zW))
+  return quatFromBases(xL, yL, zL, xW, yW, zW)
+}
+
+/**
+ * Кватернион: грань со значением value лежит строго на столе (нормаль в −Y —
+ * грань смотрит в камеру под стеклянным столом), верх цифры — к зрителю.
+ * Зеркало quatForValueUp для нижнего ракурса, но верх цифры НЕ «от зрителя»:
+ * камера снизу смотрит вверх, и верх экрана там — сторона зрителя (+Z при
+ * камере на юге), поэтому цифра вверх ногами при yW = −ch — берём yW = +ch.
+ */
+export const quatForValueDown = (die: Exclude<DieId, 'd4'>, value: number, viewDir: Vec3): Quat => {
+  const fi = faceIndexForValue(die, value)
+  const zL = normalize(toModelFrame(die, faceNormals(die)[fi]))
+  const yL = normalize(toModelFrame(die, digitUp(die, fi)))
+  const xL = normalize(cross(yL, zL))
+  const zW: Vec3 = [0, -1, 0]
+  const vd = normalize(viewDir)
+  const upDot = dot(vd, zW)
+  let ch: Vec3 = [vd[0] - zW[0] * upDot, vd[1] - zW[1] * upDot, vd[2] - zW[2] * upDot]
+  if (norm(ch) < 1e-6) ch = [0, 0, 1]
+  const yW = normalize(ch)
   const xW = normalize(cross(yW, zW))
   return quatFromBases(xL, yL, zL, xW, yW, zW)
 }

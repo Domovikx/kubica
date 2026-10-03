@@ -247,6 +247,12 @@ export const vertexValue = (vi: number): number => vi + 1
 /** Масштаб тела для физики: центры сфер hull = normalized × s (зеркало body()). */
 export const bodyScale = (die: DieId): number => DIE_SIZES[die] / 2 - EDGE_R
 
+/** Ограничивающий радиус физ-тела (мировой; плоскости граней — на bodyScale). */
+export const bodyRadius = (die: DieId): number => {
+  const s = bodyScale(die)
+  return Math.max(...normalizedVerts(die).map(([x, y, z]) => Math.hypot(x, y, z))) * s
+}
+
 /**
  * AABB-максимум физ-тела (нормированные вершины × s): витрина масштабирует
  * измеренный bbox GLB к этому размеру. Инвариантно к осевым поворотам кадра

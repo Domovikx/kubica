@@ -3,10 +3,10 @@
 // (физической пары d10+d% ещё нет), остальные кости — телами cannon-es.
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import { normalize, type RollExpr } from '@/entities/dice-notation/notation'
-import { getHistoryStore, type PoolPart } from '@/entities/roll-history/history'
+import { formatLabel, getHistoryStore, type PoolPart } from '@/entities/roll-history/history'
 import { createPhysicsWorld, cryptoRandom, type PhysicsWorld } from '@/features/roll-dice/physics'
 import { displayValue, readRoll } from '@/features/roll-dice/readout'
-import { playThock, startRattle, stopRattle } from '@/features/roll-dice/sound'
+import { playThock, stopRattle } from '@/features/roll-dice/sound'
 import { showResult } from '@/shared/ui/result-pop'
 
 export type { PoolPart }
@@ -91,6 +91,7 @@ export const simulatePool = async (
 /**
  * Драйвер поверх одного физмира. d100 — RNG 1..100 до задачи 2.5
  * (там появится физическая пара d10+d%).
+ * Стук — от живых ударов каждой кости (горсть слышно), в полёте тишина.
  */
 export const createWorldDriver = (
   world: PhysicsWorld,
@@ -102,7 +103,9 @@ export const createWorldDriver = (
       return { value, display: String(value) }
     }
     const die = `d${sides}` as DieId
-    const { quat } = await world.roll(die)
+    const { quat } = await world.roll(die, {
+      onCollide: (i) => playThock(die, i),
+    })
     const value = readRoll(die, quat)
     return { value, display: displayValue(die, value) }
   },
@@ -127,7 +130,8 @@ export const tickPoolWorld = (): void => {
 export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> => {
   const run = async (): Promise<PoolResult> => {
     const world = await getPoolWorld()
-    startRattle()
+    // Без таймерного рокота: в полёте тишина, стучат только живые удары
+    // (onCollide драйвера выше) + финальный тук посадки
     try {
       const result = await simulatePool(expr, createWorldDriver(world), label)
       const firstDie = expr.terms.find((t) => t.term.kind === 'dice')
@@ -144,7 +148,7 @@ export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> =>
         label: result.label,
         parts: result.parts,
       })
-      showResult(result.label, String(result.total), undefined, result.parts)
+      showResult(formatLabel(result.label), String(result.total), undefined, result.parts)
       return result
     } finally {
       stopRattle()

@@ -8,3 +8,26 @@ export const FELT_APOTHEM = 26.2
 export const FRAME_THICK = 4
 /** Высота борта. */
 export const FRAME_H = 4
+/**
+ * Стеклянный стол (?glass): лотка нет — только условные прямоугольные
+ * невидимые границы (половинные экстенты). Кость ~25% ширины стекла.
+ * Дефолт — под 1–2 кости (одиночные панели).
+ */
+export const GLASS_HALF_X = 30
+export const GLASS_HALF_Z = 20
+
+/**
+ * Кадр камеры под пачку: крайний слот + место кости + небольшой запас.
+ * Чем больше костей, тем шире кадр (иначе кости-микробы или за кадром).
+ */
+export const glassHalves = (maxSlotX: number, maxSlotZ: number): { hx: number; hz: number } => ({
+  hx: Math.max(24, maxSlotX + 20),
+  hz: Math.max(16, maxSlotZ + 16),
+})
+
+/**
+ * Щедрые фиксированные границы физики стола: летать есть где, стены бьют
+ * редко (меньше висов). Камера их не показывает (см. glassHalves).
+ */
+export const TABLE_HALF_X = 46
+export const TABLE_HALF_Z = 30
