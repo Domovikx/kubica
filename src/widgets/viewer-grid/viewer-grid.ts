@@ -11,16 +11,22 @@ import {
   subscribeSelection,
   type Selection,
 } from '@/features/select-model/select-model'
-import { quickRoll } from '@/features/roll-dice/quick-roll'
-import { snapFlat } from '@/features/roll-dice/physics'
+import { quickRoll, releasePower } from '@/features/roll-dice/quick-roll'
 import {
   applyQuatToVec,
   faceIndexForValue,
   quatForD4VertexUp,
+  quatForValueDown,
   quatForValueUp,
   toModelFrame,
 } from '@/features/roll-dice/face-orient'
-import type { Quat } from '@/features/roll-dice/readout'
+import {
+  displayValue,
+  readBottomRoll,
+  resolveD4Below,
+  screenUpWorld,
+  type Quat,
+} from '@/features/roll-dice/readout'
 import { isMuted, playThock, startRattle, stopRattle } from '@/features/roll-dice/sound'
 import { createViewer, type Viewer } from '@/shared/three/viewer'
 import { showResult } from '@/shared/ui/result-pop'
@@ -37,6 +43,19 @@ const parseDieId = (id: string): DieId | null => {
   return ([4, 6, 8, 10, 12, 20] as const).includes(n as 4 | 6 | 8 | 10 | 12 | 20)
     ? (`d${n}` as DieId)
     : null
+}
+
+/**
+ * Прототип «стеклянный стол» (?glass[=d6]): камера под столом, виден низ.
+ * Без значения — первая выбранная кость; со значением (?glass=d6) — та кость.
+ * Возвращает null вне прототипа.
+ */
+const glassDieFilter = (): string | null | undefined => {
+  if (typeof window === 'undefined') return undefined
+  const raw = new URLSearchParams(window.location.search).get('glass')
+  if (raw === null) return undefined
+  const want = raw.trim().toLowerCase()
+  return want === '' ? null : want
 }
 
 /** Тактильный отклик на settle (вторичное подкрепление; глушится вместе со звуком). */
@@ -198,64 +217,35 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
 
   section.append(canvas, label, info, overlay)
 
-  const viewer = createViewer(canvas, overlay)
-
   const die = parseDieId(model.id)
+  // d4 сверху нечитаем: грань смотрит вбок-вверх (~70° от вертикали), поэтому
+  // панели d4 — фиксированный tilt ~45° (грань почти фронтально, цифры прямо).
+  // Остальные строго сверху. У каждого вьювера своя камера (см. ViewerOptions).
+  // glass: стол невидим, границы прямоугольные, камера снизу — для всех,
+  // включая д4: пирамида видна нижней гранью лицом, результат — цифра
+  // вершины, верхней на экране (см. readD4ScreenTop; yaw-презентация ей
+  // запрещена — сменит результат).
+  const glass = glassDieFilter() !== undefined
+  const below = glass
+  const viewer = createViewer(
+    canvas,
+    overlay,
+    glass ? { glass: true, below: true } : die === 'd4' ? { tiltRad: 0.785 } : undefined,
+  )
 
-  // Временный дебаг калибровки: кнопки граней — показать грань плашмя.
-  // Магнит всегда кладёт ровно (математически точно) — читаем цифру сверху.
-  // d10: значения-глифы 0–9 (0 читается как 10 только в истории/попе).
-  if (
-    (model.id === 'd4' ||
-      model.id === 'd6' ||
-      model.id === 'd8' ||
-      model.id === 'd10' ||
-      model.id === 'd12' ||
-      model.id === 'd20') &&
-    die !== null
-  ) {
-    const faces =
-      model.id === 'd20'
-        ? 20
-        : model.id === 'd12'
-          ? 12
-          : model.id === 'd10'
-            ? 10
-            : model.id === 'd8'
-              ? 8
-              : model.id === 'd6'
-                ? 6
-                : 4
-    const first = model.id === 'd10' ? 0 : 1
-    const debug = document.createElement('div')
-    debug.className = 'faceDebug'
-    for (let n = first; n < first + faces; n++) {
-      const btn = document.createElement('button')
-      btn.className = 'faceDebugBtn'
-      btn.type = 'button'
-      btn.textContent = String(n)
-      btn.title = `Показать грань ${n}`
-      btn.addEventListener('click', () => {
-        viewer.setSpinning(false)
-        viewer.settleTo(
-          die === 'd4'
-            ? quatForD4VertexUp(n, viewer.getViewDir())
-            : quatForValueUp(die, n, viewer.getViewDir()),
-        )
-      })
-      debug.appendChild(btn)
-    }
-    section.appendChild(debug)
-  }
   // Модель в размер физ-тела (измеренный AABB → AABB физики): витрина показывает
   // ту же физику. Стартовая поза — сразу плашмя первой гранью (не 3/4 на ребре).
+  // below: первая грань кладётся вниз — в камеру под столом (д4: вершиной
+  // вверх как обычно — низ считается по верхней-на-экране вершине).
   const physSize = die ? physMaxDim(die) : undefined
   const initialQuat =
     die === null
       ? undefined
       : die === 'd4'
         ? quatForD4VertexUp(1, viewer.getViewDir())
-        : quatForValueUp(die, faceValue(die, 0), viewer.getViewDir())
+        : below
+          ? quatForValueDown(die, faceValue(die, 0), viewer.getViewDir())
+          : quatForValueUp(die, faceValue(die, 0), viewer.getViewDir())
   viewer.load(
     model.url,
     { physSize, initialQuat },
@@ -273,17 +263,45 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
   // Слушатели висят на canvas, который выбрасывается вместе с панелью.
   let rolling = false
   if (die) {
-    canvas.title = `Тап по кости — бросок · драг — осмотр · зажми — потискать, отпусти — швырнёт`
+    canvas.title = below
+      ? `Стекло: вид снизу · тап по кости — бросок · кость улетает вверх и бьётся в стекло`
+      : `Тап по кости — бросок · колесо — масштаб · зажми — потискать, отпусти — швырнёт`
     // Единый честный бросок из позы (покой или рука): тело стартует оттуда где
     // модель (pos+quat — без телепортов), летит на солвере 1:1, витрина через
-    // onStep только показывает. Стук — от живых ударов (onCollide ∝ удару).
+    // onStep только показывает. Звук — ТОЛЬКО от живых ударов (onCollide ∝
+    // удару): в полёте без соприкосновения кость молчит, рокот был бы враньём.
+    // Рокот живёт только в руке (старт на grab, стоп здесь же на броске).
+    // Стекло: поп и история показывают низ (д4 — верхнюю-на-экране вершину),
+    // физика и result.quat при этом те же (наклон меряем по верху как обычно).
+    const remap = (
+      quat: Quat,
+      fallback: { value: number; display: string },
+    ): { value: number; display: string } => {
+      if (!below) return fallback
+      if (die === 'd4') {
+        // Значение — от финальной позы пайплайна (доснап + yaw), не от сырой:
+        // иначе поп и витрина разъедутся на пограничных доворотах.
+        const v = resolveD4Below(quat, screenUpWorld(viewer.getViewDir())).value
+        return { value: v, display: String(v) }
+      }
+      const v = readBottomRoll(die, quat)
+      return { value: v, display: displayValue(die, v) }
+    }
     const throwFromPose = (
       pose: { pos: [number, number, number]; quat: [number, number, number, number] },
-      opts?: { power?: number; fling?: { x: number; z: number } },
+      opts?: {
+        power?: number
+        fling?: { x: number; z: number }
+        launchUp?: number
+        retry?: number
+      },
     ): void => {
       if (rolling) return
       rolling = true
-      startRattle()
+      stopRattle()
+      // Метка последнего живого удара: финальный тук — только если посадка
+      // прошла тихо (>150 мс без ударов), иначе задвоит последний стук
+      let lastHit = 0
       void quickRoll(die, {
         silent: true,
         power: opts?.power ?? 1,
@@ -291,10 +309,18 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
         spawnPos: pose.pos,
         spawnQuat: pose.quat,
         fling: opts?.fling,
+        // glass: прямоугольный мир + швырок вверх от нижней камеры;
+        // история сразу пишется по видимому значению (низ / верх-на-экране)
+        rect: glass,
+        launchUp: glass ? (opts?.launchUp ?? 28) : undefined,
+        mapHistory: glass ? (r) => remap(r.quat, r) : undefined,
         onStep: (step) => {
           viewer.syncBody(step.pos, step.quat)
         },
-        onCollide: (i) => playThock(die, i),
+        onCollide: (i) => {
+          lastHit = performance.now()
+          playThock(die, i)
+        },
       })
         .then((result) => {
           if (new URLSearchParams(window.location.search).has('raw')) {
@@ -312,24 +338,58 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
           // Дальше только медленная yaw-презентация (верх цифры к зрителю).
           // Cocked (не осела или легла с наклоном) — честно оставляем как легло:
           // доворот наклонённой был бы тем самым магнитом-рывком.
+          // below: что видно снизу, то и результат (низ, не верх;
+          // д4 — верхняя-на-экране вершина).
           stopRattle()
-          playThock(die)
-          buzz(die, result.value)
-          showResult(die, result.display)
+          if (performance.now() - lastHit > 150) playThock(die)
+          // Финиш броска: презентация, затем плавный возврат в центр стола
+          // (мобайл: кость у края нечитаема; заодно следующий бросок — из центра).
+          const finish = () =>
+            viewer.glideTo(0, 0, () => {
+              rolling = false
+            })
+          // Не осела за лимит шагов (клин/вечное качение): переброс с текущей
+          // позы вместо застывшей кривой кости с попом. Максимум 2 ретрая,
+          // дальше — как легла. Наклонные посадки ретрая не требуют: витрина
+          // кладёт их плашмя одним движением (та же грань, значение от финала).
+          if (!result.settled && (opts?.retry ?? 0) < 2) {
+            const retryPose = viewer.getPose()
+            if (retryPose) {
+              // Сбрасываем флаг под рекурсию (мы внутри единственного потока
+              // броска — гонки нет): throwFromPose тут же поднимет его обратно.
+              rolling = false
+              throwFromPose(retryPose, { ...opts, retry: (opts?.retry ?? 0) + 1 })
+              return
+            }
+          }
+          if (below && die === 'd4') {
+            // Пайплайн д4: доснап наклона (та же грань) + winning-вершина ровно
+            // наверх экрана; значение — от финала.
+            const up = screenUpWorld(viewer.getViewDir())
+            const final = resolveD4Below(result.quat, up)
+            buzz(die, final.value)
+            showResult(die, String(final.value))
+            viewer.presentResult(final.target, finish, final.flattened ? 900 : 550, final.flattened)
+            return
+          }
+          const { value: shown, display: shownDisplay } = remap(result.quat, result)
+          buzz(die, shown)
+          showResult(die, shownDisplay)
           if (!result.settled) {
             rolling = false
             return
           }
           const target =
             die === 'd4'
-              ? quatForD4VertexUp(result.value, viewer.getViewDir())
-              : quatForValueUp(die, result.value, viewer.getViewDir())
+              ? quatForD4VertexUp(shown, viewer.getViewDir())
+              : below
+                ? quatForValueDown(die, shown, viewer.getViewDir())
+                : quatForValueUp(die, shown, viewer.getViewDir())
           // Доворот — только почти-плоской: меряем НАКЛОН (не полный угол —
-          // yaw всегда большой, это и правит презентация). Наклонённую КЛАДЁМ
-          // плашмя осознанно и медленно (lay-flat, двумя фазами: сначала
-          // ближайшая плоская, затем yaw цифры) — граничные кейсы (ребро,
-          // борт) больше не создают спорных ситуаций. Значение при этом
-          // не меняется: грань-лидер остаётся верхней.
+          // yaw всегда большой, это и правит презентация). Наклонённую кладём
+          // плашмя ОДНИМ движением сразу на финальную позу (грань-лидер та же,
+          // значение не меняется): двухфазный доворот крутил туда-сюда
+          // и выглядел «не в ту сторону».
           const upRaw: readonly [number, number, number] =
             die === 'd4'
               ? normalizedVerts('d4')[result.value - 1]
@@ -341,40 +401,12 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
           const upLen = Math.hypot(upWorld[0], upWorld[1], upWorld[2]) || 1
           const tilt = Math.acos(Math.min(1, Math.max(-1, upWorld[1] / upLen)))
           if (tilt < 0.035) {
-            viewer.presentResult(target, () => {
-              rolling = false
-            })
+            viewer.presentResult(target, finish)
             return
           }
-          if (tilt < 0.26) {
-            // До 15°: сначала snap (та же грань ровно, без смены значения),
-            // затем yaw цифры. Короткие дуги, без размашистых замахов.
-            const snap = snapFlat(die, result.quat)
-            viewer.presentResult(
-              snap,
-              () =>
-                viewer.presentResult(
-                  target,
-                  () => {
-                    rolling = false
-                  },
-                  450,
-                ),
-              450,
-              true,
-            )
-            return
-          }
-          // Сильный наклон (у борта и т.п.): медленно кладём сразу на грань
-          // значения — долго (0.9 с), зато однозначно.
-          viewer.presentResult(
-            target,
-            () => {
-              rolling = false
-            },
-            900,
-            true,
-          )
+          // Наклонная: один медленный доворот на грань значения (углы не скребут
+          // пол за счёт приподъёма в full-режиме).
+          viewer.presentResult(target, finish, tilt < 0.26 ? 650 : 900, true)
         })
         .catch(() => {
           stopRattle()
@@ -392,17 +424,28 @@ const buildPanel = (model: ModelDef, onReady: (viewer: Viewer) => void): HTMLEle
       () => rolling,
       {
         onThrow: doThrow,
-        onGrabStart: () => viewer.grabStart(),
+        // Рокот — только пока кость в руке (контакт с пальцами честен);
+        // в полёте без соприкосновения — тишина, только удары.
+        onGrabStart: () => {
+          viewer.grabStart()
+          startRattle()
+        },
         onGrabMove: (dx, dy) => viewer.grabMove(dx, dy),
         onGrabEnd: (vx, vy) => {
-          // Релиз фиджета = бросок из позы руки: флик задаёт направление и силу.
-          // Еле шевельнул — мягкая укладка с руки (тоже честный исход).
+          // Релиз зарядки = полный бросок из позы руки: сила от заряда+флика
+          // (min 1.0 — подгадать грань gentle-отпуском нельзя), направление
+          // флика — в импульс. Зарядил-отпустил: весело, честно, непредсказуемо.
+          // glass: чем дольше держал, тем выше швырок (26–34 ≈ высота кости и выше).
           const pose = viewer.getPose()
-          viewer.grabEnd()
+          const { charge } = viewer.grabEnd()
           if (!pose) return
           const flick = viewer.grabFlick(vx, vy)
-          const power = Math.min(1.3, 0.35 + flick.speed * 0.3)
-          throwFromPose(pose, { power, fling: { x: flick.x, z: flick.z } })
+          const power = releasePower(charge, flick.speed)
+          throwFromPose(pose, {
+            power,
+            fling: { x: flick.x, z: flick.z },
+            launchUp: glass ? 26 + charge * 8 : undefined,
+          })
         },
       },
       (x, y) => viewer.pickDie(x, y),
@@ -437,7 +480,23 @@ export const mountViewerGrid = (
     for (const viewer of viewers) viewer.dispose()
     viewers = []
     container.innerHTML = ''
-    const defs = MODELS.filter((m) => !m.reference && selected.has(m.id))
+    const allDefs = MODELS.filter((m) => !m.reference && selected.has(m.id))
+    // glass-прототип — одна панель: ?glass=dN показывает именно её
+    // (вне зависимости от чекбоксов), ?glass — первую выбранную.
+    const glassWant = glassDieFilter()
+    const defs =
+      glassWant === undefined
+        ? allDefs
+        : (() => {
+            const hit =
+              glassWant !== null
+                ? MODELS.filter((m) => !m.reference).find(
+                    (m) =>
+                      m.id.toLowerCase() === glassWant || m.id.toLowerCase().startsWith(glassWant),
+                  )
+                : undefined
+            return hit ? [hit] : allDefs.slice(0, 1)
+          })()
     // Раскладка: все выбранные — на одном экране без скролла.
     // Колонки/ряды задаются data-атрибутами (чистый CSS, без инлайн-стилей и !important)
     const n = defs.length

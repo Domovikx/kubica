@@ -3,7 +3,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
-import { ARENA_APOTHEM, FELT_APOTHEM, FRAME_H, FRAME_THICK } from '@/shared/arena/arena'
+import {
+  ARENA_APOTHEM,
+  FELT_APOTHEM,
+  FRAME_H,
+  FRAME_THICK,
+  GLASS_HALF_X,
+  GLASS_HALF_Z,
+} from '@/shared/arena/arena'
 
 const VIEW_SIZE = 2.4
 // Спин броска: ω(t) = SPIN_V0 · e^(−t/SPIN_TAU), стоп ниже SPIN_MIN.
@@ -52,6 +59,13 @@ export interface Viewer {
     durMs?: number,
     full?: boolean,
   ) => void
+  /**
+   * Плавный возврат в центр стола после остановки (мобайл: на маленьком экране
+   * кость у края нечитаема). Только XZ по полу, поза не трогается; физика уже
+   * удалила тело — чистый визуальный tween. Слоты под N костей — позже: тогда
+   * сюда приедет (x, z) слота вместо (0, 0).
+   */
+  glideTo: (x: number, z: number, onDone?: () => void, durMs?: number) => void
   /** Луч в кость по клиентским координатам: тап мимо кости — не бросок. */
   pickDie: (clientX: number, clientY: number) => boolean
   /** Текущая поза модели (для бесшовного спавна нового броска оттуда где лежит). */
@@ -59,15 +73,16 @@ export interface Viewer {
   /** Направление на камеру из центра (для доворота грани к зрителю). */
   getViewDir: () => [number, number, number]
   /**
-   * Залипашка «потискать»: grabStart — зажал (камера стынет, кость крутится
-   * и слушается палец), grabMove — трекбол 1:1. Релиз — ЧЕСТНЫЙ: сетка бросает
-   * тело из позы руки (спавн pos+quat + флик-импульс), пружины возврата
-   * и автоспина больше нет — они противоречили физике.
-   * grabEnd() — только отпустить камеру и руку (без сайд-эффектов на модель).
+   * Залипашка-зарядка «зажми и швырни»: grabStart — зажал (камера стынет,
+   * кость хаотично кувыркается и дрожит сильнее со временем), grabMove —
+   * трекбол 1:1. Релиз — дело сетки (физбросок из позы руки силой ∝ заряду).
+   * grabEnd() возвращает charge 0..1 (min(1, holdT/1.2)) и отпускает руку.
+   * Хаос обязателен: поза и момент отпуска непредсказуемы (античит против
+   * подгадывания грани) — и заодно это весело.
    */
   grabStart: () => void
   grabMove: (dxPx: number, dyPx: number) => void
-  grabEnd: () => void
+  grabEnd: () => { charge: number }
   /**
    * Вектор флика из экранной скорости отпускания (мировая XZ + быстрота):
    * сетка превращает его в импульс физ-тела. Чистая проекция, без движения модели.
@@ -83,7 +98,33 @@ export interface Viewer {
   ) => void
 }
 
-export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): Viewer => {
+export interface ViewerOptions {
+  /**
+   * Фиксированный наклон камеры от вертикали (рад, 0 = строго сверху).
+   * d4 сверху нечитаем (грани смотрят вбок-вверх) — его панели даём ~45°:
+   * грань почти фронтально, лоток ещё целиком в кадре. Остальные — 0.
+   * У каждого вьювера своя камера, поэтому наклон пер-панельный.
+   */
+  tiltRad?: number
+  /**
+   * Стеклянный стол: поверхности нет (только тень посадки), рамы нет,
+   * границы физики — прямоугольные невидимые. Прототип ?glass.
+   */
+  glass?: boolean
+  /**
+   * Камера под столом (только с glass): видна грань на столе (низ).
+   * Бросок подкидывает кость вверх от камеры: улетает (уменьшается)
+   * и возвращается с ударом. d4 — исключение (ниже): его цифры результата
+   * живут на верхних боковых гранях, снизу их нет физически.
+   */
+  below?: boolean
+}
+
+export const createViewer = (
+  canvas: HTMLCanvasElement,
+  overlay: HTMLElement,
+  opts?: ViewerOptions,
+): Viewer => {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -120,25 +161,42 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
 
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-  // IBL почти бесплатен (запечён в PMREM один раз), но даёт PBR-блики на графите и красном
+  // IBL почти бесплатен (запечён в PMREM один раз), но даёт PBR-блики на графите и белом
   scene.environmentIntensity = 0.55
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 500)
-  // Камера сверху под ~28°: верхняя (результатная) грань читается, стол и дуги видны.
-  // Строго спереди верх не прочитать — поэтому грань кладём, а камеру поднимаем.
-  // ВРЕМЕННО для самокалибровки: ?top=1 — почти строго сверху (верхняя цифра крупно).
-  const topDown = true // ВРЕМЕННО: диагностика вида сверху (убрать в финале вместе с raw)
-  camera.position.set(0, topDown ? 30 : 18.6, topDown ? 11 : 32.6)
+  // Камера строго над полем (вид сверху): весь лоток всегда в кадре,
+  // верхние грани читаются прямо. Поле не вращаем (enableRotate=false) —
+  // осмотр драгоми убран по фидбеку; остался зум колесом в зажиме.
+  // Эпсилон по Z против вырождения up-вектора при взгляде ровно вниз.
+  // tiltRad наклоняет камеру к +Z (юг, низ экрана) — seatModel держит направление.
+  // below: камера зеркалится под стол (вид снизу вверх — грань на столе).
+  const glass = opts?.glass ?? false
+  const below = opts?.below ?? false
+  const tilt = opts?.tiltRad ?? 0
+  const belowSign = below ? -1 : 1
+  camera.position.set(0, belowSign * 60 * Math.cos(tilt), 60 * Math.sin(tilt) + 0.01)
 
   const controls = new OrbitControls(camera, canvas)
   controls.target.set(0, 1.2, 0)
   controls.enableDamping = true
   controls.dampingFactor = 0.08
   controls.enablePan = false
-  // Зум и орбита зажаты в постановочный диапазон: иначе скролл уносит камеру
-  // за far-плоскость (чёрный экран) / внутрь кости (серая заливка) / под стол.
-  controls.minPolarAngle = 0.05
-  controls.maxPolarAngle = 1.45
+  controls.enableRotate = false
+  // Зум и остатки орбиты зажаты в постановочный диапазон: иначе скролл уносит камеру
+  // за far-плоскость (чёрный экран) / внутрь кости (серая заливка).
+  controls.minPolarAngle = 0
+  // Лимит строго по tiltRad панели: OrbitControls режет направление при каждом
+  // update (было: общий 0.6 = 34.4° срезал d4-тильт 45° — чинили направлением).
+  // below: полярный угол около π (камера снизу), лимиты зеркалятся туда же —
+  // иначе первый же update прижмёт камеру обратно наверх.
+  if (below) {
+    const tiltEff = opts?.tiltRad ?? 0
+    controls.minPolarAngle = Math.PI - tiltEff - 0.05
+    controls.maxPolarAngle = Math.PI
+  } else {
+    controls.maxPolarAngle = (opts?.tiltRad ?? 0) + 0.05
+  }
   controls.zoomSpeed = 0.8
   controls.minDistance = 25
   controls.maxDistance = 90
@@ -175,28 +233,40 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
   rim.position.set(4.5, 10, -12)
   scene.add(rim)
 
+  // Подсветка снизу для стеклянного стола: камера-наблюдатель смотрит на
+  // нижние грани, а весь верхний свет их не освещает (были глухими).
+  // Без теней — дёшево, только читаемость цифр снизу.
+  if (glass) {
+    const under = new THREE.DirectionalLight(0xffe9d0, 1.4)
+    under.position.set(6, -12, 8)
+    scene.add(under)
+  }
+
   // Hex-лоток костей (см. docs/DICE_TRAY.md): фетровый пол = плоскость физики y=0,
   // деревянная рама внутренним краем ровно по 6 стенам физики (апофема ARENA_APOTHEM).
   // Hex дружит с камерой (симметрия 60°) и выглядит как настоящий D&D-лоток.
   // Размеры — из shared/arena (единый конфиг с физикой). Ноль ассетов: только PBR.
-  const ARENA_A = ARENA_APOTHEM
-  const FELT_A = FELT_APOTHEM
-  const feltGeo = new THREE.CircleGeometry(FELT_A / Math.cos(Math.PI / 6), 6)
-  feltGeo.rotateZ(Math.PI / 6)
-  const felt = new THREE.Mesh(
-    feltGeo,
-    new THREE.MeshPhysicalMaterial({
-      color: 0x701d1d,
-      roughness: 1,
-      metalness: 0,
-      sheen: 1,
-      sheenColor: new THREE.Color(0xa03a3a),
-      sheenRoughness: 0.8,
-    }),
-  )
-  felt.rotation.x = -Math.PI / 2
-  felt.receiveShadow = true
-  scene.add(felt)
+  // glass: поверхности нет вообще — ни фетра, ни стекла, ни ловца тени
+  // (даже ShadowMaterial давал пятно-призрак). Только физика y=0 + свет снизу.
+  if (!glass) {
+    const FELT_A = FELT_APOTHEM
+    const feltGeo = new THREE.CircleGeometry(FELT_A / Math.cos(Math.PI / 6), 6)
+    feltGeo.rotateZ(Math.PI / 6)
+    const felt = new THREE.Mesh(
+      feltGeo,
+      new THREE.MeshPhysicalMaterial({
+        color: 0x701d1d,
+        roughness: 1,
+        metalness: 0,
+        sheen: 1,
+        sheenColor: new THREE.Color(0xa03a3a),
+        sheenRoughness: 0.8,
+      }),
+    )
+    felt.rotation.x = -Math.PI / 2
+    felt.receiveShadow = true
+    scene.add(felt)
+  }
 
   const woodMat = new THREE.MeshPhysicalMaterial({
     color: 0x4a3421,
@@ -205,21 +275,25 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     clearcoat: 0.4,
     clearcoatRoughness: 0.5,
   })
-  // Длина грани с напуском на стыки; длинная ось — по касательной к стене
-  const sideLen = (ARENA_A + FRAME_THICK / 2) * 2 * Math.tan(Math.PI / 6) + FRAME_THICK
-  const rimGeo = new THREE.BoxGeometry(sideLen, FRAME_H, FRAME_THICK)
-  for (let i = 0; i < 6; i++) {
-    const theta = (i * Math.PI) / 3
-    const wall = new THREE.Mesh(rimGeo, woodMat)
-    wall.position.set(
-      Math.cos(theta) * (ARENA_A + FRAME_THICK / 2),
-      FRAME_H / 2,
-      Math.sin(theta) * (ARENA_A + FRAME_THICK / 2),
-    )
-    wall.rotation.y = -theta - Math.PI / 2
-    wall.castShadow = true
-    wall.receiveShadow = true
-    scene.add(wall)
+  // Деревянная рама — только у лотка; у стекла границ не видно.
+  const ARENA_A = ARENA_APOTHEM
+  if (!glass) {
+    // Длина грани с напуском на стыки; длинная ось — по касательной к стене
+    const sideLen = (ARENA_A + FRAME_THICK / 2) * 2 * Math.tan(Math.PI / 6) + FRAME_THICK
+    const rimGeo = new THREE.BoxGeometry(sideLen, FRAME_H, FRAME_THICK)
+    for (let i = 0; i < 6; i++) {
+      const theta = (i * Math.PI) / 3
+      const wall = new THREE.Mesh(rimGeo, woodMat)
+      wall.position.set(
+        Math.cos(theta) * (ARENA_A + FRAME_THICK / 2),
+        FRAME_H / 2,
+        Math.sin(theta) * (ARENA_A + FRAME_THICK / 2),
+      )
+      wall.rotation.y = -theta - Math.PI / 2
+      wall.castShadow = true
+      wall.receiveShadow = true
+      scene.add(wall)
+    }
   }
 
   const loader = new GLTFLoader()
@@ -333,6 +407,42 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     }
   }
 
+  // Возврат в центр: ease-in-out по XZ, Y не трогаем (кость едет по полу).
+  let glide: {
+    fromX: number
+    fromZ: number
+    toX: number
+    toZ: number
+    onDone: (() => void) | null
+    t: number
+    dur: number
+  } | null = null
+
+  const glideTo = (x: number, z: number, onDone?: () => void, durMs = 500): void => {
+    if (!current || disposed) {
+      onDone?.()
+      return
+    }
+    const dx = x - current.position.x
+    const dz = z - current.position.z
+    if (Math.hypot(dx, dz) < 1e-3) {
+      onDone?.()
+      return
+    }
+    spinning = false
+    settling = null
+    present = null
+    glide = {
+      fromX: current.position.x,
+      fromZ: current.position.z,
+      toX: x,
+      toZ: z,
+      onDone: onDone ?? null,
+      t: 0,
+      dur: Math.max(0.2, durMs / 1000),
+    }
+  }
+
   const pickDie = (clientX: number, clientY: number): boolean => {
     if (!current || disposed) return false
     const rect = canvas.getBoundingClientRect()
@@ -356,6 +466,7 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     spinning = false
     settling = null
     present = null
+    glide = null
     controls.enabled = false
     const now = performance.now()
     grab = {
@@ -394,15 +505,19 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     if (grab.wAxis.lengthSq() > 1e-12) grab.wAxis.normalize()
   }
 
-  // Релиз — только отпустить камеру и руку. Модель остаётся в позе руки:
-  // сетка тут же спавнит тело оттуда (pos+quat) и швыряет по-настоящему.
-  const grabEnd = (): void => {
+  // Релиз — только отпустить камеру и руку + вернуть заряд 0..1.
+  // Модель остаётся в позе руки: сетка тут же швыряет тело оттуда.
+  const grabEnd = (): { charge: number } => {
     if (!grab || disposed) {
       grab = null
-      return
+      return { charge: 0 }
     }
+    // Заряд за ~1.2 с удержания: дольше держал — сильнее швырнёт (min power
+    // всё равно полный, см. releasePower — gentle-drop для читов закрыт)
+    const charge = Math.min(1, grab.holdT / 1.2)
     controls.enabled = true
     grab = null
+    return { charge }
   }
 
   // Экранная скорость отпускания → мировой флик (XZ) + быстрота.
@@ -504,21 +619,34 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     root.position.x -= center.x
     root.position.z -= center.z
     root.position.y -= box.min.y
-    // Кадр: кость — герой, но лоток виден (см. docs/DICE_TRAY.md).
+    // Кадр строго сверху: вписываем лоток целиком (одна камера на все кости —
+    // консистентная витрина, пул-реди). Широким экранам — весь лоток, узким
+    // кап от кости (иначе кости-микробы; там лоток bleed'ится — мобайл-паттерн).
+    // Вертикаль — полный размер лотка (сверху без перспективного ужатия).
     const size = box.getSize(new THREE.Vector3())
     const aspect = camera.aspect || 1
     const dieNeed = Math.max(size.y, size.x / aspect)
-    const trayNeed = Math.max(2 * 18, (2 * (ARENA_APOTHEM + FRAME_THICK)) / aspect) * 0.94
-    const need = Math.max(dieNeed, Math.min(trayNeed, dieNeed * (aspect >= 1 ? 3 : 1.5)))
+    // glass: вписываем прямоугольное стекло целиком (границы невидимы,
+    // но кость обязана оставаться в кадре до удара о них).
+    const trayNeed = glass
+      ? Math.max(2 * GLASS_HALF_Z, (2 * GLASS_HALF_X) / aspect)
+      : (() => {
+          const trayHalf = ARENA_APOTHEM + FRAME_THICK
+          return Math.max(2 * trayHalf, (2 * trayHalf) / aspect)
+        })()
+    const need = Math.max(dieNeed, Math.min(trayNeed, dieNeed * (aspect >= 1 ? 5 : 1.5)))
     const dist = Math.max(
       20,
       (need * 0.5 * 1.25) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)),
     )
     const finalDist = dist
     controls.target.set(0, size.y / 2, 0)
-    const viewDir = camera.position.clone().sub(controls.target)
-    if (viewDir.lengthSq() < 1e-9) viewDir.set(0, 0.3, 1)
-    viewDir.normalize()
+    // Направление камеры — явно от tiltRad (а не «куда смотрела»): иначе высота
+    // мишени уводит сохранённый вектор (d4 выходил 34° вместо 45°).
+    // Эпсилон держит от вырождения up-вектора ровно над полем.
+    // below: то же направление, но снизу (камера под столом).
+    const tiltEff = Math.max(opts?.tiltRad ?? 0, 0.002)
+    const viewDir = new THREE.Vector3(0, belowSign * Math.cos(tiltEff), Math.sin(tiltEff))
     controls.minDistance = finalDist * 0.55
     controls.maxDistance = finalDist * 1.4
     camera.position.copy(controls.target).addScaledVector(viewDir, finalDist)
@@ -563,7 +691,7 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     const now = performance.now()
     const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000))
     lastT = now
-    if (current && (spinning || settling || grab || present)) {
+    if (current && (spinning || settling || grab || present || glide)) {
       // Экспоненциальное затухание вокруг стабильной оси (гироскоп спиннера)
       let speed = 0
       if (spinning) {
@@ -592,16 +720,36 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
           done?.()
         }
       }
-      // Залипашка: автоспин-ап пока держим (трекбол выше крутит модель 1:1).
-      // Релиз — дело сетки (физбросок из позы руки), пружины возврата нет.
+      // Залипашка-зарядка: хаотичный кувырок с прецессией оси (позу и момент
+      // отпуска не подгадать — античит) + дрожание ∝ заряду. Трекбол выше
+      // крутит модель 1:1. Релиз — дело сетки (физбросок из позы руки).
       if (grab) {
         grab.holdT += dt
-        const auto = Math.min(10, 2 + grab.holdT * 5)
+        const auto = Math.min(16, 4 + grab.holdT * 8)
+        // Прецессия: ось уводится детерминированным «пьяным» дрейфом —
+        // одна ось превращается в кувырок по всей сфере
+        tmpV
+          .set(
+            Math.sin(1.9 * grab.holdT),
+            Math.sin(2.7 * grab.holdT + 1.3),
+            Math.sin(1.3 * grab.holdT + 2.1),
+          )
+          .normalize()
+        grab.axis.lerp(tmpV, Math.min(1, dt * 2)).normalize()
         tmpQ.setFromAxisAngle(grab.axis, auto * dt)
         current.quaternion.premultiply(tmpQ)
         // Подобрали с пола: плавный подъём в руку (углы не цепляют стол)
         const liftY = grab.base.y + unitSize * 0.25
         current.position.y += (liftY - current.position.y) * Math.min(1, dt * 8)
+        // Дрожание заряда: амплитуда растёт с удержанием (до 8% размера).
+        // Якорь на базу (без дрейфа): позиция тянется к lift+jitter, не копит.
+        const amp = Math.min(0.08, 0.015 + grab.holdT * 0.05) * unitSize
+        const jt = performance.now() / 1000
+        const jx = grab.base.x + Math.sin(jt * 13.7) * amp
+        const jz = grab.base.z + Math.sin(jt * 17.3 + 0.7) * amp
+        const follow = Math.min(1, dt * 10)
+        current.position.x += (jx - current.position.x) * follow
+        current.position.z += (jz - current.position.z) * follow
       }
       // Презентация результата: медленный доворот на месте, ease-in-out.
       // Поза и момент остановки — от физики; yaw — эстетика, lay-flat (full) —
@@ -621,6 +769,20 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
         if (k >= 1) {
           const done = present.onDone
           present = null
+          done?.()
+        }
+      }
+      // Возврат в центр стола (идёт строго после презентации — цепочка
+      // собирается в сетке через onDone, пересечений нет).
+      if (glide) {
+        glide.t += dt
+        const k = Math.min(1, glide.t / glide.dur)
+        const e = k * k * (3 - 2 * k)
+        current.position.x = glide.fromX + (glide.toX - glide.fromX) * e
+        current.position.z = glide.fromZ + (glide.toZ - glide.fromZ) * e
+        if (k >= 1) {
+          const done = glide.onDone
+          glide = null
           done?.()
         }
       }
@@ -739,6 +901,7 @@ export const createViewer = (canvas: HTMLCanvasElement, overlay: HTMLElement): V
     setSpinning,
     settleTo,
     presentResult,
+    glideTo,
     pickDie,
     getViewDir,
     getPose,
