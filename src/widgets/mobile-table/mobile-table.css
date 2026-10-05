@@ -15,6 +15,19 @@ body[data-mode='mtable'] {
   inset: 0;
   width: 100%;
   overflow: hidden;
+
+  /*
+   * Типографская шкала (читабельность на мобилах/планшетах).
+   * Пол по BP: подписи ≥12, мета ≥13, вторичка ≥14 (WCAG 1.4.4/resize,
+   * web.dev: fluid type = clamp(min, base+vw, max), не жёсткие px).
+   * 0.3vw: шкала растёт с шириной вьюпорта до потолка на ~400–600px.
+   */
+  --fs-cap: clamp(12px, 11.5px + 0.3vw, 13px);
+  --fs-meta: clamp(13px, 12.5px + 0.3vw, 14px);
+  --fs-sec: clamp(14px, 13.5px + 0.3vw, 15px);
+  --fs-body: clamp(15px, 14.5px + 0.3vw, 16px);
+  --fs-title: clamp(16px, 15.5px + 0.3vw, 17px);
+  --fs-headline: clamp(18px, 17.5px + 0.3vw, 19px);
 }
 
 body[data-mode='mtable'] .viewers {
@@ -199,7 +212,9 @@ a.mtableIcon {
 .mtableHeadStar {
   gap: 6px;
   min-width: 0;
-  padding: 0 8px;
+  /* 6px, не 8: на 320 узкая франция (ряд шире звука) сжимала левую колонку
+     и уводила пару ±4px от центра — укладываемся в 1fr без сдвига. */
+  padding: 0 6px;
 }
 
 /* Octicon в ряду — 16px (как у GitHub), не шапочный слот 24. */
@@ -209,22 +224,22 @@ a.mtableIcon {
 }
 
 .mtableHeadStarLabel {
-  font-size: 13px;
+  font-size: var(--fs-sec);
   font-weight: 700;
   line-height: 1;
 }
 
 /* Счётчик — пилюля, как у GitHub: рамка, скругление 6, цифра по центру. */
 .mtableHeadStarCount {
-  min-width: 20px;
-  height: 18px;
+  min-width: 22px;
+  height: 20px;
   padding: 0 5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(240, 242, 245, 0.28);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-cap);
   font-weight: 700;
   line-height: 1;
 }
@@ -265,7 +280,7 @@ a.mtableIcon {
   background: #1d2026;
   color: #f0f2f5;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sec);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -309,12 +324,12 @@ a.mtableIcon {
 
 .mtableChipDie svg {
   display: block;
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
 }
 
 .mtableChipN {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: #9aa0aa;
 }
@@ -350,7 +365,7 @@ a.mtableIcon {
 .mtablePreCap {
   display: block;
   padding: 6px 0 0;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -364,7 +379,8 @@ a.mtableIcon {
 
 .mtablePreHint {
   margin: 8px 0 0;
-  font-size: 11px;
+  font-size: var(--fs-meta);
+  line-height: 1.4;
   color: #9aa0aa;
 }
 
@@ -374,7 +390,7 @@ a.mtableIcon {
 
 .mtableHredo {
   color: #9aa0aa;
-  font-size: 15px;
+  font-size: var(--fs-body);
   margin-left: 2px;
 }
 
@@ -389,7 +405,7 @@ a.mtableIcon {
   padding: 10px 18px;
   border-radius: 999px;
   background: rgba(20, 22, 26, 0.94);
-  font-size: 13px;
+  font-size: var(--fs-sec);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -446,23 +462,23 @@ button.mtableHint:disabled {
 
 .mtableHintGlyph svg {
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
 }
 
-/* Заголовок — primary-строка намёка (17/700). */
+/* Заголовок — primary-строка намёка. */
 .mtableHintTitle {
   margin-top: 12px;
-  font-size: 17px;
+  font-size: var(--fs-headline);
   font-weight: 700;
   line-height: 1.3;
 }
 
-/* Подстрока — secondary (13/600, серый). */
+/* Подстрока — secondary, серая. */
 .mtableHintSub {
   margin-top: 4px;
   max-width: 100%;
-  font-size: 13px;
+  font-size: var(--fs-sec);
   font-weight: 600;
   line-height: 1.4;
   color: #9aa0aa;
@@ -508,7 +524,7 @@ button.mtableHint:disabled {
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 600;
   line-height: 1.45;
   color: #9aa0aa;
@@ -701,7 +717,7 @@ input:focus-visible {
   justify-content: space-between;
   gap: 8px;
   padding: calc(12px + env(safe-area-inset-top)) 14px 6px;
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 800;
 }
 
@@ -724,7 +740,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid #1d2026;
 }
 
@@ -746,7 +762,8 @@ input:focus-visible {
 }
 
 .mtableDesc {
-  font-size: 12px;
+  font-size: var(--fs-meta);
+  line-height: 1.35;
   color: #9aa0aa;
   flex: 1;
 }
@@ -794,7 +811,7 @@ input:focus-visible {
   background: #ef3124;
   color: #fff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
@@ -898,14 +915,14 @@ input:focus-visible {
   justify-content: space-between;
   padding: 8px 0;
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 .mtableSectionTitle {
   display: block;
   padding: 8px 0;
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 .mtableLink {
@@ -913,7 +930,7 @@ input:focus-visible {
   background: transparent;
   color: #9aa0aa;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sec);
   cursor: pointer;
 }
 
@@ -930,7 +947,8 @@ input:focus-visible {
 
 .mtableEmpty {
   color: #9aa0aa;
-  font-size: 13px;
+  font-size: var(--fs-sec);
+  line-height: 1.4;
   margin: 4px 0;
 }
 
@@ -957,13 +975,13 @@ input:focus-visible {
 
 .mtableHmeta {
   color: #9aa0aa;
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 
 .mtableHp {
   margin-left: auto;
   color: #9aa0aa;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -989,7 +1007,7 @@ input:focus-visible {
   background: #1d2026;
   color: #f0f2f5;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
   cursor: pointer;
 }
@@ -1000,8 +1018,8 @@ input:focus-visible {
 
 .mtableWide svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 /* Выбранный режим силы броска — плоский акцент. */
@@ -1011,7 +1029,7 @@ input:focus-visible {
 }
 
 .mtableAbout {
-  font-size: 13px;
+  font-size: var(--fs-sec);
   color: #9aa0aa;
   margin: 0;
   line-height: 1.5;
@@ -1032,7 +1050,7 @@ input:focus-visible {
   border-radius: 12px;
   background: #1d2026;
   color: #f0f2f5;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
   text-decoration: none;
 }
@@ -1052,8 +1070,8 @@ input:focus-visible {
 
 .mtableSocial svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: none;
 }
 
@@ -1066,7 +1084,7 @@ input:focus-visible {
 .mtableSocialMeta {
   margin-left: auto;
   color: #9aa0aa;
-  font-size: 13px;
+  font-size: var(--fs-sec);
   font-weight: 600;
   white-space: nowrap;
 }
