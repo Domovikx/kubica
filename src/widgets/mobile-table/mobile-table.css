@@ -17,17 +17,26 @@ body[data-mode='mtable'] {
   overflow: hidden;
 
   /*
-   * Типографская шкала (читабельность на мобилах/планшетах).
-   * Пол по BP: подписи ≥12, мета ≥13, вторичка ≥14 (WCAG 1.4.4/resize,
-   * web.dev: fluid type = clamp(min, base+vw, max), не жёсткие px).
-   * 0.3vw: шкала растёт с шириной вьюпорта до потолка на ~400–600px.
+   * Типографская шкала (читабельность: фидбэк — «на мобилах интерфейс
+   * мелкий»; 2.19-фаза 2). Пол +2 к фазе 1 и живой рост до ~1570px:
+   * полы держат телефоны (≤~430px), 0.35vw растёт на планшетах/десктопах,
+   * потолок — на ~1570px (web.dev fluid type = clamp(min, base+vw, max)).
+   * Иконки — та же логика (0.4vw, пол = фаза 1 + 2, потолок ~1675px):
+   * масштабируются вместе с текстом, не фиксированные px.
+   *  Кости (3D) не трогаем — их размер задаёт камера.
    */
-  --fs-cap: clamp(12px, 11.5px + 0.3vw, 13px);
-  --fs-meta: clamp(13px, 12.5px + 0.3vw, 14px);
-  --fs-sec: clamp(14px, 13.5px + 0.3vw, 15px);
-  --fs-body: clamp(15px, 14.5px + 0.3vw, 16px);
-  --fs-title: clamp(16px, 15.5px + 0.3vw, 17px);
-  --fs-headline: clamp(18px, 17.5px + 0.3vw, 19px);
+  --fs-cap: clamp(14px, 12.5px + 0.35vw, 18px);
+  --fs-meta: clamp(15px, 13.5px + 0.35vw, 19px);
+  --fs-sec: clamp(16px, 14.5px + 0.35vw, 20px);
+  --fs-body: clamp(17px, 15.5px + 0.35vw, 21px);
+  --fs-title: clamp(18px, 16.5px + 0.35vw, 22px);
+  --fs-headline: clamp(20px, 18.5px + 0.35vw, 24px);
+  --icon-head: clamp(26px, 24.3px + 0.4vw, 31px);
+  --icon-like: clamp(18px, 16.3px + 0.4vw, 23px);
+  --icon-chip: clamp(20px, 18.3px + 0.4vw, 25px);
+  --icon-glyph: clamp(30px, 28.3px + 0.4vw, 35px);
+  --icon-wide: clamp(24px, 22.3px + 0.4vw, 29px);
+  --icon-row: clamp(28px, 26.3px + 0.4vw, 33px);
 }
 
 body[data-mode='mtable'] .viewers {
@@ -133,7 +142,9 @@ body[data-mode='mtable'] .result {
   right: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0,1fr): франция не растёт до min-content контента (ряд Star
+     правее шире звука слева) — иначе центр пары на 320 уезжает на ~8px. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
@@ -184,7 +195,7 @@ body[data-mode='mtable'] .result {
   background: transparent;
   color: #f0f2f5;
   font-family: inherit;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 800;
   cursor: pointer;
 }
@@ -199,8 +210,8 @@ body[data-mode='mtable'] .result {
 
 .mtableIcon svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: var(--icon-head);
+  height: var(--icon-head);
 }
 
 /* Ряд Star в шапке (2.17): ссылка на репо живёт как обычная кнопка
@@ -217,10 +228,10 @@ a.mtableIcon {
   padding: 0 6px;
 }
 
-/* Octicon в ряду — 16px (как у GitHub), не шапочный слот 24. */
+/* Octicon в ряду — своя шкала (--icon-like), не шапочный слот. */
 .mtableHeadStar svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-like);
+  height: var(--icon-like);
 }
 
 .mtableHeadStarLabel {
@@ -229,10 +240,19 @@ a.mtableIcon {
   line-height: 1;
 }
 
-/* Счётчик — пилюля, как у GitHub: рамка, скругление 6, цифра по центру. */
+/* На совсем узких (≤360) подпись уступает место: ряд = иконка + пилюля;
+   смысл для SR остаётся в aria-label ссылки. */
+@media (max-width: 360px) {
+  .mtableHeadStarLabel {
+    display: none;
+  }
+}
+
+/* Счётчик — пилюля, как у GitHub: рамка, скругление 6, цифра по центру.
+   Высота/ширина привязаны к --fs-cap (растут вместе со шкалой). */
 .mtableHeadStarCount {
-  min-width: 22px;
-  height: 20px;
+  min-width: calc(var(--fs-cap) + 10px);
+  height: calc(var(--fs-cap) + 8px);
   padding: 0 5px;
   display: inline-flex;
   align-items: center;
@@ -324,8 +344,8 @@ a.mtableIcon {
 
 .mtableChipDie svg {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: var(--icon-chip);
+  height: var(--icon-chip);
 }
 
 .mtableChipN {
@@ -345,7 +365,7 @@ a.mtableIcon {
   z-index: 2;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -462,8 +482,8 @@ button.mtableHint:disabled {
 
 .mtableHintGlyph svg {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: var(--icon-glyph);
+  height: var(--icon-glyph);
 }
 
 /* Заголовок — primary-строка намёка. */
@@ -488,7 +508,8 @@ button.mtableHint:disabled {
  * CTA — простой «+» внутри композиции (весь блок — кнопка → шторка). Только svg
  * без текста: слов «Кости» хватает в заголовке/подстроке. Без рамки и фона
  * (фидбэк: белый бордер/подложка не зашли) — акцент даёт только цвет линии «+».
- * Размер 24px — как в шапке (.mtableAdd), та же геометрия и вес. Круг 44×44 —
+ * Размер — тот же --icon-head, что в шапке (.mtableAdd), та же геометрия и вес.
+ * Круг 44×44 —
  * тап-зона ≥44 (плюс вся карточка — кнопка). Нажатие — без feedback (подсветка
  * и затемнение «+» — оверхэд); reduce-motion не нужен.
  */
@@ -506,12 +527,12 @@ button.mtableHint:disabled {
   color: #f0f2f5;
 }
 
-/* Слот «+»: тот же svg (addIcon), что в шапке; ширина-высота заданы явно —
-   атрибуты у svg 24×24. Акцент — цвет линии, без заливки-кружка. */
+/* Слот «+»: тот же svg (addIcon), что в шапке; размер — токен --icon-head.
+   Акцент — цвет линии, без заливки-кружка. */
 .mtableHintCta svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: var(--icon-head);
+  height: var(--icon-head);
   color: #ef3124;
 }
 
@@ -585,11 +606,12 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-/* Кнопка набора в шапке: пусто — значок «+» (24px, тот же svg-слот, что у бургера),
-   состав — текст «2d4 d12» уровня secondary (16/800); крупнее (20/800) только
-   сумма-акцент на бургере. */
+/* Кнопка набора в шапке: пусто — значок «+» (тот же --icon-head svg-слот,
+   что у бургера), состав — текст уровня secondary (sec/800; на телефоне это
+   прежние 16px — состав в 320 влезает с бургером), крупнее (headline/800)
+   только сумма-акцент на бургере. */
 .mtableAdd {
-  font-size: 16px;
+  font-size: var(--fs-sec);
   font-weight: 800;
   white-space: nowrap;
   padding: 0 10px;
@@ -603,10 +625,10 @@ input:focus-visible {
   }
 }
 
-/* Сумма броска на бургере — primary шкалы хедера (20/800): крупнее кнопки
-   набора, акцентный цвет. В покое тут svg-иконка (font-size не виден). */
+/* Сумма броска на бургере — primary шкалы хедера (headline/800): крупнее
+   кнопки набора, акцентный цвет. В покое тут svg-иконка (font-size не виден). */
 .mtableBurger {
-  font-size: 20px;
+  font-size: var(--fs-headline);
   font-weight: 800;
 }
 
@@ -635,15 +657,15 @@ input:focus-visible {
 .mtableFootParts {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 800;
   color: #9aa0aa;
 }
 
 /* Пока кости летят — на бургере лоадер вместо кнопки меню/суммы. */
 .mtableSpin {
-  width: 22px;
-  height: 22px;
+  width: var(--icon-wide);
+  height: var(--icon-wide);
   border: 3px solid rgba(240, 242, 245, 0.25);
   border-top-color: #ef3124;
   border-radius: 50%;
@@ -750,14 +772,21 @@ input:focus-visible {
 
 .mtableGlyph {
   display: flex;
-  width: 34px;
+  width: calc(var(--icon-row) + 8px);
   justify-content: center;
   color: #c9cdd4;
   flex-shrink: 0;
 }
 
+/* dieGlyph в шторке: атрибуты 26 — перекрываем токеном (масштабируется). */
+.mtableGlyph svg {
+  width: var(--icon-row);
+  height: var(--icon-row);
+}
+
 .mtableName {
   font-weight: 800;
+  font-size: var(--fs-title);
   width: 40px;
 }
 
@@ -775,7 +804,7 @@ input:focus-visible {
   border: none;
   background: #22262e;
   color: #f0f2f5;
-  font-size: 20px;
+  font-size: var(--fs-headline);
   font-family: inherit;
   cursor: pointer;
   flex-shrink: 0;
@@ -794,7 +823,7 @@ input:focus-visible {
   font-weight: 800;
   min-width: 28px;
   text-align: center;
-  font-size: 18px;
+  font-size: var(--fs-headline);
 }
 
 .mtableFormulaRow {
@@ -970,7 +999,7 @@ input:focus-visible {
 .mtableHv {
   color: #ef3124;
   font-weight: 800;
-  font-size: 17px;
+  font-size: var(--fs-title);
 }
 
 .mtableHmeta {
@@ -1018,8 +1047,8 @@ input:focus-visible {
 
 .mtableWide svg {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: var(--icon-wide);
+  height: var(--icon-wide);
 }
 
 /* Выбранный режим силы броска — плоский акцент. */
@@ -1070,8 +1099,8 @@ input:focus-visible {
 
 .mtableSocial svg {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: var(--icon-wide);
+  height: var(--icon-wide);
   flex: none;
 }
 
