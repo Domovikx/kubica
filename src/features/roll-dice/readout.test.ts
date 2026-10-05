@@ -15,6 +15,7 @@ import {
   readD4ScreenTop,
   readRoll,
   resolveD4Below,
+  scoreValue,
   screenTopVertexIndex,
   screenUpWorld,
   yawDeltaToScreenTop,
@@ -291,5 +292,13 @@ describe('readout: верхняя грань/вершина', () => {
     expect(displayValue('d10', 0)).toBe('10')
     expect(displayValue('d10', 7)).toBe('7')
     expect(displayValue('d6', 3)).toBe('3')
+  })
+
+  it('scoreValue: в сумму d10 с гранью 0 идёт 10, остальные кости не меняются', () => {
+    expect(scoreValue('d10', 0)).toBe(10)
+    expect(scoreValue('d10', 9)).toBe(9)
+    expect(scoreValue('d6', 0)).toBe(0)
+    expect(scoreValue('d100', 0)).toBe(0)
+    expect(scoreValue('const', 0)).toBe(0)
   })
 })

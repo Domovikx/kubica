@@ -1,11 +1,12 @@
 // Симуляция пула костей: RollExpr (2.1) + один физический мир на весь пул.
 // kh/kl/dh/dl применяются внутри своего терма; d100 до 2.5 — крипто-RNG 1..100
 // (физической пары d10+d% ещё нет), остальные кости — телами cannon-es.
+// Суммы/сортировка — через scoreValue: у d10 грань «0» читается как 10.
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import { normalize, type RollExpr } from '@/entities/dice-notation/notation'
 import { formatLabel, getHistoryStore, type PoolPart } from '@/entities/roll-history/history'
 import { createPhysicsWorld, cryptoRandom, type PhysicsWorld } from '@/features/roll-dice/physics'
-import { displayValue, readRoll } from '@/features/roll-dice/readout'
+import { displayValue, readRoll, scoreValue } from '@/features/roll-dice/readout'
 import { playThock, stopRattle } from '@/features/roll-dice/sound'
 import { showResult } from '@/shared/ui/result-pop'
 
@@ -62,7 +63,10 @@ export const simulatePool = async (
         sign: st.sign,
       }))
       if (op !== null && opN > 0 && opN < count) {
-        const desc = entries.map((_, i) => i).sort((a, b) => entries[b].value - entries[a].value)
+        // Сортировка по scoreValue: d10 с гранью «0» (= 10) должна быть
+        // старше «9», иначе kh/kl выберет неверную кость.
+        const score = (i: number): number => scoreValue(entries[i].die, entries[i].value)
+        const desc = entries.map((_, i) => i).sort((a, b) => score(b) - score(a))
         const keptIdx =
           op === 'kh'
             ? desc.slice(0, opN)
@@ -80,7 +84,8 @@ export const simulatePool = async (
     }),
   )
   const flat = perTerm.flat()
-  const total = flat.reduce((sum, p) => sum + (p.kept ? p.sign * p.value : 0), 0)
+  // Итог по scoreValue (d10: грань «0» = 10) — совпадает с display в частях.
+  const total = flat.reduce((sum, p) => sum + (p.kept ? p.sign * scoreValue(p.die, p.value) : 0), 0)
   return {
     total,
     parts: flat.map(({ die, value, display, kept }) => ({ die, value, display, kept })),

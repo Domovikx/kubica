@@ -182,6 +182,39 @@ export const yawDeltaToScreenTop = (quat: Quat, screenUp: Vec3): number => {
   return delta
 }
 
-/** Отображаемое значение: на d10 ноль читается как 10 (стандарт D&D). */
-export const displayValue = (die: DieId, value: number): string =>
-  die === 'd10' && value === 0 ? '10' : String(value)
+/**
+ * Числовое значение результата для сумм/итогов. Единственное исключение —
+ * **d10**: у канонической d10 грани промаркированы 0–9 (не 1–10), и «0» при
+ * одиночном броске читается как 10, т.е. грань даёт число 1..10. Для всех
+ * остальных костей значение не меняется.
+ *
+ * Результаты веб-исследования (2026-10, записано здесь, чтобы вопрос не
+ * всплывал снова):
+ *
+ * - Wikipedia «Dice notation» → Standard notation: «The faces are numbered
+ *   from 1 to s … A notable exception is the d10, which is labeled from 0
+ *   to 9, though the 0 can also be read as a 10».
+ * - Wikipedia «Pentagonal trapezohedron» → 10-sided dice: «Ten-sided dice
+ *   are commonly numbered from 0 to 9 … Ten-sided dice may also be marked
+ *   1 to 10 when a random number in this range is desirable».
+ *
+ * Оговорки:
+ *
+ * - Проценты — исключение из исключения: в паре d10+d% (десятки/единицы) 0
+ *   остаётся нулём (00 может читаться как 100 по правилам конкретной
+ *   системы). В Kubica d100 — отдельная кость (крипто-RNG 1..100,
+ *   `dice-pool/pool.ts`), физическая пара d10+d% — задача 2.5: там появится
+ *   своя типизация, нормализация d10 к ней применяться не будет.
+ * - 3D-грань печатается «0», как на настоящей кости; «10» — то, что
+ *   показывает отображение (`displayValue`). Любые СУММЫ (красная сумма в
+ *   шапке стола, итог пула, история, сортировка kh/kl) обязаны складывать
+ *   `scoreValue`, а не сырые `value` — иначе сумма в шапке расходится с
+ *   футером/историей, которые печатают `display`.
+ *
+ * @see displayValue — та же нормализация, но строкой.
+ */
+export const scoreValue = (die: string, value: number): number =>
+  die === 'd10' && value === 0 ? 10 : value
+
+/** Отображаемое значение: на d10 ноль читается как 10 (см. scoreValue). */
+export const displayValue = (die: DieId, value: number): string => String(scoreValue(die, value))

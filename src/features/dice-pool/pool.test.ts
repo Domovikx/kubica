@@ -3,6 +3,7 @@ import { parseNotation } from '@/entities/dice-notation/notation'
 import { formatParts } from '@/entities/roll-history/history'
 import { createWorldDriver, simulatePool, type PoolDriver } from './pool'
 import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
+import { displayValue } from '@/features/roll-dice/readout'
 import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
 
 /** Детерминированный драйвер: значения выдаются по очереди вызовов. */
@@ -60,6 +61,25 @@ describe('pool: keep/drop и сумма', () => {
     const result = await simulatePool(parseNotation('2D20 KH1 + 5'), stubDriver([10, 4]))
     expect(result.label).toBe('2d20kh1+5')
     expect(result.total).toBe(15)
+  })
+
+  it('d10: грань 0 = 10 в сумме и в keep-highest (см. scoreValue)', async () => {
+    const d10Driver = (values: number[]): PoolDriver => {
+      let i = 0
+      return {
+        rollDie: async (sides) => {
+          const value = values[i++ % values.length]
+          return { value, display: sides === 10 ? displayValue('d10', value) : String(value) }
+        },
+      }
+    }
+    const sum = await simulatePool(parseNotation('2d10'), d10Driver([0, 7]))
+    expect(sum.total).toBe(17)
+    expect(sum.parts.map((p) => p.display)).toEqual(['10', '7'])
+    // kh: «0» (=10) должна быть старше «9» — иначе выберется неверная кость
+    const kh = await simulatePool(parseNotation('2d10kh1'), d10Driver([0, 9]))
+    expect(kh.parts.map((p) => p.kept)).toEqual([true, false])
+    expect(kh.total).toBe(10)
   })
 })
 
