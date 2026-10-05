@@ -346,15 +346,7 @@ button.mtableHint:disabled {
   opacity: 0.7;
 }
 
-/* Нажатие — пилюля CTA светлеет, акцентный «+» темнеет (feedback всей кнопки-карточки). */
-button.mtableHint:active .mtableHintCta {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(240, 242, 245, 0.32);
-}
-
-button.mtableHint:active .mtableHintCta svg {
-  color: #d42b20;
-}
+/* Нажатие на CTA — без feedback: подсветка и затемнение «+» — оверхэд (фидбэк). */
 
 /* Глифы костей — вступление композиции (контур, как в шторке). */
 .mtableHintGlyph {
@@ -388,38 +380,33 @@ button.mtableHint:active .mtableHintCta svg {
 }
 
 /*
- * CTA «+ Кости» — призыв внутри композиции (весь блок — кнопка → шторка).
- * Обводка-пилюля рифмуется с контурной графикой карточки (глифы, линия инфо),
- * «+» — та же геометрия, что у кнопки набора в шапке, но в акцентном цвете:
- * вместо заливки-кружка — только тонкая линия глифа (красной площади почти нет),
- * а призыв держит вес за счёт обводки, заливки и 800-го начертания. Отступы
- * симметричны (по 18px), вертикальное центрирование — flex + align-items.
- * Тап-зона CTA ≥44 (плюс вся карточка — кнопка). Движения нет — feedback
- * мгновенный (reduce-motion не нужен).
+ * CTA — простой «+» внутри композиции (весь блок — кнопка → шторка). Только svg
+ * без текста: слов «Кости» хватает в заголовке/подстроке. Без рамки и фона
+ * (фидбэк: белый бордер/подложка не зашли) — акцент даёт только цвет линии «+».
+ * Размер 24px — как в шапке (.mtableAdd), та же геометрия и вес. Круг 44×44 —
+ * тап-зона ≥44 (плюс вся карточка — кнопка). Нажатие — без feedback (подсветка
+ * и затемнение «+» — оверхэд); reduce-motion не нужен.
  */
 .mtableHintCta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  min-width: 44px;
   min-height: 44px;
   margin-top: 14px;
-  padding: 0 18px;
-  border: 1px solid rgba(240, 242, 245, 0.18);
+  padding: 0;
+  border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: none;
   color: #f0f2f5;
-  font-size: 15px;
-  font-weight: 800;
-  white-space: nowrap;
 }
 
 /* Слот «+»: тот же svg (addIcon), что в шапке; ширина-высота заданы явно —
    атрибуты у svg 24×24. Акцент — цвет линии, без заливки-кружка. */
 .mtableHintCta svg {
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   color: #ef3124;
 }
 
