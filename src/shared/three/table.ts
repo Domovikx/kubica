@@ -158,7 +158,7 @@ export const createTable = (
 
   // Камера строго под столом (вид снизу вверх). Эпсилон по Z против
   // вырождения up-вектора.
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 500)
+  const camera = new THREE.PerspectiveCamera(22, 1, 0.1, 500)
   camera.position.set(0, -60, 0.01)
 
   const controls = new OrbitControls(camera, canvas)
@@ -251,6 +251,12 @@ export const createTable = (
     controls.target.set(0, 1.2, 0)
     controls.minDistance = dist * 0.55
     controls.maxDistance = dist * 1.4
+    // Ближняя/дальняя — под фактический диапазон дистанций: при tele-fov
+    // (малый угол → большая дистанция) статичные 0.1/500 обрезали кости по
+    // far на отъезде (пустой кадр), а ratio far/near держим ≈33 для глубины.
+    camera.near = Math.max(0.5, controls.minDistance * 0.1)
+    camera.far = Math.max(camera.near * 50, controls.maxDistance * 1.3)
+    camera.updateProjectionMatrix()
     camera.position.set(0, -dist, 0.01)
     home.pos.copy(camera.position)
     home.target.copy(controls.target)
