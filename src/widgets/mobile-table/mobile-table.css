@@ -121,7 +121,7 @@ body[data-mode='mtable'] .result {
 
 /* Малые экраны (≤600 — тот же брейкпоинт, что у шторки и дровера):
    Kubica и звук убираем — правая треть съедает место, центр
-   «+ Кости/бургер» уезжает влево на узких (замерено до ~380px).
+   «кнопка набора/бургер» уезжает влево на узких (замерено до ~380px).
    Звук не теряется: он дублируется пунктом в бургере. */
 @media (max-width: 600px) {
   .mtableTitle,
@@ -326,7 +326,9 @@ button.mtableHint {
   flex-direction: column;
   align-items: center;
   margin: 0;
-  padding: 18px 16px 14px;
+  /* Симметрично: блок чернил (глифы…инфо) центрируется в карточке, а не
+     уезжает вниз (при 18/14 контент-блок сидел на 2.5px ниже центра). */
+  padding: 16px;
   border: 1px solid #2a2e36;
   border-radius: 14px;
   background: rgba(18, 20, 25, 0.94);
@@ -344,8 +346,14 @@ button.mtableHint:disabled {
   opacity: 0.7;
 }
 
+/* Нажатие — пилюля CTA светлеет, акцентный «+» темнеет (feedback всей кнопки-карточки). */
 button.mtableHint:active .mtableHintCta {
-  background: #d42b20;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(240, 242, 245, 0.32);
+}
+
+button.mtableHint:active .mtableHintCta svg {
+  color: #d42b20;
 }
 
 /* Глифы костей — вступление композиции (контур, как в шторке). */
@@ -379,20 +387,40 @@ button.mtableHint:active .mtableHintCta {
   color: #9aa0aa;
 }
 
-/* CTA «+ Кости» — акцентный «призыв» внутри композиции (весь блок — кнопка). */
+/*
+ * CTA «+ Кости» — призыв внутри композиции (весь блок — кнопка → шторка).
+ * Обводка-пилюля рифмуется с контурной графикой карточки (глифы, линия инфо),
+ * «+» — та же геометрия, что у кнопки набора в шапке, но в акцентном цвете:
+ * вместо заливки-кружка — только тонкая линия глифа (красной площади почти нет),
+ * а призыв держит вес за счёт обводки, заливки и 800-го начертания. Отступы
+ * симметричны (по 18px), вертикальное центрирование — flex + align-items.
+ * Тап-зона CTA ≥44 (плюс вся карточка — кнопка). Движения нет — feedback
+ * мгновенный (reduce-motion не нужен).
+ */
 .mtableHintCta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  gap: 7px;
+  min-height: 44px;
   margin-top: 14px;
-  padding: 0 20px;
+  padding: 0 18px;
+  border: 1px solid rgba(240, 242, 245, 0.18);
   border-radius: 999px;
-  background: #ef3124;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f0f2f5;
   font-size: 15px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+/* Слот «+»: тот же svg (addIcon), что в шапке; ширина-высота заданы явно —
+   атрибуты у svg 24×24. Акцент — цвет линии, без заливки-кружка. */
+.mtableHintCta svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  color: #ef3124;
 }
 
 /*
@@ -465,8 +493,9 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-/* Кнопка набора в шапке: текст «2d4 d12» / «+ Кости» — уровень secondary
-   (16/800); крупнее (20/800) только сумма-акцент на бургере. */
+/* Кнопка набора в шапке: пусто — значок «+» (24px, тот же svg-слот, что у бургера),
+   состав — текст «2d4 d12» уровня secondary (16/800); крупнее (20/800) только
+   сумма-акцент на бургере. */
 .mtableAdd {
   font-size: 16px;
   font-weight: 800;

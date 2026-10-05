@@ -58,7 +58,14 @@ import {
   uniquePresetName,
 } from '@/features/table-setup/presets'
 import { createTable, type Table } from '@/shared/three/table'
-import { clearAllIcon, closeIcon, menuIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
+import {
+  addIcon,
+  clearAllIcon,
+  closeIcon,
+  menuIcon,
+  soundIcon,
+  vibrationIcon,
+} from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
 import { hideResult } from '@/shared/ui/result-pop'
 import './mobile-table.css'
@@ -134,12 +141,13 @@ export const mountMobileTable = (
   burger.type = 'button'
   burger.innerHTML = menuIcon()
   burger.setAttribute('aria-label', 'Меню')
-  // «+ Кости» — набор («2d4 d12»), пусто — «+ Кости»; сумма броска — на бургере.
+  // Пусто — значок «+» (пара бургер-иконке), набор — текст («2d4 d12»);
+  // сумма броска — на бургере. См. refreshChrome.
   const diceBtn = document.createElement('button')
   diceBtn.className = 'mtableIcon mtableAdd'
   diceBtn.dataset.testid = 'mtable-add'
   diceBtn.type = 'button'
-  diceBtn.textContent = '+ Кости'
+  diceBtn.innerHTML = addIcon()
   diceBtn.setAttribute('aria-label', 'Выбор костей')
   const title = document.createElement('span')
   title.className = 'mtableTitle'
@@ -205,6 +213,11 @@ export const mountMobileTable = (
   const hintCta = document.createElement('span')
   hintCta.className = 'mtableHintCta'
   hintCta.dataset.testid = 'mtable-hint-cta'
+  // «+» — та же геометрия и svg, что у кнопки набора в шапке (addIcon(), слот
+  // 24px → 21px здесь). Плашки-кружка нет: акцент даёт цвет линии «+» (как
+  // красный у суммы на бургере), сама пилюля остаётся контурной — графика
+  // карточки не тяжелеет. Слово «Кости» несёт текст (иконка его заменила бы).
+  hintCta.innerHTML = `${addIcon()}Кости`
   // Слот под монетизацию: тихая строка о приложении. Сейчас — только текст;
   // позже сюда встанет баннер/ссылка (для ссылки элемент выносят из кнопки —
   // <a> внутри <button> недопустим; обёртка и позиция блока не меняются).
@@ -885,9 +898,14 @@ export const mountMobileTable = (
       foot.hidden = true
     }
     const short = shortSet(counts)
-    diceBtn.textContent = total > 0 ? short : '+ Кости'
-    diceBtn.setAttribute('aria-label', total > 0 ? `Выбор костей: ${short}` : 'Выбор костей')
-    diceBtn.title = summarize(counts)
+    // Пусто — значок «+» (пара бургер-иконке), состав — текстом: он информативен,
+    // без него кнопка становится «слепой». aria-label/title — в обоих состояниях.
+    const label = total > 0 ? `Выбор костей: ${short}` : 'Выбор костей'
+    diceBtn.setAttribute('aria-label', label)
+    diceBtn.title = total > 0 ? summarize(counts) : label
+    if (total > 0) diceBtn.textContent = short
+    // Значок ставим один раз на пустое состояние (firstElementChild — svg, текста нет).
+    else if (diceBtn.firstElementChild === null) diceBtn.innerHTML = addIcon()
     // Хинт-empty-state: пусто (композиция → шит) / грузится (disabled) /
     // ошибка загрузки; кости есть — hidden.
     if (loadError) {
@@ -895,7 +913,6 @@ export const mountMobileTable = (
     } else if (total === 0) {
       hintTitle.textContent = 'Добавь кости на стол'
       hintSub.textContent = 'Пресеты и любой состав — внутри'
-      hintCta.textContent = '+ Кости'
       hintSub.hidden = false
       hintCta.hidden = false
       hintInfo.hidden = false
