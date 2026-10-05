@@ -62,8 +62,11 @@ import {
   addIcon,
   clearAllIcon,
   closeIcon,
+  githubIcon,
   menuIcon,
   soundIcon,
+  likeIcon,
+  telegramIcon,
   vibrationIcon,
 } from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
@@ -132,6 +135,57 @@ export const mountMobileTable = (
   // Декорация для SR: итог озвучивает кнопка (aria-live ниже).
   canvas.setAttribute('aria-hidden', 'true')
 
+  // Водяной знак (фидбэк: «если нельзя сделать маленьким — надо сделать
+  // большим»): гигантское «Kubica» почти во всю ширину `.mtable`, ПОД канвой
+  // (канва прозрачная, см. table.ts alpha) и под шапкой — фоновая подложка,
+  // как крупный логотип-призрак по центру сцены. Декор — только для глаз.
+  const watermark = document.createElement('div')
+  watermark.className = 'mtableWatermark'
+  watermark.dataset.testid = 'mtable-watermark'
+  watermark.setAttribute('aria-hidden', 'true')
+  const wmText = document.createElement('span')
+  wmText.className = 'mtableWatermarkText'
+  wmText.textContent = 'Kubica'
+  watermark.append(wmText)
+  // Адаптивка под экран (фидбэк): широкий → по горизонтали, узкий → по
+  // вертикали, квадратный → под 45°. Угол считаем от пропорций ВЬЮПОРТА
+  // (контейнер на десктопе зажат max-width 720 — по нему «широта» не видна),
+  // длину — по контейнеру: растягиваем почти во всю доступную длину с
+  // эстетическим отступом от краёв, масштаб шрифта меряем на лету.
+  const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
+  const fitWatermark = (): void => {
+    const r = watermark.getBoundingClientRect()
+    if (r.width < 1 || r.height < 1) return
+    const vw = window.innerWidth || r.width
+    const vh = window.innerHeight || r.height
+    const aspect = vw / Math.max(vh, 1)
+    // ≥1.5 — широко → 0°; ровно 1 (квадрат) → 45°; ≤2/3 — узко → 90°.
+    const angle =
+      aspect >= 1
+        ? 45 * clamp01((1.5 - aspect) / 0.5)
+        : 45 + 45 * clamp01((1 - aspect) / (1 - 2 / 3))
+    const rad = (angle * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const pad = Math.min(48, Math.max(16, Math.round(Math.min(r.width, r.height) * 0.06)))
+    const availW = r.width - 2 * pad
+    const availH = r.height - 2 * pad
+    // Длина отрезка той же ориентации, что влезает в бокс (по диагонали —
+    // min сторон / cos45).
+    const along = Math.min(
+      cos > 0.001 ? availW / cos : Number.POSITIVE_INFINITY,
+      sin > 0.001 ? availH / sin : Number.POSITIVE_INFINITY,
+    )
+    // Меряем ширину строки при 100px (без поворота) → масштаб под `along`.
+    wmText.style.transform = 'none'
+    wmText.style.fontSize = '100px'
+    const w100 = wmText.getBoundingClientRect().width
+    if (w100 < 1) return
+    const fs = (along / w100) * 100
+    wmText.style.fontSize = `${Math.round(fs * 10) / 10}px`
+    wmText.style.transform = angle > 0.05 ? `rotate(${angle}deg)` : 'none'
+  }
+
   const head = document.createElement('div')
   head.className = 'mtableHead'
   head.dataset.testid = 'mtable-head'
@@ -149,12 +203,37 @@ export const mountMobileTable = (
   diceBtn.type = 'button'
   diceBtn.innerHTML = addIcon()
   diceBtn.setAttribute('aria-label', 'Выбор костей')
-  const title = document.createElement('span')
-  title.className = 'mtableTitle'
-  title.dataset.testid = 'mtable-title'
-  title.textContent = 'Kubica'
+  // Лайк в шапке (2.17, четвёртый заход): РЯД как на GitHub — иконка + подпись
+  // «Star» + счётчик в пилюле (присланный юзером фрагмент счётчика Stars).
+  // Ссылка на github.com/Domovikx/kubica (target/rel как в шторке), стоит
+  // справа; звук — слева (центр целиком у священной пары «+»/бургер, 2.15).
+  // Надпись «Kubica» из шапки убрана — стала водяным знаком (см. watermark).
+  const headStar = document.createElement('a')
+  headStar.className = 'mtableIcon mtableHeadStar'
+  headStar.dataset.testid = 'mtable-head-star'
+  headStar.href = 'https://github.com/Domovikx/kubica'
+  headStar.target = '_blank'
+  headStar.rel = 'noopener noreferrer'
+  const headStarCount = document.createElement('span')
+  headStarCount.className = 'mtableHeadStarCount'
+  headStarCount.dataset.testid = 'mtable-head-star-count'
+  headStarCount.hidden = true
+  const headStarLabel = document.createElement('span')
+  headStarLabel.className = 'mtableHeadStarLabel'
+  headStarLabel.textContent = 'Star'
+  headStar.innerHTML = likeIcon()
+  headStar.append(headStarLabel, headStarCount)
+  const syncHeadStarAria = (): void => {
+    headStar.setAttribute(
+      'aria-label',
+      headStarCount.hidden
+        ? 'Оценить репозиторий на GitHub (откроется в новой вкладке)'
+        : `Оценить репозиторий Kubica на GitHub, звёзд: ${headStarCount.textContent} (откроется в новой вкладке)`,
+    )
+  }
+  syncHeadStarAria()
   const soundBtn = document.createElement('button')
-  soundBtn.className = 'mtableIcon'
+  soundBtn.className = 'mtableIcon mtableSound'
   soundBtn.dataset.testid = 'mtable-sound'
   soundBtn.type = 'button'
   const syncSound = () => {
@@ -168,16 +247,59 @@ export const mountMobileTable = (
     syncSound()
     syncDrawerSound()
   })
-  // Шапка: управление (набор, бургер) по центру экрана, справа Kubica и звук.
+  // Шапка: слева звук, по центру пара «+»/бургер (2.15), справа ряд Star.
   const headCtl = document.createElement('div')
   headCtl.className = 'mtableHeadCtl'
   headCtl.dataset.testid = 'mtable-head-ctl'
   headCtl.append(diceBtn, burger)
+  const headLeft = document.createElement('div')
+  headLeft.className = 'mtableHeadLeft'
+  headLeft.dataset.testid = 'mtable-head-left'
+  headLeft.append(soundBtn)
   const headSide = document.createElement('div')
   headSide.className = 'mtableHeadSide'
   headSide.dataset.testid = 'mtable-head-side'
-  headSide.append(title, soundBtn)
-  head.append(headCtl, headSide)
+  headSide.append(headStar)
+  head.append(headLeft, headCtl, headSide)
+
+  // Лайк и полный состав в узкой шапке не влезают (320px: 24 паддинга + 20
+  // gap'ов + лайк 44 + пара 98 + текст 225 = 411 > 320 — физически не влезает,
+  // резать состав/пару нельзя). Grid держит правой трети её min-content
+  // (44 под лайк), остаток уходит в левую: пока остаток ≥ 44 — лайк ровно у
+  // правого паддинга, но центр (пара) смещается влево на половину разницы;
+  // когда остаток кончается — лайк вылезает за контент-бокс и скрывается
+  // (тогда пара снова по центру, h-scroll нет — у .mtable overflow: clip).
+  // На пустом столе, после «Убрать все» и на 390/768 (в т.ч. с полным
+  // составом) — лайк всегда на месте; ссылка на репо в шторке живёт всегда.
+  const fitHeadStar = (): void => {
+    headStar.hidden = false
+    soundBtn.hidden = false
+    const measure = () => {
+      const hr = head.getBoundingClientRect()
+      const cs = getComputedStyle(head)
+      const ctl = headCtl.getBoundingClientRect()
+      return {
+        hr,
+        padL: parseFloat(cs.paddingLeft),
+        padR: parseFloat(cs.paddingRight),
+        ctl,
+      }
+    }
+    // Звук слева: пока пара «+»/бургер упирается в правый контент-бокс —
+    // звук виноват в сдвиге (на 320 с полным составом левая колонка выталкивает
+    // центр за экран) → прячем (звук дублируется пунктом в бургере).
+    let m = measure()
+    const snd = soundBtn.getBoundingClientRect()
+    if (snd.right > m.ctl.left - 1 || m.ctl.right > m.hr.right - m.padR + 1) soundBtn.hidden = true
+    // Ряд Star справа: правее пары и внутри контент-бокса (320/390 с полным
+    // составом ряд широкий — уступает, ссылка остаётся в шторке).
+    m = measure()
+    const sr = headStar.getBoundingClientRect()
+    headStar.hidden =
+      sr.left < m.ctl.right + 1 ||
+      sr.right > m.hr.right - m.padR + 1 ||
+      sr.left < m.hr.left + m.padL + 1
+  }
 
   const applyCounts = (counts: TableCounts) => {
     setup.clear()
@@ -718,10 +840,163 @@ export const mountMobileTable = (
     'Kubica — точные кости D&D: d6 16 мм, набор d4–d20, грани N+1, честная физика. FreeCAD · OpenSCAD · CadQuery → Blender → three.js.'
   aboutSection.append(aboutTitle, aboutText)
 
-  drawerBody.append(histSection, pwSection, sndSection, aboutSection)
+  // --- Соцсети (2.17): ссылки в шторке + лайк в шапке (см. headStar) ---
+  // Постоянные ссылки (GitHub/Telegram) + лайкалка — строка-ссылка на репо.
+  // Внешние: target=_blank + rel=noopener noreferrer, строка ≥44, aria-метка
+  // проговаривает назначение и то, что вкладка откроется новая.
+  const socialSection = document.createElement('div')
+  socialSection.className = 'mtableSection'
+  socialSection.dataset.testid = 'mtable-social-section'
+  const socialTitle = document.createElement('span')
+  socialTitle.className = 'mtableSectionTitle'
+  socialTitle.dataset.testid = 'mtable-social-title'
+  socialTitle.textContent = 'Соцсети'
+
+  /** Строка-ссылка: иконка + подпись + мета справа (хэндл или счётчик). */
+  const socialLink = (
+    icon: string,
+    name: string,
+    meta: string,
+    href: string,
+    aria: string,
+  ): HTMLAnchorElement => {
+    const a = document.createElement('a')
+    a.className = 'mtableSocial'
+    a.dataset.testid = 'mtable-social'
+    a.href = href
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.innerHTML = icon
+    const label = document.createElement('span')
+    label.className = 'mtableSocialName'
+    label.textContent = name
+    const sub = document.createElement('span')
+    sub.className = 'mtableSocialMeta'
+    sub.textContent = meta
+    a.append(label, sub)
+    a.setAttribute('aria-label', `${aria} (откроется в новой вкладке)`)
+    return a
+  }
+
+  const ghLink = socialLink(
+    githubIcon(),
+    'GitHub',
+    '@DomovikX',
+    'https://github.com/DomovikX',
+    'Профиль GitHub DomovikX',
+  )
+  const tgLink = socialLink(
+    telegramIcon(),
+    'Telegram',
+    '@Domovikx',
+    'https://t.me/Domovikx',
+    'Канал Domovikx в Telegram',
+  )
+
+  // Лайкалка: ссылка на репозиторий проекта; счётчик звёзд — опциональный
+  // (см. loadStars): при отсутствии сети/лимите API и при 0 — просто скрыт,
+  // не спиннер.
+  const starLink = document.createElement('a')
+  starLink.className = 'mtableSocial mtableStar'
+  starLink.dataset.testid = 'mtable-star'
+  starLink.href = 'https://github.com/Domovikx/kubica'
+  starLink.target = '_blank'
+  starLink.rel = 'noopener noreferrer'
+  starLink.innerHTML = likeIcon()
+  const starName = document.createElement('span')
+  starName.className = 'mtableSocialName'
+  starName.textContent = 'Оценить репозиторий'
+  const starCount = document.createElement('span')
+  starCount.className = 'mtableSocialMeta'
+  starCount.dataset.testid = 'star-count'
+  starCount.hidden = true
+  starLink.append(starName, starCount)
+  const syncStarAria = (): void => {
+    starLink.setAttribute(
+      'aria-label',
+      starCount.hidden
+        ? 'Оценить репозиторий Kubica звездой на GitHub (откроется в новой вкладке)'
+        : `Оценить репозиторий Kubica на GitHub, звёзд: ${starCount.textContent} (откроется в новой вкладке)`,
+    )
+  }
+  syncStarAria()
+
+  // Счётчик звёзд: кэш в localStorage на сутки + GitHub API без токена
+  // (rate limit 60/ч на IP — кэш держит расход в ≤1 запроса/сутки на
+  // посетителя). Деградация тихая: offline/403/429/любая ошибка → счётчик
+  // остаётся скрытым (или в прежнем значении из кэша), без ретраев.
+  const STAR_KEY = 'kubica-stars'
+  const STAR_TTL_MS = 24 * 60 * 60 * 1000
+  let starsAsked = false
+  const showStars = (n: number): void => {
+    // Шторка: 0 звёзд — не социальное доказательство, мету-счётчик прячем
+    // (сама строка-ссылка живёт всегда), показываем от 1.
+    starCount.hidden = n < 1
+    starCount.textContent = starCount.hidden ? '' : String(n)
+    // Шапка — ряд как на GitHub: цифра видна всегда, когда она известна
+    // (GitHub показывает и 0); без данных/офлайн пилюля скрыта.
+    headStarCount.textContent = String(n)
+    headStarCount.hidden = false
+    syncStarAria()
+    syncHeadStarAria()
+  }
+  const loadStars = (): void => {
+    if (starsAsked) return
+    starsAsked = true
+    let cached: { at: number; n: number } | null = null
+    try {
+      const raw = localStorage.getItem(STAR_KEY)
+      const parsed: unknown = raw === null ? null : JSON.parse(raw)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        typeof (parsed as { at?: unknown }).at === 'number' &&
+        typeof (parsed as { n?: unknown }).n === 'number'
+      ) {
+        cached = parsed as { at: number; n: number }
+      }
+    } catch {
+      cached = null
+    }
+    if (cached) {
+      showStars(cached.n)
+      if (Date.now() - cached.at < STAR_TTL_MS) return
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    void fetch('https://api.github.com/repos/Domovikx/kubica', {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+      .then((res): Promise<unknown> =>
+        res.ok ? res.json() : Promise.reject(new Error(String(res.status))),
+      )
+      .then((data: unknown) => {
+        const n =
+          typeof data === 'object' && data !== null
+            ? (data as { stargazers_count?: unknown }).stargazers_count
+            : undefined
+        if (typeof n !== 'number') return
+        showStars(n)
+        try {
+          localStorage.setItem(STAR_KEY, JSON.stringify({ at: Date.now(), n }))
+        } catch {
+          // без хранилища живём — просто будем ходить в API реже
+        }
+      })
+      .catch(() => {
+        // тихо: остаёмся на кэше или без счётчика
+      })
+  }
+  loadStars()
+
+  socialSection.append(socialTitle, ghLink, tgLink, starLink)
+
+  drawerBody.append(histSection, pwSection, sndSection, aboutSection, socialSection)
   drawer.append(drawerHead, drawerBody)
 
-  section.append(canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
+  section.append(watermark, canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
+  requestAnimationFrame(fitWatermark)
+  document.fonts?.ready.then(fitWatermark).catch(() => {})
+
   container.appendChild(section)
 
   const openSheet = () => {
@@ -736,6 +1011,8 @@ export const mountMobileTable = (
     sheet.hidden = true
     drawer.hidden = false
     backdrop.hidden = false
+    // Счётчик звёзд тянем лениво — при первом открытии меню (см. loadStars).
+    loadStars()
     drawerClose.focus()
   }
   const closeOverlays = () => {
@@ -945,6 +1222,8 @@ export const mountMobileTable = (
     }
     saveBtn.textContent = activeSet ? 'Обновить набор' : 'Сохранить сет'
     saveBtn.disabled = rolling || total === 0
+    // Состав мог изменить ширину шапки — пересаживаем лайк (см. fitHeadStar).
+    fitHeadStar()
   }
 
   const addInstance = (inst: Instance, i: number) => {
@@ -1278,6 +1557,8 @@ export const mountMobileTable = (
     resize() {
       table.resize()
       relayout()
+      fitHeadStar()
+      fitWatermark()
     },
     dispose() {
       disposed = true

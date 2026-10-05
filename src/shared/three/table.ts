@@ -123,7 +123,9 @@ export const createTable = (
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: false,
+    // Прозрачная канва: подложка-градиент живёт в CSS (.mtable), а под ней —
+    // водяной знак «Kubica» (mobile-table), который иначе не виден.
+    alpha: true,
     stencil: false,
     powerPreference: 'high-performance',
   })
@@ -145,11 +147,10 @@ export const createTable = (
     grad.addColorStop(1, '#0a0b0e')
     bgCtx.fillStyle = grad
     bgCtx.fillRect(0, 0, 2, 256)
-    const bgTex = new THREE.CanvasTexture(bgCanvas)
-    bgTex.colorSpace = THREE.SRGBColorSpace
-    scene.background = bgTex
-  } else {
-    scene.background = new THREE.Color(0x14161a)
+    // Фон сцены не рисуем (scene.background = null): градиент переехал в CSS
+    // (.mtable) — так сквозь канву виден водяной знак. bgCanvas/градиент
+    // оставлены для сверки палитры (2px эталон).
+    new THREE.CanvasTexture(bgCanvas)
   }
 
   const pmrem = new THREE.PMREMGenerator(renderer)

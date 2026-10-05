@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { clearAllIcon, closeIcon, menuIcon, presetsIcon, soundIcon, vibrationIcon } from './md-icon'
+import {
+  addIcon,
+  clearAllIcon,
+  closeIcon,
+  githubIcon,
+  menuIcon,
+  presetsIcon,
+  soundIcon,
+  likeIcon,
+  telegramIcon,
+  vibrationIcon,
+} from './md-icon'
 
 describe('md-icon', () => {
   it('звук вкл/выкл — разные path, currentColor', () => {
@@ -31,5 +42,25 @@ describe('md-icon', () => {
   it('убрать всё — валидный svg, не крестик', () => {
     expect(clearAllIcon()).toContain('<svg')
     expect(clearAllIcon()).not.toBe(closeIcon())
+  })
+
+  // 2.17: бренды (simple-icons) — 24×24; лайк — octicon-star GitHub (сетка 16,
+  // как и счётчик Stars на самом GitHub).
+  it('соцсети — github/telegram в viewBox 0 0 24 24, лайк в 0 0 16 16', () => {
+    expect(githubIcon()).toContain('viewBox="0 0 24 24"')
+    expect(telegramIcon()).toContain('viewBox="0 0 24 24"')
+    expect(likeIcon()).toContain('viewBox="0 0 16 16"')
+    expect(githubIcon()).not.toBe(telegramIcon())
+    for (const svg of [githubIcon(), telegramIcon(), likeIcon()]) {
+      expect(svg).toContain('fill="currentColor"')
+      expect(svg).toContain('aria-hidden="true"')
+    }
+  })
+
+  it('лайк — свой path, не совпадает ни с одной шапочной иконкой', () => {
+    expect(likeIcon()).toContain('<svg')
+    for (const svg of [menuIcon(), addIcon(), soundIcon(false), closeIcon()]) {
+      expect(likeIcon()).not.toBe(svg)
+    }
   })
 })

@@ -61,11 +61,46 @@ body[data-mode='mtable'] .result {
   height: 100%;
   max-width: 720px;
   margin: 0 auto;
+  /* Подложка бывшей scene.background (table.ts: #23262d → #14161a 55% →
+     #0a0b0e): канва стала прозрачной (alpha), чтобы сквозь неё был виден
+     водяной знак — градиент переехал в CSS, попиксельно тот же. */
+  background: linear-gradient(180deg, #23262d 0%, #14161a 55%, #0a0b0e 100%);
+}
+
+.mtableWatermark {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Одно большое название почти во всю ширину («если нельзя сделать
+     маленьким — надо сделать большим»): призрак по центру сцены, кости
+     проезжают поверх него. Цвет/трек подобраны так, чтобы не спорить с
+     костями: фон уже градиентный, знак — чуть светлее подложки. */
+  color: rgba(240, 242, 245, 0.045);
+  -webkit-text-stroke: 1px rgba(240, 242, 245, 0.035);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Текст знака: размер/поворот навешивает fitWatermark (mobile-table.ts) —
+   ширина строки должна вписаться в доступную длину контейнера. */
+.mtableWatermarkText {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: min(24vw, 150px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .mtableCanvas {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -91,7 +126,8 @@ body[data-mode='mtable'] .result {
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
 }
 
-/* Управление (набор + бургер) — строго по центру экрана. */
+/* Пара «+»/бургер (2.15) — по центру экрана; лайк (2.17) живёт справа,
+   в правой трети — центр целиком отдан паре. */
 .mtableHeadCtl {
   position: relative;
   grid-column: 2;
@@ -101,7 +137,16 @@ body[data-mode='mtable'] .result {
   justify-content: center;
 }
 
-/* Kubica и звук — прижаты вправо. */
+/* Звук — полностью влево (фидбэк: «звук перенесём в хэдер полностью влево»). */
+.mtableHeadLeft {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+}
+
+/* Ряд Star (иконка + «Star» + счётчик) — прижат вправо. */
 .mtableHeadSide {
   grid-column: 3;
   display: flex;
@@ -110,25 +155,9 @@ body[data-mode='mtable'] .result {
   justify-self: end;
 }
 
-/* Шкала типографики хедера: 20/800 (сумма-акцент) → 16/800 (кнопки/иконки)
-   → 13/700 (метка Kubica). Kubica — метка, не конкурент кнопкам. */
-.mtableTitle {
-  font-size: 13px;
-  font-weight: 700;
-  color: #9aa0aa;
-  text-align: right;
-}
-
-/* Малые экраны (≤600 — тот же брейкпоинт, что у шторки и дровера):
-   Kubica и звук убираем — правая треть съедает место, центр
-   «кнопка набора/бургер» уезжает влево на узких (замерено до ~380px).
-   Звук не теряется: он дублируется пунктом в бургере. */
-@media (max-width: 600px) {
-  .mtableTitle,
-  .mtableHeadSide .mtableIcon {
-    display: none;
-  }
-}
+/* Метка «Kubica» из шапки убрана — стала водяным знаком (.mtableWatermark).
+   Звук теперь живёт слева (mtableHeadLeft) и на узких не прячется: тесноту
+   решает fitHeadStar (на 320 с полным составом звук уступает паре). */
 
 .mtableIcon {
   min-width: 44px;
@@ -159,6 +188,66 @@ body[data-mode='mtable'] .result {
   display: block;
   width: 24px;
   height: 24px;
+}
+
+/* Ряд Star в шапке (2.17): ссылка на репо живёт как обычная кнопка
+   .mtableIcon (тап ≥44, hover/active), контент — ряд как на GitHub. */
+a.mtableIcon {
+  text-decoration: none;
+}
+
+.mtableHeadStar {
+  gap: 6px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+/* Octicon в ряду — 16px (как у GitHub), не шапочный слот 24. */
+.mtableHeadStar svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mtableHeadStarLabel {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Счётчик — пилюля, как у GitHub: рамка, скругление 6, цифра по центру. */
+.mtableHeadStarCount {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(240, 242, 245, 0.28);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mtableHeadStarCount[hidden] {
+  display: none;
+}
+
+/* Лайк уступает место составу на узких (см. fitHeadStar): author-стиль
+   .mtableIcon перебивает UA `[hidden]` — гасим явно. */
+.mtableHeadStar[hidden] {
+  display: none;
+}
+
+/* та же ловушка и у звука слева: fitHeadStar гасит его на 320 с полным
+   составом (звук выталкивал пару за контент-бокс). */
+.mtableSound[hidden] {
+  display: none;
+}
+
+.mtableHead a.mtableIcon:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* Чипы пресетов в шторке: только состав костями (без подписей), тап — выбор,
@@ -926,4 +1015,68 @@ input:focus-visible {
   color: #9aa0aa;
   margin: 0;
   line-height: 1.5;
+}
+
+/*
+ * Соцсети (2.17): строки-ссылки в шторке — язык .mtableWide (44px, radius 12,
+ * фон карточки), но выравнивание влево: иконка + подпись, мета (хэндл или
+ * счётчик звёзд) справа. Внешние ссылки: _blank + noopener (в разметке).
+ */
+.mtableSocial {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #1d2026;
+  color: #f0f2f5;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mtableSocial + .mtableSocial {
+  margin-top: 8px;
+}
+
+.mtableSocial:hover {
+  background: #242832;
+}
+
+.mtableSocial:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.mtableSocial svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.mtableSocialName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mtableSocialMeta {
+  margin-left: auto;
+  color: #9aa0aa;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Счётчик звёзд появляется, только когда его принесли (см. loadStars). */
+.mtableSocialMeta[hidden] {
+  display: none;
+}
+
+/* Лайкалка: иконка лайка — акцентный цвет (как сумма на бургере, «+» в хинте). */
+.mtableStar svg {
+  color: #ef3124;
 }
