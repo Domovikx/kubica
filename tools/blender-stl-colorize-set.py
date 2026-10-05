@@ -15,6 +15,19 @@ from mathutils import Vector
 PIP_R = 1.4
 DIGIT_DEPTH = 0.1
 
+# Guard от белых рёбер (2.13): бокс цифры выходит за пределы грани (подчёркивание
+# 6/9, двузначные), и центроид тонкого треугольника на скруглении ребра (нормаль
+# отклонена от плоскости грани на 5-11°) попадал в бокс и красился в D_pips.
+# Пол пикса: нормаль параллельна грани (dev~0); стенка глифа: вертикальный рез
+# (dev=90°) — остаётся пипсом. Скругление: 3° < dev < 60° — не пипс.
+FLAT_MAX_DEG = 3.0
+WALL_MIN_DEG = 60.0
+
+
+def is_pip_angle(dev_deg):
+    """Грань с таким отклонением нормали может быть пипсом/цифрой (см. above)."""
+    return dev_deg <= FLAT_MAX_DEG or dev_deg >= WALL_MIN_DEG
+
 # ---------- геометрия (зеркало tools/dice_set.scad) ----------
 
 def phi():
@@ -246,13 +259,6 @@ is_digit_die = DIE in ('d4', 'd6', 'd8', 'd10', 'd12', 'd20')
 boxes = digit_boxes(DIE) if is_digit_die else []
 s = DIE_SIZES[DIE] / 2 - EDGE_R
 
-# Guard от белых рёбер (2.13): бокс цифры выходит за пределы грани (подчёркивание
-# 6/9, двузначные), и центроид тонкого треугольника на скруглении ребра (нормаль
-# отклонена от плоскости грани на 5-11°) попадал в бокс и красился в D_pips.
-# Пол пикса: нормаль параллельна грани (dev~0); стенка глифа: вертикальный рез
-# (dev=90°) — остаётся пипсом. Скругление: 3° < dev < 60° — не пипс.
-FLAT_MAX_DEG = 3.0
-WALL_MIN_DEG = 60.0
 for face in bm.faces:
     c = sum((v.co for v in face.verts), Vector()) / len(face.verts)
     if is_digit_die:
@@ -278,7 +284,7 @@ for face in bm.faces:
             lo = -half_v - (size * 0.35 if val in (6, 9) else 0.0)
             if abs(uu) < half_u and lo < vv < half_v and 0.005 < depth < DIGIT_DEPTH + 0.3:
                 dev = math.degrees(math.acos(max(-1.0, min(1.0, face.normal.dot(nv)))))
-                if dev <= FLAT_MAX_DEG or dev >= WALL_MIN_DEG:
+                if is_pip_angle(dev):
                     is_pip = True
                 break
     face.material_index = 1 if is_pip else 0

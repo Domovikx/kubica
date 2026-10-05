@@ -38,3 +38,7 @@ tools/blender-mcp/
 # Сам каталог трекается через .gitkeep, содержимое — нет
 *tmp*
 *nul*
+
+# Python (тесты tools/)
+__pycache__/
+*.pyc
