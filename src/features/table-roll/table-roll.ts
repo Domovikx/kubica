@@ -14,6 +14,7 @@ import {
   displayValue,
   readBottomRoll,
   resolveD4Below,
+  scoreValue,
   type Quat,
 } from '@/features/roll-dice/readout'
 import { hideResult, showResult } from '@/shared/ui/result-pop'
@@ -120,7 +121,9 @@ export const labelTableResult = (results: readonly TableDieResult[]): TableLabel
   }
   return {
     label: groups.map((g) => (g.n > 1 ? `${g.n}${g.die}` : g.die)).join('+'),
-    total: parts.reduce((sum, p) => sum + p.value, 0),
+    // Итог по scoreValue (d10: грань «0» = 10), иначе красная сумма в шапке
+    // разойдётся с футером/историей — там печатается display (см. scoreValue).
+    total: parts.reduce((sum, p) => sum + scoreValue(p.die, p.value), 0),
     parts,
   }
 }
@@ -150,63 +153,95 @@ export const commitTableResult = (
   showResult(formatLabel(labelled.label), String(labelled.total), undefined, labelled.parts)
 }
 
+/** Внутренний прямоугольник канвы под раскладку (px): канва минус отступы. */
+export interface LayoutRect {
+  w: number
+  h: number
+}
+
+export interface LayoutPlan {
+  /** Шаг ячейки (px) — квадрат, в который вписывается кость с запасом. */
+  cell: number
+  cols: number
+  rows: number
+  /** Центры ячеек: px от центра rect, y вниз (экранная ориентация). */
+  slots: Array<{ x: number; y: number }>
+}
+
+/** Потолок ячейки (px): одиночная кость не разливается на весь экран. */
+const MAX_CELL_PX = 360
+
 /**
- * Раскладка слотов после settle (pure): каждый кубик — в условном квадрате
- * (шаг gap по обеим осям, повёрнутый ромб влезает с запасом), квадраты
- * компануются по пропорции экрана: широкий — широкие ряды (4d6 → в ряд),
- * портрет — квадрат 2×2, узкий — колонка. opts.aspect = ширина/высота
- * канваса (дефолт 1). 1 → центр; 2 → пара по X; 3 → треугольник;
- * 4+ → сетка cols×rows, последний ряд центрируется. Шаг задаёт виджет
- * по самой крупной кости пачки (с учётом поворота — ромб).
+ * Рациональное деление канвы на n костей (pure): inner-прямоугольник rect
+ * (px) → сетка cols×rows квадратных ячеек (шаг по обеим осям, повёрнутый
+ * ромб влезает с запасом). Кандидаты cols = 1..n, rows = ⌈n/cols⌉, ячейка
+ * = min(w/cols, h/rows) с потолком opts.maxCell. Выбираем наибольшую
+ * ячейку — кости занимают отведённое место целиком; при равенстве — меньше
+ * пустых ячеек, затем пропорция сетки ближе к пропорции rect (широкий кадр
+ * вырождается в ряд, портретный — в колонку). Слоты читаются сверху вниз,
+ * последний ряд центрируется. n ≤ 0 → пустая раскладка (cell — под камеру
+ * пустого стола).
  */
 export const layoutSlots = (
   n: number,
-  gap = 22,
-  opts?: { aspect?: number },
-): Array<{ x: number; z: number }> => {
-  const half = gap / 2
-  if (n <= 1) return [{ x: 0, z: 0 }]
-  if (n === 2)
-    return [
-      { x: -half, z: 0 },
-      { x: half, z: 0 },
-    ]
-  if (n === 3)
-    return [
-      { x: -half, z: -gap * 0.3 },
-      { x: half, z: -gap * 0.3 },
-      { x: 0, z: gap * 0.45 },
-    ]
-  const aspect = opts?.aspect && opts.aspect > 0 ? opts.aspect : 1
-  // Насколько кадр раскладки может быть вытянут против экрана: 2.5 даёт
-  // «в ряд» на 16:9 и уже, а портрет удерживает в квадрате/колонке.
-  const stretch = aspect * 2.5
+  rect: LayoutRect,
+  opts?: { maxCell?: number },
+): LayoutPlan => {
+  const w = Math.max(1, rect.w)
+  const h = Math.max(1, rect.h)
+  const maxCell = Math.max(1, Math.min(opts?.maxCell ?? MAX_CELL_PX, w, h))
+  if (n <= 0) return { cell: maxCell, cols: 0, rows: 0, slots: [] }
+  const EPS = 1e-9
   let cols = 1
-  let best = -1
+  let rows = n
+  let cell = maxCell
+  let bestCell = -1
+  let bestEmpties = 0
+  let bestAspectErr = 0
   for (let c = 1; c <= n; c++) {
-    const rows = Math.ceil(n / c)
-    // Квадратные ячейки должны влезть и по высоте (кроме одного ряда).
-    if (rows > 1 && rows > Math.floor(c / aspect + 1e-6)) continue
-    if (c / rows > stretch) continue
-    const last = n % c
-    const fill = last === 0 ? 1 : last / c
-    const score = fill * 10 + c
-    if (score > best) {
-      best = score
+    const r = Math.ceil(n / c)
+    const fit = Math.min(w / c, h / r)
+    if (!(fit > 0)) continue
+    const cellC = Math.min(fit, maxCell)
+    const empties = c * r - n
+    const aspectErr = Math.abs(Math.log(c / r / (w / h)))
+    const better =
+      bestCell < 0 ||
+      cellC > bestCell + EPS ||
+      (Math.abs(cellC - bestCell) <= EPS &&
+        (empties < bestEmpties || (empties === bestEmpties && aspectErr < bestAspectErr - EPS)))
+    if (better) {
+      bestCell = cellC
+      bestEmpties = empties
+      bestAspectErr = aspectErr
       cols = c
+      rows = r
+      cell = cellC
     }
   }
-  if (best < 0) cols = n
-  const rows = Math.ceil(n / cols)
-  const slots: Array<{ x: number; z: number }> = []
+  const slots: Array<{ x: number; y: number }> = []
   for (let r = 0; r < rows; r++) {
     const inRow = Math.min(cols, n - r * cols)
     for (let c = 0; c < inRow; c++) {
-      slots.push({ x: (c - (inRow - 1) / 2) * gap, z: (r - (rows - 1) / 2) * gap })
+      slots.push({ x: (c - (inRow - 1) / 2) * cell, y: (r - (rows - 1) / 2) * cell })
     }
   }
-  return slots
+  return { cell, cols, rows, slots }
 }
+
+/**
+ * План → мировые координаты: m — мировых единиц на пиксель (шаг ячейки в
+ * мире / шаг в px), center — смещение центра rect от центра канвы (px,
+ * y вниз). Верх экрана = +Z (камера стола снизу вверх), поэтому экранное
+ * «вниз» отдаём в −Z: первый ряд (y минимальный) получает максимальный z,
+ * порядок инстансов читается сверху вниз, как в футере расшифровки.
+ */
+export const slotsToWorld = (
+  plan: LayoutPlan,
+  m: number,
+  center: { x: number; y: number },
+): Array<{ x: number; z: number }> =>
+  plan.slots.map((s) => ({ x: (s.x + center.x) * m, z: -(s.y + center.y) * m }))
 
 /** Активные миры бросков (по миру на пачку — статика осевших никому не мешает). */
 const activeWorlds = new Set<Promise<PhysicsWorld>>()
@@ -220,7 +255,8 @@ export const tickTableWorld = (): void => {
 
 /**
  * Бросок пачки в свежем rect-мире (без очереди — пачка идёт разом).
- * bounds — половинные экстенты под размер пачки (см. glassHalves).
+ * bounds — половинные экстенты: «стол» виджета = канва минус отступы шапки
+ * и футера (см. applyLayout в mobile-table).
  * Мир чистится целиком после пачки: осевшая статика не переживает бросок.
  */
 export const rollTable = async (

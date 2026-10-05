@@ -3,7 +3,13 @@ import type { DieId } from '@/entities/dice-geometry/geometry'
 import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
 import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
 import type { Quat } from '@/features/roll-dice/readout'
-import { labelTableResult, layoutSlots, rollTableDice, type TableDieResult } from './table-roll'
+import {
+  labelTableResult,
+  layoutSlots,
+  rollTableDice,
+  slotsToWorld,
+  type TableDieResult,
+} from './table-roll'
 
 const IDENTITY: Quat = [0, 0, 0, 1]
 
@@ -88,6 +94,23 @@ describe('table-roll: пачка в одном мире', () => {
     expect(results.map((r) => r.key)).toEqual(['d6#0', 'd6#1', 'd4#0'])
     expect(labelTableResult(results).label).toBe('2d6+d4')
   })
+
+  it('labelTableResult: d10 с гранью 0 в сумме считается 10 (см. scoreValue)', () => {
+    const labelled = labelTableResult([
+      {
+        key: 'd10#0',
+        die: 'd10',
+        value: 0,
+        display: '10',
+        quat: IDENTITY,
+        settled: true,
+        steps: 1,
+      },
+      { key: 'd10#1', die: 'd10', value: 7, display: '7', quat: IDENTITY, settled: true, steps: 1 },
+    ])
+    expect(labelled.total).toBe(17)
+    expect(labelled.label).toBe('2d10')
+  })
 })
 
 describe('table-roll: энергия пачки оседает в бюджет', () => {
@@ -135,62 +158,113 @@ describe('table-roll: энергия пачки оседает в бюджет',
   }, 120000)
 })
 
-describe('layoutSlots: раскладка по центру', () => {
-  it('1 → центр, 2 → пара по X с отступом', () => {
-    expect(layoutSlots(1)).toEqual([{ x: 0, z: 0 }])
-    expect(layoutSlots(2)).toEqual([
-      { x: -11, z: 0 },
-      { x: 11, z: 0 },
-    ])
+describe('layoutSlots: рациональное деление канвы', () => {
+  it('n ≤ 0 → пусто; 1 → центр; потолок ячейки уважается', () => {
+    expect(layoutSlots(0, { w: 400, h: 600 }).slots).toEqual([])
+    expect(layoutSlots(1, { w: 400, h: 600 }).slots).toEqual([{ x: 0, y: 0 }])
+    // Потолок 360px: одиночная кость не растекается на весь экран.
+    expect(layoutSlots(1, { w: 2000, h: 2000 }).cell).toBe(360)
+    expect(layoutSlots(1, { w: 1000, h: 1000 }, { maxCell: 120 }).cell).toBe(120)
   })
 
-  it('кастомный шаг раздвигает слоты пропорционально', () => {
-    expect(layoutSlots(2, 30)).toEqual([
-      { x: -15, z: 0 },
-      { x: 15, z: 0 },
-    ])
+  it('широкий кадр → ряд, портретный → колонка, квадрат → 2×2', () => {
+    const wide = layoutSlots(4, { w: 1200, h: 400 })
+    expect(wide.cols).toBe(4)
+    expect(wide.rows).toBe(1)
+    const port = layoutSlots(4, { w: 400, h: 1200 })
+    expect(port.cols).toBe(1)
+    expect(port.rows).toBe(4)
+    const sq = layoutSlots(4, { w: 600, h: 600 })
+    expect(sq.cols).toBe(2)
+    expect(sq.rows).toBe(2)
   })
 
-  it('3 → треугольник, 4+ → сетка без наложений (dist ≥ gap)', () => {
-    expect(layoutSlots(3)).toHaveLength(3)
-    for (const n of [4, 5, 6]) {
-      const slots = layoutSlots(n)
-      expect(slots).toHaveLength(n)
-      for (let i = 0; i < slots.length; i++) {
-        for (let j = i + 1; j < slots.length; j++) {
-          const dist = Math.hypot(slots[i].x - slots[j].x, slots[i].z - slots[j].z)
-          expect(dist).toBeGreaterThanOrEqual(22 - 1e-9)
+  it('телефон 390×700 на 10 костей → 2 колонки, всё в ректе', () => {
+    const plan = layoutSlots(10, { w: 390, h: 700 })
+    expect(plan.cols).toBe(2)
+    expect(plan.rows).toBe(5)
+    expect(plan.cell).toBeCloseTo(140, 6)
+    expect(plan.slots).toHaveLength(10)
+    for (const s of plan.slots) {
+      expect(Math.abs(s.x) + plan.cell / 2).toBeLessThanOrEqual(390 / 2 + 1e-9)
+      expect(Math.abs(s.y) + plan.cell / 2).toBeLessThanOrEqual(700 / 2 + 1e-9)
+    }
+  })
+
+  it('порядок чтения сверху вниз: y не убывает по инстансам', () => {
+    for (const n of [1, 2, 3, 4, 5, 6, 8, 10]) {
+      for (const rect of [
+        { w: 390, h: 700 },
+        { w: 1200, h: 400 },
+        { w: 800, h: 800 },
+      ]) {
+        const slots = layoutSlots(n, rect).slots
+        for (let i = 1; i < slots.length; i++) {
+          expect(slots[i].y).toBeGreaterThanOrEqual(slots[i - 1].y - 1e-9)
         }
       }
     }
   })
 
-  it('aspect: широкий кадр — 4 в ряд, портрет — 2×2', () => {
-    const wide = layoutSlots(4, 22, { aspect: 16 / 9 })
-    expect(wide.map((s) => s.z)).toEqual([0, 0, 0, 0])
-    const port = layoutSlots(4, 22, { aspect: 9 / 16 })
-    expect(new Set(port.map((s) => s.z)).size).toBe(2)
-    expect(new Set(port.map((s) => s.x)).size).toBe(2)
-  })
-
-  it('aspect: для любого кадра dist ≥ gap', () => {
-    const gap = 24
-    for (const aspect of [0.3, 0.5, 1, 16 / 9, 3]) {
-      for (const n of [4, 5, 6, 8]) {
-        const slots = layoutSlots(n, gap, { aspect })
-        expect(slots).toHaveLength(n)
-        for (let i = 0; i < slots.length; i++) {
-          for (let j = i + 1; j < slots.length; j++) {
-            const dist = Math.hypot(slots[i].x - slots[j].x, slots[i].z - slots[j].z)
-            expect(dist).toBeGreaterThanOrEqual(gap - 1e-9)
+  it('без наложений: центры ячеек ≥ cell на любом кадре', () => {
+    for (const n of [2, 3, 4, 5, 6, 8, 10]) {
+      for (const rect of [
+        { w: 390, h: 700 },
+        { w: 1200, h: 400 },
+        { w: 800, h: 800 },
+        { w: 320, h: 480 },
+      ]) {
+        const plan = layoutSlots(n, rect)
+        expect(plan.slots).toHaveLength(n)
+        for (let i = 0; i < plan.slots.length; i++) {
+          for (let j = i + 1; j < plan.slots.length; j++) {
+            const a = plan.slots[i]
+            const b = plan.slots[j]
+            const dist = Math.hypot(a.x - b.x, a.y - b.y)
+            expect(dist).toBeGreaterThanOrEqual(plan.cell - 1e-9)
           }
         }
       }
     }
   })
 
-  it('aspect ≤ 0 не роняет раскладку (fallback 1)', () => {
-    expect(layoutSlots(4, 22, { aspect: 0 })).toHaveLength(4)
-    expect(layoutSlots(4, 22, { aspect: NaN })).toHaveLength(4)
+  it('вырожденный рект не даёт NaN', () => {
+    const plan = layoutSlots(5, { w: 0, h: 0 })
+    expect(plan.slots).toHaveLength(5)
+    for (const s of plan.slots) {
+      expect(Number.isFinite(s.x)).toBe(true)
+      expect(Number.isFinite(s.y)).toBe(true)
+    }
+  })
+})
+
+describe('slotsToWorld: px → мир', () => {
+  // 1000×600 на 2 кости → ряд (ячейка 360): x = ±180, y = 0.
+  const row = layoutSlots(2, { w: 1000, h: 600 })
+
+  it('y вниз экрана → −Z, x → X (верх экрана = +Z)', () => {
+    expect(row.cols).toBe(2)
+    const world = slotsToWorld(row, 0.1, { x: 0, y: 0 })
+    expect(world).toHaveLength(2)
+    expect(world[0].x).toBeCloseTo(-18)
+    expect(world[1].x).toBeCloseTo(18)
+    expect(world[0].z).toBeCloseTo(0)
+    expect(world[1].z).toBeCloseTo(0)
+  })
+
+  it('центр ректа ниже центра канвы → сетка ниже (−Z)', () => {
+    const one = layoutSlots(1, { w: 400, h: 400 })
+    const [s] = slotsToWorld(one, 0.5, { x: 0, y: 40 })
+    expect(s.x).toBeCloseTo(0)
+    expect(s.z).toBeCloseTo(-20)
+  })
+
+  it('порядок инстансов в мире: z монотонно не возрастает', () => {
+    const plan = layoutSlots(10, { w: 390, h: 700 })
+    const world = slotsToWorld(plan, 0.2, { x: 0, y: 10 })
+    expect(world).toHaveLength(10)
+    for (let i = 1; i < world.length; i++) {
+      expect(world[i].z).toBeLessThanOrEqual(world[i - 1].z + 1e-9)
+    }
   })
 })
