@@ -24,10 +24,3 @@ export const glassHalves = (maxSlotX: number, maxSlotZ: number): { hx: number; h
   hx: Math.max(24, maxSlotX + 20),
   hz: Math.max(16, maxSlotZ + 16),
 })
-
-/**
- * Щедрые фиксированные границы физики стола: летать есть где, стены бьют
- * редко (меньше висов). Камера их не показывает (см. glassHalves).
- */
-export const TABLE_HALF_X = 46
-export const TABLE_HALF_Z = 30

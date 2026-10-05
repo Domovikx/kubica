@@ -93,6 +93,7 @@ body[data-mode='mtable'] .result {
 
 /* Управление (набор + бургер) — строго по центру экрана. */
 .mtableHeadCtl {
+  position: relative;
   grid-column: 2;
   display: flex;
   align-items: center;
@@ -109,9 +110,12 @@ body[data-mode='mtable'] .result {
   justify-self: end;
 }
 
+/* Шкала типографики хедера: 20/800 (сумма-акцент) → 16/800 (кнопки/иконки)
+   → 13/700 (метка Kubica). Kubica — метка, не конкурент кнопкам. */
 .mtableTitle {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9aa0aa;
   text-align: right;
 }
 
@@ -305,16 +309,127 @@ body[data-mode='mtable'] .result {
   display: none;
 }
 
-/* Хинт-статус по центру: пусто — кнопка без chrome, грузится — disabled. */
+/*
+ * Хинт-empty-state: центрированная композиция на центре экрана (костей нет —
+ * центр свободен). Весь блок — кнопка → шторка; внутри глифы костей, заголовок,
+ * подстрока, CTA «+ Кости» и тихая инфо-строка (слот под монетизацию).
+ * absolute + translate(-50%,-50%) — на раскладку шапки/футера не влияет.
+ */
 button.mtableHint {
-  background: transparent;
-  border: none;
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  width: min(320px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 18px 16px 14px;
+  border: 1px solid #2a2e36;
+  border-radius: 14px;
+  background: rgba(18, 20, 25, 0.94);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #f0f2f5;
   font-family: inherit;
+  text-align: center;
   cursor: pointer;
+  animation: mtableHintIn 0.18s ease-out;
 }
 
+/* Грузится — статус не интерактивен (клик и так не пройдёт, opacity = статус). */
 button.mtableHint:disabled {
   cursor: default;
+  opacity: 0.7;
+}
+
+button.mtableHint:active .mtableHintCta {
+  background: #d42b20;
+}
+
+/* Глифы костей — вступление композиции (контур, как в шторке). */
+.mtableHintGlyph {
+  display: flex;
+  gap: 10px;
+  color: #c9cdd4;
+}
+
+.mtableHintGlyph svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+
+/* Заголовок — primary-строка намёка (17/700). */
+.mtableHintTitle {
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Подстрока — secondary (13/600, серый). */
+.mtableHintSub {
+  margin-top: 4px;
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #9aa0aa;
+}
+
+/* CTA «+ Кости» — акцентный «призыв» внутри композиции (весь блок — кнопка). */
+.mtableHintCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: #ef3124;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/*
+ * Тихая инфо-строка о приложении — СЛОТ ПОД МОНЕТИЗАЦИЮ: сейчас только
+ * текст, позже сюда встанет баннер/ссылка (см. mobile-table.ts, hintInfo).
+ */
+.mtableHintInfo {
+  max-width: 100%;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #9aa0aa;
+  opacity: 0.75;
+}
+
+/* display:flex у элементов перебивает UA-[hidden] — возвращаем скрытие. */
+.mtableHint[hidden],
+.mtableHintGlyph[hidden],
+.mtableHintSub[hidden],
+.mtableHintCta[hidden],
+.mtableHintInfo[hidden] {
+  display: none;
+}
+
+/* Появление — только мягкий fade+сдвиг; никаких пульсаций/дыханий. */
+@keyframes mtableHintIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .mtableWide + .mtableWide {
@@ -340,20 +455,6 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
-/* Хинт-статус по центру: пусто — кнопка без chrome, грузится — disabled. */
-.mtableHint {
-  position: absolute;
-  top: 42%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 4;
-  margin: 0;
-  padding: 0 24px;
-  color: #9aa0aa;
-  font-size: 15px;
-  text-align: center;
-}
-
 /* Итог броска — только для скринридера (невидим, но озвучивается). */
 .mtableLive {
   position: absolute;
@@ -364,17 +465,27 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-/* Кнопка набора в шапке: текст «2d4 d12» / «+ Кости» (сумма броска — на бургере). */
+/* Кнопка набора в шапке: текст «2d4 d12» / «+ Кости» — уровень secondary
+   (16/800); крупнее (20/800) только сумма-акцент на бургере. */
 .mtableAdd {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   white-space: nowrap;
   padding: 0 10px;
 }
 
-/* Цифра суммы на бургере: шрифт как у кнопки набора, цвет акцентный. */
+/* Движение — по желанию пользователя: хинт появляется без анимации.
+   Тот же селектор, что у базового правила (spec иначе media не победит). */
+@media (prefers-reduced-motion: reduce) {
+  button.mtableHint {
+    animation: none;
+  }
+}
+
+/* Сумма броска на бургере — primary шкалы хедера (20/800): крупнее кнопки
+   набора, акцентный цвет. В покое тут svg-иконка (font-size не виден). */
 .mtableBurger {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
 }
 
@@ -382,8 +493,8 @@ input:focus-visible {
   color: #ef3124;
 }
 
-/* Футер расшифровки: части пробелами в одну строку, по низу экрана.
-   Только чтение: тапы летят сквозь него на поле. */
+/* Футер разбивки: одна строка пробелами по низу экрана, шрифт как mtable-add.
+   Без фона/обводки (как хэдер), только чтение: тапы летят сквозь него. */
 .mtableFoot {
   position: absolute;
   bottom: calc(12px + env(safe-area-inset-bottom));
@@ -392,7 +503,6 @@ input:focus-visible {
   z-index: 6;
   display: flex;
   max-width: calc(100% - 24px);
-  padding: 6px 14px;
   white-space: nowrap;
   pointer-events: none;
 }

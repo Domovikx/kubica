@@ -111,7 +111,7 @@ export const createTable = (
   opts?: { hx?: number; hz?: number; orbit?: boolean },
 ): Table => {
   // Кадр под конкретную пачку (по умолчанию — под 1–2 кости).
-  // Это НЕ границы физики (те щедрые и фиксированные — см. TABLE_HALF_*):
+  // Это НЕ границы физики (их считает виджет по inner-прямоугольнику канвы):
   // камера обязана держать кости крупно при любом N.
   let fitHx = opts?.hx ?? GLASS_HALF_X
   let fitHz = opts?.hz ?? GLASS_HALF_Z

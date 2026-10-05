@@ -36,6 +36,7 @@ import {
   labelTableResult,
   layoutSlots,
   rollTable,
+  slotsToWorld,
   tickTableWorld,
   type TableDieResult,
 } from '@/features/table-roll/table-roll'
@@ -60,7 +61,6 @@ import { createTable, type Table } from '@/shared/three/table'
 import { clearAllIcon, closeIcon, menuIcon, soundIcon, vibrationIcon } from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
 import { hideResult } from '@/shared/ui/result-pop'
-import { glassHalves, TABLE_HALF_X, TABLE_HALF_Z } from '@/shared/arena/arena'
 import './mobile-table.css'
 
 const buzz = (die: DieId, value: number): void => {
@@ -181,14 +181,48 @@ export const mountMobileTable = (
   const sameCounts = (a: TableCounts, b: TableCounts): boolean =>
     DIE_IDS.every((die) => (a[die] ?? 0) === (b[die] ?? 0))
 
-  // Хинт-статус по центру: пусто (кнопка → шит) / грузится / ошибка загрузки.
+  // Хинт-empty-state: центрированная композиция на свободном центре экрана
+  // (костей нет — центр пуст). Весь блок — кнопка → шторка; внутри глифы +
+  // заголовок + подстрока + CTA «+ Кости» + тихая инфо-строка о приложении.
+  // Состояния: пусто / грузится (disabled, статус) / ошибка — см. refreshChrome.
   const hint = document.createElement('button')
   hint.className = 'mtableHint'
   hint.dataset.testid = 'mtable-hint'
   hint.type = 'button'
-  hint.textContent = 'Жми «+ Кости» — пресеты и выбор костей внутри'
   hint.hidden = true
   hint.addEventListener('click', () => openSheet())
+  const hintGlyph = document.createElement('span')
+  hintGlyph.className = 'mtableHintGlyph'
+  hintGlyph.dataset.testid = 'mtable-hint-glyph'
+  hintGlyph.setAttribute('aria-hidden', 'true')
+  hintGlyph.innerHTML = dieGlyph('d4') + dieGlyph('d6') + dieGlyph('d20')
+  const hintTitle = document.createElement('span')
+  hintTitle.className = 'mtableHintTitle'
+  hintTitle.dataset.testid = 'mtable-hint-title'
+  const hintSub = document.createElement('span')
+  hintSub.className = 'mtableHintSub'
+  hintSub.dataset.testid = 'mtable-hint-sub'
+  const hintCta = document.createElement('span')
+  hintCta.className = 'mtableHintCta'
+  hintCta.dataset.testid = 'mtable-hint-cta'
+  // Слот под монетизацию: тихая строка о приложении. Сейчас — только текст;
+  // позже сюда встанет баннер/ссылка (для ссылки элемент выносят из кнопки —
+  // <a> внутри <button> недопустим; обёртка и позиция блока не меняются).
+  const hintInfo = document.createElement('span')
+  hintInfo.className = 'mtableHintInfo'
+  hintInfo.dataset.testid = 'mtable-hint-info'
+  hintInfo.textContent = 'Kubica — стол для бросков костей'
+  hint.append(hintGlyph, hintTitle, hintSub, hintCta, hintInfo)
+
+  /** Статус вместо композиции (грузится / ошибка): одна строка, без CTA. */
+  const hintStatus = (text: string, disabled: boolean) => {
+    hintTitle.textContent = text
+    hintSub.hidden = true
+    hintCta.hidden = true
+    hintInfo.hidden = true
+    hint.hidden = false
+    hint.disabled = disabled
+  }
 
   // Итог броска визуально нигде (суммы — по граням, история — в меню):
   // для скринридера — невидимый живой регион (бывший aria-live на кнопке).
@@ -197,8 +231,8 @@ export const mountMobileTable = (
   live.dataset.testid = 'mtable-live'
   live.setAttribute('role', 'status')
 
-  // Футер расшифровки: только чтение (тапы летят сквозь него на поле),
-  // скринридеру итог уже озвучивает живой регион выше.
+  // Футер: только разбивка пробелами; только чтение (тапы летят сквозь него),
+  // скринридеру итог — живой регион. Сумма — на бургере сверху (минимализм).
   const foot = document.createElement('div')
   foot.className = 'mtableFoot'
   foot.dataset.testid = 'mtable-foot'
@@ -782,6 +816,8 @@ export const mountMobileTable = (
   const viewDirOf = () => table.getViewDir()
   let instances: Instance[] = []
   let slots: Array<{ x: number; z: number }> = []
+  /** Границы физики броска: «стол» = канва минус отступы (см. applyLayout). */
+  let physBounds = { hx: 30, hz: 20 }
   let loadedKeys = new Set<string>()
   let rolling = false
   let disposed = false
@@ -822,12 +858,12 @@ export const mountMobileTable = (
     return phase
   }
 
-  /** Состав набора — на кнопке («2d4 d12»), цифра суммы — на бургере, расшифровка — в футере. */
+  /** Состав набора — на кнопке («2d4 d12»), сумма — на бургере, разбивка — в футере. */
   const refreshChrome = (counts: TableCounts) => {
     const total = totalCount(counts)
     const phase = syncPhase(total)
-    // На кнопке-бургере — только цифра суммы; расшифровка — в футере внизу.
-    // Пока кости летят — лоадер (не кнопка).
+    // На бургере — крупная сумма последнего броска (иконка меню — до броска),
+    // лоадер — пока кости летят. Разбивка — в футере.
     if (rolling) {
       burger.innerHTML = '<span class="mtableSpin" data-testid="mtable-spin"></span>'
       burger.disabled = true
@@ -838,9 +874,8 @@ export const mountMobileTable = (
       if (lastResult) burger.textContent = String(lastResult.total)
       else burger.innerHTML = menuIcon()
     }
-    // Сумма — акцентным цветом, иконка меню и лоадер — обычным.
     burger.classList.toggle('hasSum', !rolling && lastResult !== null)
-    // Футер: расшифровка пробелами («4 4 4 2 7 8 3 4 6 1»).
+    // Футер: разбивка пробелами («4 3 1 6 4 8 8 1 10 5»).
     if (lastResult && !rolling) {
       const breakdown = formatParts(lastResult.parts).join(' ')
       footParts.textContent = breakdown
@@ -853,19 +888,21 @@ export const mountMobileTable = (
     diceBtn.textContent = total > 0 ? short : '+ Кости'
     diceBtn.setAttribute('aria-label', total > 0 ? `Выбор костей: ${short}` : 'Выбор костей')
     diceBtn.title = summarize(counts)
-    // Хинт-статус: пусто (кнопка → шит) / грузится (disabled) / ошибка загрузки.
+    // Хинт-empty-state: пусто (композиция → шит) / грузится (disabled) /
+    // ошибка загрузки; кости есть — hidden.
     if (loadError) {
-      hint.textContent = `Не загрузилась: ${loadError}`
-      hint.hidden = false
-      hint.disabled = false
+      hintStatus(`Не загрузилась: ${loadError}`, false)
     } else if (total === 0) {
-      hint.textContent = 'Жми «+ Кости» — пресеты и выбор костей внутри'
+      hintTitle.textContent = 'Добавь кости на стол'
+      hintSub.textContent = 'Пресеты и любой состав — внутри'
+      hintCta.textContent = '+ Кости'
+      hintSub.hidden = false
+      hintCta.hidden = false
+      hintInfo.hidden = false
       hint.hidden = false
       hint.disabled = false
     } else if (phase === 'loading') {
-      hint.textContent = `Гружу… ${loadedKeys.size}/${instances.length}`
-      hint.hidden = false
-      hint.disabled = true
+      hintStatus(`Гружу… ${loadedKeys.size}/${instances.length}`, true)
     } else {
       hint.hidden = true
     }
@@ -922,6 +959,61 @@ export const mountMobileTable = (
     )
   }
 
+  /**
+   * Канва (известные ширина/высота + отступы шапки и футера) → inner-
+   * прямоугольник → рациональное деление на N костей. Масштаб m (ед./px)
+   * = шаг ячейки в мире / шаг в px: сетка, камера и границы физики живут
+   * в одном масштабе — кость занимает свою ячейку одинаково на любом
+   * экране, а одиночная кость не растекается (потолок ячейки).
+   */
+  const applyLayout = (): void => {
+    const cw = Math.max(1, canvas.clientWidth)
+    const ch = Math.max(1, canvas.clientHeight)
+    const cRect = canvas.getBoundingClientRect()
+    const top = Math.max(0, head.getBoundingClientRect().bottom - cRect.top)
+    // Футер разбивки лежит поверх поля: его высоту резервируем всегда,
+    // иначе после броска строка ложится на нижний ряд. hidden → меряем с
+    // заглушкой (пустой спан даёт 0); роста нет — одна строка, nowrap.
+    const wasHidden = foot.hidden
+    const parts = footParts.textContent
+    foot.hidden = false
+    if (!parts) footParts.textContent = 'd20 1'
+    const bottom = Math.max(0, cRect.bottom - foot.getBoundingClientRect().top)
+    footParts.textContent = parts
+    foot.hidden = wasHidden
+    const rect = { w: cw, h: Math.max(1, ch - top - bottom) }
+    const biggest = instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0)
+    const gap = Math.max(24, biggest * 1.55)
+    const plan = layoutSlots(instances.length, rect)
+    const m = gap / plan.cell
+    slots = slotsToWorld(plan, m, { x: 0, y: top + rect.h / 2 - ch / 2 })
+    // setFit под канву: при fit = размер·m/2.5 frameCamera даёт ровно
+    // 1 px ↔ m ед. (видимая высота = need·1.25) — сетка садится в канву.
+    table.setFit((cw * m) / 2.5, (ch * m) / 2.5)
+    // «Стол» при броске = та же канва минус верх/низ; врезка под кромку,
+    // но не больше ячейки (иначе борт упрётся в лежащую у края кость).
+    const inset = Math.min(8, plan.cell * 0.15)
+    physBounds = {
+      hx: Math.max(1, (rect.w / 2 - inset) * m),
+      hz: Math.max(1, (rect.h / 2 - inset) * m),
+    }
+  }
+
+  /**
+   * Пересборка под новый размер канвы: сетка/камера/границы + посадка
+   * уже лежащих костей по новой сетке. Во время броска не трогаем позы —
+   * полёт и доводка живут со слотами, снятыми на старте.
+   */
+  const relayout = (): void => {
+    applyLayout()
+    if (rolling || disposed) return
+    instances.forEach((inst, i) => {
+      const s = slots[i]
+      const pose = table.getPose(inst.key)
+      if (s && pose) table.syncBody(inst.key, [s.x, pose.pos[1], s.z], pose.quat)
+    })
+  }
+
   const syncInstances = (counts: TableCounts) => {
     if (disposed) return
     const next = expandInstances(counts)
@@ -932,15 +1024,7 @@ export const mountMobileTable = (
     for (const inst of instances) table.removeDie(inst.key)
     instances = next
     loadError = ''
-    const biggest = instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0)
-    const gap = Math.max(24, biggest * 1.55)
-    // Без верхних чипов и нижней панели поле пустое: кости — в реальном центре кадра.
-    const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight)
-    slots = layoutSlots(instances.length, gap, { aspect }).map((s) => ({ x: s.x, z: s.z }))
-    const maxX = slots.reduce((m, s) => Math.max(m, Math.abs(s.x)), 0)
-    const maxZ = slots.reduce((m, s) => Math.max(m, Math.abs(s.z)), 0)
-    const fit = glassHalves(maxX, maxZ)
-    table.setFit(fit.hx, fit.hz)
+    applyLayout()
     loadedKeys = new Set()
     instances.forEach((inst, i) => addInstance(inst, i))
     refreshChrome(counts)
@@ -1015,7 +1099,7 @@ export const mountMobileTable = (
         finishPack()
         return
       }
-      void rollTable(reqs, cbs, { hx: TABLE_HALF_X, hz: TABLE_HALF_Z })
+      void rollTable(reqs, cbs, physBounds)
         .then((results) => {
           if (disposed) return
           for (const r of results) final.set(r.key, r)
@@ -1160,6 +1244,7 @@ export const mountMobileTable = (
 
   requestAnimationFrame(() => {
     table.resize()
+    relayout()
   })
 
   // Тесты/чекерам нужны координаты кости (тап — единственный триггер броска):
@@ -1175,6 +1260,7 @@ export const mountMobileTable = (
     },
     resize() {
       table.resize()
+      relayout()
     },
     dispose() {
       disposed = true

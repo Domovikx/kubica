@@ -72,8 +72,9 @@ test('пара d4+d6: тап по кости бросает, история ра
   // После броска бургер снова кнопка с суммой (лоадер убран).
   await expect(page.locator('.mtableBurger .mtableSpin')).toHaveCount(0)
   await expect(page.locator('.mtableHrow')).toHaveCount(1)
-  // На бургере только цифра суммы, расшифровка пробелами — в футере внизу.
+  // Сумма — крупная акцентная на бургере, разбивка пробелами — в футере.
   await expect(page.locator('.mtableBurger')).toHaveText(/^\d+$/)
+  await expect(page.locator('.mtableBurger')).toHaveClass(/hasSum/)
   await expect(page.locator('.mtableFootParts')).toHaveText(/\d/)
   // Итог визуально нигде — но скринридер его озвучил («d4 d6: 5 · 3 2»).
   await expect(page.locator('.mtableLive')).toHaveText(/^.+: \d+/)
