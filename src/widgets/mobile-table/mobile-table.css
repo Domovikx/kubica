@@ -6,6 +6,17 @@ body[data-mode='mtable'] .bottombar {
 }
 
 /*
+ * Масштаб интерфейса (2.20): шаги 100–200% (WCAG 1.4.4/G178 — контрол
+ * увеличения текста до 200%), выбор в меню-бургере, персист dice-uiscale.
+ * Множитель питает все --fs-/--icon-токены и тап-боксы (--tap). Кости (3D)
+ * от масштаба не зависят — их размер задаёт камера.
+ */
+:root {
+  --ui-scale: 1;
+  --tap: calc(44px * var(--ui-scale));
+}
+
+/*
  * Тело зафиксировано: фокус на инпуте шторки (формула/имя сета) иначе
  * скроллит документ вбок через scrollIntoView — вёрстка «уезжает» влево.
  * Экрану скролл не нужен (поле на весь экран, списки скроллятся внутри).
@@ -24,19 +35,20 @@ body[data-mode='mtable'] {
    * Иконки — та же логика (0.4vw, пол = фаза 1 + 2, потолок ~1675px):
    * масштабируются вместе с текстом, не фиксированные px.
    *  Кости (3D) не трогаем — их размер задаёт камера.
+   * Умножение на --ui-scale (2.20): пользовательский масштаб 100–200%.
    */
-  --fs-cap: clamp(14px, 12.5px + 0.35vw, 18px);
-  --fs-meta: clamp(15px, 13.5px + 0.35vw, 19px);
-  --fs-sec: clamp(16px, 14.5px + 0.35vw, 20px);
-  --fs-body: clamp(17px, 15.5px + 0.35vw, 21px);
-  --fs-title: clamp(18px, 16.5px + 0.35vw, 22px);
-  --fs-headline: clamp(20px, 18.5px + 0.35vw, 24px);
-  --icon-head: clamp(26px, 24.3px + 0.4vw, 31px);
-  --icon-like: clamp(18px, 16.3px + 0.4vw, 23px);
-  --icon-chip: clamp(20px, 18.3px + 0.4vw, 25px);
-  --icon-glyph: clamp(30px, 28.3px + 0.4vw, 35px);
-  --icon-wide: clamp(24px, 22.3px + 0.4vw, 29px);
-  --icon-row: clamp(28px, 26.3px + 0.4vw, 33px);
+  --fs-cap: calc(clamp(14px, 12.5px + 0.35vw, 18px) * var(--ui-scale));
+  --fs-meta: calc(clamp(15px, 13.5px + 0.35vw, 19px) * var(--ui-scale));
+  --fs-sec: calc(clamp(16px, 14.5px + 0.35vw, 20px) * var(--ui-scale));
+  --fs-body: calc(clamp(17px, 15.5px + 0.35vw, 21px) * var(--ui-scale));
+  --fs-title: calc(clamp(18px, 16.5px + 0.35vw, 22px) * var(--ui-scale));
+  --fs-headline: calc(clamp(20px, 18.5px + 0.35vw, 24px) * var(--ui-scale));
+  --icon-head: calc(clamp(26px, 24.3px + 0.4vw, 31px) * var(--ui-scale));
+  --icon-like: calc(clamp(18px, 16.3px + 0.4vw, 23px) * var(--ui-scale));
+  --icon-chip: calc(clamp(20px, 18.3px + 0.4vw, 25px) * var(--ui-scale));
+  --icon-glyph: calc(clamp(30px, 28.3px + 0.4vw, 35px) * var(--ui-scale));
+  --icon-wide: calc(clamp(24px, 22.3px + 0.4vw, 29px) * var(--ui-scale));
+  --icon-row: calc(clamp(28px, 26.3px + 0.4vw, 33px) * var(--ui-scale));
 }
 
 body[data-mode='mtable'] .viewers {
@@ -184,8 +196,8 @@ body[data-mode='mtable'] .result {
    решает fitHeadStar (на 320 с полным составом звук уступает паре). */
 
 .mtableIcon {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--tap);
+  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -293,7 +305,7 @@ a.mtableIcon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0 12px;
   border: none;
   border-radius: 999px;
@@ -517,8 +529,8 @@ button.mtableHint:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--tap);
+  min-height: var(--tap);
   margin-top: 14px;
   padding: 0;
   border: none;
@@ -760,6 +772,9 @@ input:focus-visible {
 
 .mtableRow {
   display: flex;
+  /* wrap: при масштабе ≥150% степперы/глиф не влезают в строку 320 —
+     уезжают на вторую строку (вертикальная прокрутка, WCAG 1.4.10). */
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
@@ -787,7 +802,7 @@ input:focus-visible {
 .mtableName {
   font-weight: 800;
   font-size: var(--fs-title);
-  width: 40px;
+  width: calc(40px * var(--ui-scale));
 }
 
 .mtableDesc {
@@ -798,8 +813,8 @@ input:focus-visible {
 }
 
 .mtableStep {
-  width: 44px;
-  height: 44px;
+  width: var(--tap);
+  height: var(--tap);
   border-radius: 12px;
   border: none;
   background: #22262e;
@@ -821,7 +836,7 @@ input:focus-visible {
 
 .mtableN {
   font-weight: 800;
-  min-width: 28px;
+  min-width: calc(28px * var(--ui-scale));
   text-align: center;
   font-size: var(--fs-headline);
 }
@@ -833,7 +848,7 @@ input:focus-visible {
 }
 
 .mtableOk {
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0 18px;
   border: none;
   border-radius: 12px;
@@ -940,6 +955,9 @@ input:focus-visible {
 
 .mtableSectionHead {
   display: flex;
+  /* wrap: на масштабе ≥175% заголовок + ссылка не влезают в 320 —
+     ссылка уходит на вторую строку, а не за экран (WCAG 1.4.10). */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
@@ -1026,7 +1044,7 @@ input:focus-visible {
 
 .mtableWide {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1057,6 +1075,35 @@ input:focus-visible {
   color: #fff;
 }
 
+/* Шаги масштаба интерфейса (2.20): пилюли в ряд, выбранная — акцент. */
+.mtableScaleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mtableScale {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: #1d2026;
+  color: #f0f2f5;
+  font-family: inherit;
+  font-size: var(--fs-sec);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mtableScale:hover {
+  background: #242832;
+}
+
+.mtableScale.on {
+  background: #ef3124;
+  color: #fff;
+}
+
 .mtableAbout {
   font-size: var(--fs-sec);
   color: #9aa0aa;
@@ -1074,7 +1121,7 @@ input:focus-visible {
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0 12px;
   border-radius: 12px;
   background: #1d2026;

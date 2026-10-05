@@ -31,6 +31,7 @@ import {
   throwPower,
   throwPowerBoost,
 } from '@/features/roll-dice/power'
+import { UI_SCALES, applyUiScale, setUiScale, uiScale } from '@/features/ui-scale/ui-scale'
 import {
   commitTableResult,
   labelTableResult,
@@ -124,6 +125,8 @@ export const mountMobileTable = (
 } => {
   const setup = getSetupStore()
   const history = getHistoryStore()
+  // Масштаб интерфейса (2.20): персист до сборки — токены читают --ui-scale.
+  applyUiScale(uiScale())
   container.innerHTML = ''
   const section = document.createElement('section')
   section.className = 'mtable'
@@ -799,6 +802,47 @@ export const mountMobileTable = (
   })
   sndSection.append(sndTitle, sndToggle, hapToggle)
 
+  // Масштаб интерфейса (2.20): шаги 100–200%, живое применение + персист.
+  const scaleSection = document.createElement('div')
+  scaleSection.className = 'mtableSection'
+  scaleSection.dataset.testid = 'mtable-scale-section'
+  const scaleTitle = document.createElement('span')
+  scaleTitle.className = 'mtableSectionTitle'
+  scaleTitle.dataset.testid = 'mtable-scale-title'
+  scaleTitle.textContent = 'Масштаб интерфейса'
+  const scaleRow = document.createElement('div')
+  scaleRow.className = 'mtableScaleRow'
+  scaleRow.dataset.testid = 'mtable-scale-row'
+  const scaleBtns: HTMLButtonElement[] = UI_SCALES.map((s) => {
+    const pct = Math.round(s * 100)
+    const b = document.createElement('button')
+    b.className = 'mtableScale'
+    b.dataset.testid = 'mtable-scale'
+    b.type = 'button'
+    b.textContent = `${pct}%`
+    b.setAttribute('aria-label', `Масштаб интерфейса ${pct}%`)
+    b.addEventListener('click', () => {
+      setUiScale(s)
+      syncScale()
+      // Шапка (fitHeadStar) меряет реальные боксы — пересчёт под масштаб.
+      refreshChrome(setup.get())
+      showToast(`Масштаб ${pct}%`)
+      vibrate(15)
+    })
+    scaleRow.appendChild(b)
+    return b
+  })
+  const syncScale = (): void => {
+    const cur = uiScale()
+    scaleBtns.forEach((b, i) => {
+      const on = UI_SCALES[i] === cur
+      b.classList.toggle('on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+  }
+  syncScale()
+  scaleSection.append(scaleTitle, scaleRow)
+
   // Сила броска — вместо старой зарядки удержанием (кость = кнопка, сила = меню).
   const pwSection = document.createElement('div')
   pwSection.className = 'mtableSection'
@@ -990,7 +1034,7 @@ export const mountMobileTable = (
 
   socialSection.append(socialTitle, ghLink, tgLink, starLink)
 
-  drawerBody.append(histSection, pwSection, sndSection, aboutSection, socialSection)
+  drawerBody.append(histSection, pwSection, sndSection, scaleSection, aboutSection, socialSection)
   drawer.append(drawerHead, drawerBody)
 
   section.append(watermark, canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
