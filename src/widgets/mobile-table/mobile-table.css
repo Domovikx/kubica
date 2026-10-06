@@ -458,7 +458,8 @@ button.mtableHint {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 5;
-  width: min(320px, calc(100% - 32px));
+  /* × --ui-scale (2.22): карточка-хинт шире на крупном масштабе. */
+  width: min(calc(320px * var(--ui-scale)), calc(100% - 32px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -720,14 +721,16 @@ input:focus-visible {
   display: none;
 }
 
-/* Шторка «+ Кости» — центрированная карточка, как меню-бургер. */
+/* Шторка «+ Кости» — центрированная карточка, как меню-бургер.
+   Ширина × --ui-scale (2.22): на масштабе 150–200% карточка шире, контент
+   не теснится; min() держит поля до вьюпорта (на 320 поведение прежнее). */
 .mtableSheet {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 21;
-  width: min(360px, calc(100% - 48px));
+  width: min(calc(360px * var(--ui-scale)), calc(100% - 48px));
   max-height: calc(100% - 48px);
   display: flex;
   flex-direction: column;
@@ -873,14 +876,15 @@ input:focus-visible {
 }
 
 /* Меню — центрированная карточка: на широких ограничитель по центру,
-   на узких поля меньше (см. @media ниже). */
+   на узких поля меньше (см. @media ниже). Ширина × --ui-scale (2.22) —
+   см. комментарий у .mtableSheet. */
 .mtableDrawer {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 21;
-  width: min(360px, calc(100% - 48px));
+  width: min(calc(360px * var(--ui-scale)), calc(100% - 48px));
   max-height: calc(100% - 48px);
   display: flex;
   flex-direction: column;
