@@ -495,7 +495,10 @@ export const createTable = (
     camera.updateMatrixWorld()
     const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0)
     const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1)
-    const axis = new THREE.Vector3().addScaledVector(right, -dyPx).addScaledVector(up, dxPx)
+    // Пальец тащит точку ПОД ним: драг вправо → точка вправо (вокруг up,+),
+    // драг вниз → точка вниз (вокруг right,+). Старый минус у dy давал
+    // инверсию вертикали (вверх/вниз наоборот при корректных лево/право).
+    const axis = new THREE.Vector3().addScaledVector(right, dyPx).addScaledVector(up, dxPx)
     if (axis.lengthSq() < 1e-12) return
     spinDQ.setFromAxisAngle(axis.normalize(), angle)
     const s = view.root.scale.x
