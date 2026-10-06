@@ -39,6 +39,16 @@ interface DieView {
     t: number
     dur: number
   } | null
+  /** Зарядка (wind-up): база для кувырка/дрожи; null — не в зарядке. */
+  wind: {
+    pos: THREE.Vector3
+    quat: THREE.Quaternion
+    axis: THREE.Vector3
+    /** Фазы «пьяного» дрейфа оси: удержание не детерминировано (античит). */
+    ph: [number, number, number]
+    /** Фазы дрожи по осям. */
+    jph: [number, number, number]
+  } | null
 }
 
 export interface Table {
@@ -88,12 +98,28 @@ export interface Table {
    */
   spinDie: (id: string, dxPx: number, dyPx: number) => void
   /**
+   * Зарядка броска (wind-up): кости приподнимаются, хаотично кувыркаются
+   * (пьяная прецессия с рандомными фазами — позу/момент релиза не подгадать,
+   * античит) и дрожат ∝ удержанию. restore=false — снять, оставив позу в
+   * кувырке (тут же бросаем: физспавн подхватывает, рывка нет);
+   * restore=true — откат поз к базе (зарядка отменена, следа не остаётся);
+   * restore='spin' — в базу, но у keepId оставить текущий кватернион
+   * (осмотр: крутка пользователя сохраняется, кость приземляется).
+   */
+  windup: (on: boolean, restore?: boolean | 'spin', keepId?: string) => void
+  /**
    * Приглушить кость до первого броска (грани есть, но «не горят» —
    * иначе цифры читаются как состоявшийся результат).
    */
   dimDie: (id: string, dimmed: boolean) => void
   getPose: (id: string) => TablePose | null
   getViewDir: () => [number, number, number]
+  /**
+   * Экранная скорость релиза (px/мс) → мировой швырок XZ: проекция через
+   * колонки камеры (как grabFlick витрины), вертикаль стола едим; норма —
+   * 1.5 px/мс ≈ сильный рывок → 8 ед/с, потолок там же.
+   */
+  flickVec: (vxPx: number, vyPx: number) => { x: number; z: number }
   /** Пересчитать кадр под новый размер пачки (без пересоздания сцены). */
   setFit: (hx: number, hz: number) => void
   /**
@@ -346,7 +372,7 @@ export const createTable = (
           .setFromObject(root)
           .getCenter(new THREE.Vector3())
           .applyMatrix4(new THREE.Matrix4().copy(root.matrixWorld).invert())
-        dice.set(id, { root, unitSize, localCenter, present: null, glide: null })
+        dice.set(id, { root, unitSize, localCenter, present: null, glide: null, wind: null })
         frameCamera()
         onLoad?.()
       },
@@ -512,6 +538,49 @@ export const createTable = (
     view.root.position.copy(center).add(offset)
   }
 
+  // Зарядка (wind-up): кувырок с пьяной прецессией + подъём + дрожь ∝ удержанию.
+  // Фазы дрейфа рандомны на каждый старт — позу/момент релиза не подгадать.
+  let windOn = false
+  let windT = 0
+  const windTmpV = new THREE.Vector3()
+  const windTmpQ = new THREE.Quaternion()
+  const windup: Table['windup'] = (on, restore = true, keepId) => {
+    if (disposed) return
+    if (on) {
+      if (windOn) return
+      windOn = true
+      windT = 0
+      for (const view of dice.values()) {
+        if (view.present || view.glide) continue
+        const axis = new THREE.Vector3(
+          Math.random() - 0.5,
+          Math.random() - 0.5,
+          Math.random() - 0.5,
+        )
+        view.wind = {
+          pos: view.root.position.clone(),
+          quat: view.root.quaternion.clone(),
+          axis: axis.lengthSq() < 1e-6 ? axis.set(1, 0, 0) : axis.normalize(),
+          ph: [Math.random() * 6.283, Math.random() * 6.283, Math.random() * 6.283],
+          jph: [Math.random() * 6.283, Math.random() * 6.283, Math.random() * 6.283],
+        }
+      }
+      return
+    }
+    windOn = false
+    for (const [id, view] of dice.entries()) {
+      if (!view.wind) continue
+      if (restore === 'spin' && id === keepId) {
+        // Осмотр: приземляем, но кватернион пользователя (крутка) не трогаем.
+        view.root.position.copy(view.wind.pos)
+      } else if (restore !== false) {
+        view.root.position.copy(view.wind.pos)
+        view.root.quaternion.copy(view.wind.quat)
+      }
+      view.wind = null
+    }
+  }
+
   const getPose: Table['getPose'] = (id) => {
     const view = dice.get(id)
     if (!view || disposed) return null
@@ -532,6 +601,20 @@ export const createTable = (
     return [v.x / l, v.y / l, v.z / l]
   }
 
+  const flickVec: Table['flickVec'] = (vxPx, vyPx) => {
+    const v = Math.hypot(vxPx, vyPx)
+    if (v < 1e-4) return { x: 0, z: 0 }
+    camera.updateMatrixWorld()
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0)
+    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1)
+    const dir = new THREE.Vector3().addScaledVector(right, vxPx).addScaledVector(up, -vyPx)
+    dir.y = 0
+    const len = dir.length()
+    if (len < 1e-6) return { x: 0, z: 0 }
+    const speed = Math.min(8, (v / 1.5) * 8)
+    return { x: (dir.x / len) * speed, z: (dir.z / len) * speed }
+  }
+
   const resize = () => {
     if (disposed) return
     const width = canvas.clientWidth
@@ -547,7 +630,42 @@ export const createTable = (
     const now = performance.now()
     const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000))
     lastT = now
+    if (windOn) windT += dt
     for (const view of dice.values()) {
+      // Зарядка: кувырок вокруг центра (пивот как в spinDie) с прецессией
+      // оси, подъём в «руку» и дрожь ∝ удержанию. Якорь — базовая поза
+      // (без дрейфа): позиция тянется к lift+jitter, не копит ошибку.
+      if (view.wind) {
+        const w = view.wind
+        const auto = Math.min(16, 4 + windT * 8)
+        windTmpV
+          .set(
+            Math.sin(1.9 * windT + w.ph[0]),
+            Math.sin(2.7 * windT + w.ph[1]),
+            Math.sin(1.3 * windT + w.ph[2]),
+          )
+          .normalize()
+        w.axis.lerp(windTmpV, Math.min(1, dt * 2)).normalize()
+        windTmpQ.setFromAxisAngle(w.axis, auto * dt)
+        const s = view.root.scale.x
+        const center = spinTmpC
+          .copy(view.localCenter)
+          .multiplyScalar(s)
+          .applyQuaternion(view.root.quaternion)
+          .add(view.root.position)
+        const offset = spinTmpO.copy(view.root.position).sub(center).applyQuaternion(windTmpQ)
+        view.root.quaternion.premultiply(windTmpQ)
+        view.root.position.copy(center).add(offset)
+        const amp = Math.min(0.08, 0.015 + windT * 0.05) * view.unitSize
+        const jt = now / 1000
+        const tx = w.pos.x + Math.sin(jt * 13.7 + w.jph[0]) * amp
+        const tz = w.pos.z + Math.sin(jt * 17.3 + w.jph[1]) * amp
+        const ty = w.pos.y + view.unitSize * 0.25 + Math.sin(jt * 11.1 + w.jph[2]) * amp
+        const follow = Math.min(1, dt * 10)
+        view.root.position.x += (tx - view.root.position.x) * follow
+        view.root.position.y += (ty - view.root.position.y) * follow
+        view.root.position.z += (tz - view.root.position.z) * follow
+      }
       // Одно движение сразу на финал (full-slerp короткой дугой + лёгкий
       // подскок в середине, чтобы углы не скребли пол).
       if (view.present) {
@@ -624,9 +742,11 @@ export const createTable = (
     pickDieId,
     findDiePoint,
     spinDie,
+    windup,
     dimDie,
     getPose,
     getViewDir,
+    flickVec,
     setFit,
     resetView,
     resize,

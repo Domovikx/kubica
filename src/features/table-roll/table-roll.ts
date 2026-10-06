@@ -26,6 +26,8 @@ export interface TableDieRequest {
   spawnPos: [number, number, number]
   spawnQuat?: [number, number, number, number]
   power?: number
+  /** Пол |ω| (рад/с): слабая раскрутка невозможна (античит; см. RollOpts). */
+  minAngular?: number
   launchUp?: number
   damping?: number
   sleepLimit?: number
@@ -67,6 +69,7 @@ export const rollTableDice = async (
     reqs.map(async (req): Promise<TableDieResult> => {
       const { quat, settled, steps } = await world.roll(req.die, {
         power: req.power ?? 1,
+        minAngular: req.minAngular,
         launchUp: req.launchUp,
         damping: req.damping,
         sleepLimit: req.sleepLimit,

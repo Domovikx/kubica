@@ -23,6 +23,7 @@ import {
   playThock,
   setHaptics,
   setMuted,
+  startRattle,
   stopRattle,
 } from '@/features/roll-dice/sound'
 import {
@@ -843,7 +844,8 @@ export const mountMobileTable = (
   syncScale()
   scaleSection.append(scaleTitle, scaleRow)
 
-  // Сила броска — вместо старой зарядки удержанием (кость = кнопка, сила = меню).
+  // Сила броска: режим меню (boost 0/0.5/1) складывается с зарядом удержания
+  // и фликом релиза (cap 1.6 — см. fireThrow); тап-удержание ≥2 с и есть бросок.
   const pwSection = document.createElement('div')
   pwSection.className = 'mtableSection'
   pwSection.dataset.testid = 'mtable-power-section'
@@ -863,7 +865,11 @@ export const mountMobileTable = (
     })
     return b
   })
-  pwSection.append(pwTitle, ...pwBtns)
+  const pwHint = document.createElement('p')
+  pwHint.className = 'mtableSectionHint'
+  pwHint.dataset.testid = 'mtable-power-hint'
+  pwHint.textContent = 'Кость заряжается удержанием 2–4 с — сильнее бросок (и флик при отпускании)'
+  pwSection.append(pwTitle, ...pwBtns, pwHint)
   const syncPower = (): void => {
     const cur = throwPower()
     pwBtns.forEach((b, i) => b.classList.toggle('on', THROW_POWERS[i].mode === cur))
@@ -1141,7 +1147,17 @@ export const mountMobileTable = (
     if (!any) return
     closeOverlays()
     applyCounts(counts)
-    throwAll(throwPowerBoost())
+    // Короткий взмах перед рероллом: поза уходит в кувырок — физспавн
+    // (случайная ориентация) стартует от хаоса, без видимого рывка.
+    windActive = true
+    section.dataset.phase = 'charging'
+    table.windup(true)
+    startRattle()
+    window.setTimeout(() => {
+      windActive = false
+      table.windup(false, false)
+      throwAll(throwPowerBoost())
+    }, 350)
   }
 
   // Камера статична (орбиты нет — жест по фону ничего не делает);
@@ -1172,22 +1188,29 @@ export const mountMobileTable = (
   /** Кости с состоявшимся броском (остальные — приглушены). */
   const thrownKeys = new Set<string>()
   /**
-   * Защита от случайного переброса: тап по свежему итогу (до чтения)
-   * игнорируем. Окно — 1.2 с с момента показа.
+   * Зарядка броска (wind-up): удержание ≥2 с на кости. windActive — кувырок
+   * крутится; pendingFire — короткий тап дожигает до 2-й секунды (мёртвых
+   * тапов нет). Защита от случайного переброса теперь сама зарядка:
+   * 2 с удержания — не «щелчок».
    */
-  let resultAt = 0
-  const RESULT_GRACE_MS = 1200
+  let windActive = false
+  let pendingFire: number | null = null
+  /** Минимум удержания до броска и время полного заряда (2 с → 4 с). */
+  const MIN_HOLD_MS = 2000
+  const CHARGE_FULL_MS = 4000
 
-  /** Фаза стола для тестов/чекеров: empty | loading | ready | rolling. */
+  /** Фаза стола для тестов/чекеров: empty | loading | ready | charging | rolling. */
   const syncPhase = (total: number): string => {
     const phase =
       total === 0
         ? 'empty'
         : rolling
           ? 'rolling'
-          : loadedKeys.size < instances.length
-            ? 'loading'
-            : 'ready'
+          : windActive
+            ? 'charging'
+            : loadedKeys.size < instances.length
+              ? 'loading'
+              : 'ready'
     section.dataset.phase = phase
     return phase
   }
@@ -1331,11 +1354,17 @@ export const mountMobileTable = (
     // 1 px ↔ m ед. (видимая высота = need·1.25) — сетка садится в канву.
     table.setFit((cw * m) / 2.5, (ch * m) / 2.5)
     // «Стол» при броске = та же канва минус верх/низ; врезка под кромку,
-    // но не больше ячейки (иначе борт упрётся в лежащую у края кость).
+    // но не больше ячейки (иначе борт упрётся в лежащую у кости кость).
     const inset = Math.min(8, plan.cell * 0.15)
+    // Борт обязан отстоять от крайнего слота не меньше чем на полупоперечник
+    // кости (иначе спавн/каток у стены клинит — «покой в воздухе» и слабая
+    // раскрутка от выдавливания солвером). pad — по самой крупной кости пачки.
+    const pad = biggest + 3
+    const maxSlotX = slots.reduce((a, s) => Math.max(a, Math.abs(s.x)), 0)
+    const maxSlotZ = slots.reduce((a, s) => Math.max(a, Math.abs(s.z)), 0)
     physBounds = {
-      hx: Math.max(1, (rect.w / 2 - inset) * m),
-      hz: Math.max(1, (rect.h / 2 - inset) * m),
+      hx: Math.max(1, (rect.w / 2 - inset) * m, maxSlotX + pad),
+      hz: Math.max(1, (rect.h / 2 - inset) * m, maxSlotZ + pad),
     }
   }
 
@@ -1379,9 +1408,16 @@ export const mountMobileTable = (
   syncInstances(setup.get())
   renderPresets()
 
-  // flick умер вместе с зарядкой (drag на кнопке): сила — из меню, разлёт — угловой.
-  const throwAll = (powerBoost = 0): void => {
+  /**
+   * Бросок пачкой. powerBoost = режим меню + заряд удержания + флик релиза
+   * (кап 1.6); flick — направленный швырок XZ из флика пальцем (мировые
+   * координаты, см. table.flickVec). Зарядка отдается физике: позу кувырка
+   * не откатываем — спавн подхватывает без визуального рывка.
+   */
+  const throwAll = (powerBoost = 0, flick?: { x: number; z: number }): void => {
     if (rolling || disposed) return
+    windActive = false
+    table.windup(false, false)
     const thrown = [...instances]
     if (thrown.length === 0) return
     const thrownSlots = slots.map((s) => ({ ...s }))
@@ -1418,19 +1454,23 @@ export const mountMobileTable = (
         const spawnPos: [number, number, number] = round === 0 ? pose.pos : [s.x, pose.pos[1], s.z]
         const ang = (idx / Math.max(1, n)) * Math.PI * 2 + round * 0.7
         const spread = 4 + (idx % 3)
+        const power = 0.7 + powerBoost * 0.6 + (idx % 3) * 0.08
         return [
           {
             key,
             die,
             spawnPos,
-            spawnQuat: pose.quat,
-            power: 0.7 + powerBoost * 0.6 + (idx % 3) * 0.08,
+            // Ориентацию позы НЕ отдаём (античит: drag-поворот кости не
+            // пробрасывается) — спавн идёт со случайной ориентацией.
+            power,
+            // Пол |ω|: слабая раскрутка невозможна (античит подгадывания).
+            minAngular: 6 * power,
             launchUp,
             damping: 0.3,
             sleepLimit: 1.0,
             fling: {
-              x: Math.cos(ang) * spread,
-              z: Math.sin(ang) * spread,
+              x: Math.cos(ang) * spread + (flick?.x ?? 0),
+              z: Math.sin(ang) * spread + (flick?.z ?? 0),
             },
           } as const,
         ]
@@ -1478,9 +1518,8 @@ export const mountMobileTable = (
         thrownKeys.add(r.key)
         table.dimDie(r.key, false)
       }
-      // Для тапа-переброса — grace-окно (раньше защищало текст на кнопке).
+      // Итог живёт в кнопке/футере (idle → rolling → результат ↻).
       lastResult = { label: labelled.label, total: labelled.total, parts: labelled.parts }
-      resultAt = Date.now()
       for (const r of ordered) buzz(r.die, r.value)
       const presents = ordered.map(
         (r) =>
@@ -1539,44 +1578,118 @@ export const mountMobileTable = (
     )
   }
 
-  // Жест на поле: тап по кости — бросок; драг по кости — вращение кости
-  // (чисто визуальный осмотр); драг по фону — ничего (камера не двигается).
+  /**
+   * Снять зарядку: restore=true — позы всех костей в базу (отмена);
+   * 'spin' — в базу, но крутка кости keepId остаётся (осмотр при
+   * отпускании <2 с сдвинувшимся курсором).
+   */
+  const endWind = (restore: boolean | 'spin', keepId?: string): void => {
+    windActive = false
+    table.windup(false, restore, keepId)
+    stopRattle()
+    refreshChrome(setup.get())
+  }
+  /**
+   * Релиз зарядки: сила = меню + удержание (2 с → 0, 4 с → +0.5) + флик
+   * пальцем (+0.4); кувырок не откатываем — физспавн подхватывает позу.
+   */
+  const fireThrow = (heldMs: number, vxPx: number, vyPx: number): void => {
+    windActive = false
+    if (rolling || disposed) {
+      // Пока добирали 2 с — стол ушёл в другой бросок: зарядку гасим молча.
+      table.windup(false)
+      stopRattle()
+      return
+    }
+    const charge = Math.max(0, Math.min(1, (heldMs - MIN_HOLD_MS) / (CHARGE_FULL_MS - MIN_HOLD_MS)))
+    const flick01 = Math.min(1, Math.hypot(vxPx, vyPx) / 1.5)
+    const boost = Math.min(1.6, throwPowerBoost() + 0.5 * charge + 0.4 * flick01)
+    table.windup(false, false)
+    throwAll(boost, table.flickVec(vxPx, vyPx))
+  }
+
+  // Жест на поле: удержание на кости ≥2 с — зарядка; движение при зажатой
+  // кнопке зарядку НЕ прерывает (кувырок идёт, кость ещё крутится трекболом
+  // под курсором). Отпускание: ≥2 с — бросок (заряд + флик); раньше — добор
+  // до 2 с (мёртвых тапов нет), но если курсор сдвинулся >8 px — это осмотр:
+  // зарядка гаснет (эта кость остаётся в крутке, остальные — в базу), броска
+  // нет. Драг по фону — ничего (камера статична). Сила — заряд + флик + меню.
   canvas.addEventListener('pointerdown', (e) => {
     if (!e.isPrimary || rolling) return
     const x = e.clientX
     const y = e.clientY
     const t = performance.now()
     const dieId = table.pickDieId(x, y)
+    if (!dieId) return
+    // Захват указателя: отпускание за краем канвы/над шапкой не теряется.
+    try {
+      canvas.setPointerCapture(e.pointerId)
+    } catch {
+      /* указатель уже свободен */
+    }
+    // Новое нажатие перекрывает висящий доброс от короткого тапа.
+    if (pendingFire !== null) {
+      window.clearTimeout(pendingFire)
+      pendingFire = null
+    }
+    if (!windActive) {
+      windActive = true
+      section.dataset.phase = 'charging'
+      table.windup(true)
+      startRattle()
+      vibrate(10)
+    }
     let lastX = x
     let lastY = y
-    let spun = false
+    let moved = false
+    // Последний сэмпл движения — скорость флика в момент релиза (px/мс).
+    let sample = { t, x, y }
     const onMove = (mv: PointerEvent) => {
       if (!mv.isPrimary) return
       const dx = mv.clientX - lastX
       const dy = mv.clientY - lastY
       lastX = mv.clientX
       lastY = mv.clientY
-      if (!dieId) return
-      if (!spun && Math.hypot(mv.clientX - x, mv.clientY - y) <= 8) return
-      spun = true
-      table.spinDie(dieId, dx, dy)
+      const now = performance.now()
+      if (now - sample.t >= 16) sample = { t: now, x: mv.clientX, y: mv.clientY }
+      if (!moved && Math.hypot(mv.clientX - x, mv.clientY - y) > 8) moved = true
+      if (moved) table.spinDie(dieId, dx, dy)
     }
     const cleanup = () => {
       canvas.removeEventListener('pointermove', onMove)
       canvas.removeEventListener('pointerup', onUp)
       canvas.removeEventListener('pointercancel', onCancel)
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
     }
     const onUp = (up: PointerEvent) => {
       cleanup()
       if (!up.isPrimary) return
-      const moved = Math.hypot(up.clientX - x, up.clientY - y)
-      if (!spun && moved < 8 && performance.now() - t < 500 && dieId) {
-        // Свежий итог сначала читаем: тап в окно grace — не переброс.
-        if (lastResult && Date.now() - resultAt < RESULT_GRACE_MS) return
-        throwAll(throwPowerBoost())
+      const held = performance.now() - t
+      const dt = Math.max(1, performance.now() - sample.t)
+      const vx = (up.clientX - sample.x) / dt
+      const vy = (up.clientY - sample.y) / dt
+      if (held >= MIN_HOLD_MS) {
+        // Зарядка пережила движение — время решает: ≥2 с бросаем.
+        fireThrow(held, vx, vy)
+      } else if (moved) {
+        // Осмотр: крутка этой кости остаётся, остальные — в базу.
+        endWind('spin', dieId)
+      } else {
+        // Добор зарядки до 2 с: тап не «мёртвый», просто бросает на отметке.
+        pendingFire = window.setTimeout(() => {
+          pendingFire = null
+          fireThrow(MIN_HOLD_MS, vx, vy)
+        }, MIN_HOLD_MS - held)
       }
     }
-    const onCancel = () => cleanup()
+    const onCancel = () => {
+      cleanup()
+      if (pendingFire !== null) {
+        window.clearTimeout(pendingFire)
+        pendingFire = null
+      }
+      endWind(true)
+    }
     canvas.addEventListener('pointermove', onMove)
     canvas.addEventListener('pointerup', onUp)
     canvas.addEventListener('pointercancel', onCancel)
@@ -1587,8 +1700,8 @@ export const mountMobileTable = (
     relayout()
   })
 
-  // Тесты/чекерам нужны координаты кости (тап — единственный триггер броска):
-  // DEV-хук собирается только dev-сборкой, в прод не попадает.
+  // Тесты/чекерам нужны координаты кости (удержание ≥2 с — единственный
+  // триггер броска): DEV-хук собирается только dev-сборкой, в прод не попадает.
   if (import.meta.env.DEV) {
     ;(window as WindowWithMTable).__mtable = { diePoint: () => table.findDiePoint() }
   }
@@ -1606,6 +1719,11 @@ export const mountMobileTable = (
     },
     dispose() {
       disposed = true
+      if (pendingFire !== null) {
+        window.clearTimeout(pendingFire)
+        pendingFire = null
+      }
+      stopRattle()
       document.removeEventListener('keydown', onKey)
       window.clearTimeout(toastTimer)
       window.clearTimeout(clearTimer)

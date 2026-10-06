@@ -1,5 +1,5 @@
-// Стол (корень /): пустое состояние, набор через степперы, бросок тапом по кости,
-// история в меню-бургере, итог — только для скринридера (.mtableLive).
+// Стол (корень /): пустое состояние, набор через степперы, бросок удержанием
+// кости ≥2 с, история в меню-бургере, итог — только для скринридера (.mtableLive).
 import { expect, test, type Page } from '@playwright/test'
 
 /** Ловим pageerror в массив (изоляция: массив свой на каждый тест). */
@@ -9,7 +9,7 @@ const collectErrors = (page: Page): string[] => {
   return errors
 }
 
-/** Точка кости на экране — DEV-хук window.__mtable (тап = единственный бросок). */
+/** Точка кости на экране — DEV-хук window.__mtable (удержание ≥2 с — бросок). */
 const diePoint = (page: Page) =>
   page.evaluate(
     () =>
@@ -41,7 +41,7 @@ test('пустой стол: хинт, две менюшки шапки, кно�
   expect(errors).toEqual([])
 })
 
-test('пара d4+d6: тап по кости бросает, история растёт, итог озвучен SR', async ({ page }) => {
+test('пара d4+d6: удержание кости бросает, история растёт, итог озвучен SR', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
@@ -55,7 +55,11 @@ test('пара d4+d6: тап по кости бросает, история ра
   await expect(page.locator('.mtableIcon[aria-label="Меню"] svg')).toHaveCount(1)
   const pt = await diePoint(page)
   expect(pt).not.toBeNull()
-  await page.mouse.click(pt!.x, pt!.y)
+  // Бросок требует зарядки ≥2 с: жмем, держим, отпускаем (тап не бросает).
+  await page.mouse.move(pt!.x, pt!.y)
+  await page.mouse.down()
+  await page.waitForTimeout(2100)
+  await page.mouse.up()
   await page
     .waitForFunction(
       () => document.querySelector('.mtable')?.getAttribute('data-phase') === 'rolling',
@@ -78,6 +82,29 @@ test('пара d4+d6: тап по кости бросает, история ра
   await expect(page.locator('.mtableFootParts')).toHaveText(/\d/)
   // Итог визуально нигде — но скринридер его озвучил («d4 d6: 5 · 3 2»).
   await expect(page.locator('.mtableLive')).toHaveText(/^.+: \d+/)
+  expect(errors).toEqual([])
+})
+
+test('сдвиг курсора при удержании зарядку не прерывает — бросок всё равно', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  await page.locator('.mtableAdd').click()
+  await page.getByRole('button', { name: 'Добавить d6' }).click()
+  await page.getByLabel('Закрыть выбор костей').click()
+  await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'ready')
+  const pt = await diePoint(page)
+  expect(pt).not.toBeNull()
+  await page.mouse.move(pt!.x, pt!.y)
+  await page.mouse.down()
+  // Зарядка стартовала; сдвиг >8px НЕ гасит её (старый баг: резкий стоп
+  // при зажатой кнопке) — фаза charging живёт и после движения.
+  await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'charging')
+  await page.mouse.move(pt!.x + 40, pt!.y + 25, { steps: 5 })
+  await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'charging')
+  await page.waitForTimeout(2300)
+  await page.mouse.up()
+  await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'rolling', { timeout: 5000 })
   expect(errors).toEqual([])
 })
 

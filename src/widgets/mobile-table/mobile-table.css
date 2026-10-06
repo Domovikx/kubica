@@ -978,6 +978,13 @@ input:focus-visible {
   font-size: var(--fs-body);
 }
 
+.mtableSectionHint {
+  margin: 8px 0 0;
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: #9aa0aa;
+}
+
 .mtableLink {
   border: none;
   background: transparent;

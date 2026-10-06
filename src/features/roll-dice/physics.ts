@@ -96,6 +96,12 @@ export interface RollOpts {
    * и застынет внутри неё. Одиночки не используют (там тело одно).
    */
   keepStatic?: boolean
+  /**
+   * Пол по |ω| (рад/с): слабая раскрутка невозможна — античит подгадывания
+   * грани слабым вращением. Направление ω не трогаем (оно из потока RNG).
+   * Без опции пола нет: витрина/пул держат свой дизайн (точная ось спина).
+   */
+  minAngular?: number
 }
 
 export interface PhysicsWorld {
@@ -130,6 +136,16 @@ export const cryptoRandom = (): number => {
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)
   return buf[0] / 0x100000000
+}
+
+/**
+ * Центр спавна не ближе r+0.5 к прямому борту: спавн вклинивается в стену
+ * (клин — «покой в воздухе» и выдавливание, т.е. слабая раскрутка от
+ * солвера). Симметричный клэмп — честность (RNG поток не меняется).
+ */
+const clampSpan = (v: number, half: number, r: number): number => {
+  const span = half - r - 0.5
+  return span <= 0 ? 0 : Math.max(-span, Math.min(span, v))
 }
 
 type Vec3 = [number, number, number]
@@ -768,8 +784,12 @@ export const createPhysicsWorld = async (opts?: {
           const rY = random()
           const px = sp.pos[0] + (random() - 0.5) * 2 * area
           const pz = sp.pos[2] + (random() - 0.5) * 2 * area
-          const clearY = Math.max(sp.pos[1], boundR, clearAt(px, pz) + halfDown + 1) + 1 + rY * 1.5
-          body.position.set(px, clearY, pz)
+          // Борт ближе boundR — спавн внутри стены (клин зависает в воздухе
+          // и выдавливается со слабой раскруткой): держим просвет.
+          const sx = rectHx > 0 ? clampSpan(px, rectHx, boundR) : px
+          const sz = rectHz > 0 ? clampSpan(pz, rectHz, boundR) : pz
+          const clearY = Math.max(sp.pos[1], boundR, clearAt(sx, sz) + halfDown + 1) + 1 + rY * 1.5
+          body.position.set(sx, clearY, sz)
         } else {
           const px = (random() - 0.5) * 2 * area
           const rY = random()
@@ -786,17 +806,43 @@ export const createPhysicsWorld = async (opts?: {
           sp ? (opts?.launchUp ?? 6 + random() * 2.5 * p) : -1 - random() * 2 * p,
           (random() - 0.5) * 8 * p + (opts?.fling?.z ?? 0),
         )
-        body.angularVelocity.set(
-          (random() - 0.5) * 14 * p,
-          (random() - 0.5) * 14 * p,
-          (random() - 0.5) * 14 * p,
-        )
-        // Без телепорта ориентации: с руки/со стола — текущая поза,
-        // из центра — случайная (там смотреть не на что)
+        // Порядок random() бит-в-бит как раньше ([x, y, z] слева направо) —
+        // сиды детерминированных тестов не съезжают.
+        const wx = (random() - 0.5) * 14 * p
+        const wy = (random() - 0.5) * 14 * p
+        const wz = (random() - 0.5) * 14 * p
+        body.angularVelocity.set(wx, wy, wz)
+        // Ориентация: с руки (витрина) — текущая поза, с инспекции/центра —
+        // случайная. Стол позу юзера не отдаёт (античит подгадывания через
+        // drag-поворот кости).
         if (sp?.quat) {
           body.quaternion.set(sp.quat[0], sp.quat[1], sp.quat[2], sp.quat[3])
         } else {
           body.quaternion.setFromEuler(random() * Math.PI * 2, random() * Math.PI * 2, 0)
+        }
+        // Пол |ω| (античит): слабая раскрутка невозможна (|ω| ≥ wmin).
+        // При срабатывании пола направление ПЕРЕБРАСЫВАЕМ заново (равновероятно),
+        // а не масштабируем старое: условие wl<wmin срезало бы «неугловые»
+        // направления куба и связало их с усиленной |ω| → биас граней {1,6}
+        // (читер-бот, пул N=960: χ²=31.9 против χ²=5.5 без пола). Величина с
+        // джиттером ≥ wmin (константа тоже биасила). Поток random() здесь
+        // сдвигается (4 draws), но только при передаче minAngular — сид-тесты
+        // пол не передают, бит-в-бит поток цел.
+        const wmin = opts?.minAngular ?? 0
+        if (wmin > 0) {
+          const wl = Math.hypot(wx, wy, wz)
+          if (wl < wmin) {
+            const ax = random() * 2 - 1
+            const ay = random() * 2 - 1
+            const az = random() * 2 - 1
+            const al = Math.hypot(ax, ay, az)
+            const mag = wmin * (1 + random() * 0.5)
+            if (al > 1e-6) {
+              body.angularVelocity.set((ax * mag) / al, (ay * mag) / al, (az * mag) / al)
+            } else {
+              body.angularVelocity.set(mag, 0, 0)
+            }
+          }
         }
         world.addBody(body)
         // Стук — от живых ударов (impact velocity вдоль нормали), а не по таймеру:
