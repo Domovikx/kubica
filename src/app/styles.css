@@ -1,3 +1,24 @@
+/* Tailwind v4 (новый стек): только theme + utilities, БЕЗ preflight —
+ * существующая вёрстка не должна сдвинуться ни на пиксель (e2e/чекеры меряют
+ * DOM один-в-один). Утилиты живут в @layer → незалойеренный legacy-CSS их
+ * перебивает: старые правила главнее, новые React-компоненты набирают
+ * классы там, где legacy-стилей нет. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  /* Дизайн-токены kubica (перенос из :root — общий источник для Tailwind). */
+  --color-bg: #14161a;
+  --color-scene: #0a0b0e;
+  --color-panel: rgba(20, 22, 26, 0.72);
+  --color-ink: #f0f1f3;
+  --color-muted: #9a9da4;
+  --color-accent: #ef3124;
+  --color-accent-hover: #d92b20;
+  --font-sans: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+}
+
 :root {
   --alfa-red: #ef3124;
   --alfa-red-hover: #d92b20;
