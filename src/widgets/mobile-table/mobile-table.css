@@ -28,27 +28,27 @@ body[data-mode='mtable'] {
   overflow: hidden;
 
   /*
-   * Типографская шкала (читабельность: фидбэк — «на мобилах интерфейс
-   * мелкий»; 2.19-фаза 2). Пол +2 к фазе 1 и живой рост до ~1570px:
-   * полы держат телефоны (≤~430px), 0.35vw растёт на планшетах/десктопах,
-   * потолок — на ~1570px (web.dev fluid type = clamp(min, base+vw, max)).
-   * Иконки — та же логика (0.4vw, пол = фаза 1 + 2, потолок ~1675px):
-   * масштабируются вместе с текстом, не фиксированные px.
-   *  Кости (3D) не трогаем — их размер задаёт камера.
+   * Типографская шкала — инверсия по конвенции (2.21, откат части 2.19-фазы 2):
+   * телефон крупнее, десктоп плотнее (Material/HIG: mobile щедрее, dense UI
+   * на широких). Убывающий clamp: полы держат телефоны ≤~430px (max = мобила),
+   * 0.32vw спадает к планшетам и фиксируется на ~1024px (min = десктоп),
+   * дальше без роста — desktop body 16 против мобильных 18.
+   * Иконки — та же инверсия (Δ2 к десктопу).
    * Умножение на --ui-scale (2.20): пользовательский масштаб 100–200%.
+   * Кости (3D) не трогаем — их размер задаёт камера.
    */
-  --fs-cap: calc(clamp(14px, 12.5px + 0.35vw, 18px) * var(--ui-scale));
-  --fs-meta: calc(clamp(15px, 13.5px + 0.35vw, 19px) * var(--ui-scale));
-  --fs-sec: calc(clamp(16px, 14.5px + 0.35vw, 20px) * var(--ui-scale));
-  --fs-body: calc(clamp(17px, 15.5px + 0.35vw, 21px) * var(--ui-scale));
-  --fs-title: calc(clamp(18px, 16.5px + 0.35vw, 22px) * var(--ui-scale));
-  --fs-headline: calc(clamp(20px, 18.5px + 0.35vw, 24px) * var(--ui-scale));
-  --icon-head: calc(clamp(26px, 24.3px + 0.4vw, 31px) * var(--ui-scale));
-  --icon-like: calc(clamp(18px, 16.3px + 0.4vw, 23px) * var(--ui-scale));
-  --icon-chip: calc(clamp(20px, 18.3px + 0.4vw, 25px) * var(--ui-scale));
-  --icon-glyph: calc(clamp(30px, 28.3px + 0.4vw, 35px) * var(--ui-scale));
-  --icon-wide: calc(clamp(24px, 22.3px + 0.4vw, 29px) * var(--ui-scale));
-  --icon-row: calc(clamp(28px, 26.3px + 0.4vw, 33px) * var(--ui-scale));
+  --fs-cap: calc(clamp(13px, 16.28px - 0.32vw, 15px) * var(--ui-scale));
+  --fs-meta: calc(clamp(14px, 17.28px - 0.32vw, 16px) * var(--ui-scale));
+  --fs-sec: calc(clamp(15px, 18.28px - 0.32vw, 17px) * var(--ui-scale));
+  --fs-body: calc(clamp(16px, 19.28px - 0.32vw, 18px) * var(--ui-scale));
+  --fs-title: calc(clamp(17px, 20.28px - 0.32vw, 19px) * var(--ui-scale));
+  --fs-headline: calc(clamp(19px, 22.28px - 0.32vw, 21px) * var(--ui-scale));
+  --icon-head: calc(clamp(24px, 27.28px - 0.32vw, 26px) * var(--ui-scale));
+  --icon-like: calc(clamp(16px, 19.28px - 0.32vw, 18px) * var(--ui-scale));
+  --icon-chip: calc(clamp(18px, 21.28px - 0.32vw, 20px) * var(--ui-scale));
+  --icon-glyph: calc(clamp(28px, 31.28px - 0.32vw, 30px) * var(--ui-scale));
+  --icon-wide: calc(clamp(22px, 25.28px - 0.32vw, 24px) * var(--ui-scale));
+  --icon-row: calc(clamp(26px, 29.28px - 0.32vw, 28px) * var(--ui-scale));
 }
 
 body[data-mode='mtable'] .viewers {
@@ -619,11 +619,13 @@ input:focus-visible {
 }
 
 /* Кнопка набора в шапке: пусто — значок «+» (тот же --icon-head svg-слот,
-   что у бургера), состав — текст уровня secondary (sec/800; на телефоне это
-   прежние 16px — состав в 320 влезает с бургером), крупнее (headline/800)
-   только сумма-акцент на бургере. */
+   что у бургера), состав — текст уровня secondary. Потолок 16px (2.21):
+   компактная мета-кнопка не растёт с инверсией шкалы — иначе состав на 320
+   раздвигает пару и бургер вылезает за 310 (add-icon: 314>310 при 17px;
+   при 16px — 306, как в 2.19/2.20). Крупнее — только сумма-акцент на
+   бургере. */
 .mtableAdd {
-  font-size: var(--fs-sec);
+  font-size: min(var(--fs-sec), 16px);
   font-weight: 800;
   white-space: nowrap;
   padding: 0 10px;
