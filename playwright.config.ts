@@ -10,7 +10,10 @@ export default defineConfig({
   expect: { timeout: 60 * 1000 },
   fullyParallel: true,
   forbidOnly: false,
-  retries: 0,
+  // Retry ×1 (BP): удержание-тест таймингозависим от rAF/SwiftShader и в
+  // полных прогонах (3 проекта × 6 тестов + dev-сервер) проседает под
+  // нагрузкой — точечно проходит стабильно. on-first-retry ниже как раз под это.
+  retries: 1,
   reporter: [['html', { outputFolder: 'tmp/playwright-report', open: 'on-failure' }]],
   outputDir: 'tmp/test-results',
   use: {

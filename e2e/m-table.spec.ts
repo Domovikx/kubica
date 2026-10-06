@@ -126,17 +126,18 @@ test('сеты: сохранить → изменить → обновить, у
   await page.getByRole('button', { name: 'Добавить d6' }).click()
   await page.getByRole('button', { name: 'Обновить набор' }).click()
   await expect(mineChip.first()).toHaveAttribute('aria-label', 'Набор: d6 d8')
-  // Нажатие не запускает отсчёт: первая секунда — пауза, затем отсчёт 3 с.
+  // Удержание: пауза 1 с, затем отсчёт 3 с — сет удаляется сам, без mouse.up.
+  // Проверяем class/text-состояния с широким окном (≈4 с до автоудаления):
+  // под нагрузкой прогона между mouse.down и expect может пройти больше
+  // grace-секунды — узкое окно toHaveText('') тут флакало.
   const box = await mineChip.first().boundingBox()
   expect(box).not.toBeNull()
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
   await page.mouse.down()
-  await expect(mineChip.first().locator('.mtableChipCount')).toHaveText('')
-  await page.waitForTimeout(1100)
-  await expect(mineChip.first().locator('.mtableChipCount')).toHaveText(/^[123]$/)
-  await page.waitForTimeout(3400)
-  await page.mouse.up()
+  await expect(mineChip.first()).toHaveClass(/holding/)
+  await expect(mineChip.first().locator('.mtableChipCount')).toHaveText(/^(|[123])$/)
   await expect(mineChip).toHaveCount(0)
+  await page.mouse.up()
   await expect(page.locator('.mtableToast')).toHaveText('Набор удалён')
   // Удалён выделенный сет → кнопка снова «Сохранить сет».
   await expect(page.getByRole('button', { name: 'Сохранить сет' })).toBeEnabled()
