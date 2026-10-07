@@ -5,6 +5,7 @@ import {
   closeIcon,
   githubIcon,
   menuIcon,
+  musicIcon,
   presetsIcon,
   soundIcon,
   likeIcon,
@@ -62,5 +63,16 @@ describe('md-icon', () => {
     for (const svg of [menuIcon(), addIcon(), soundIcon(false), closeIcon()]) {
       expect(likeIcon()).not.toBe(svg)
     }
+  })
+
+  // 2.22: фоновая музыка — нота вкл/выкл, разные path, своя от звука.
+  it('музыка playing/off — разные path, currentColor, не совпадает со звуком', () => {
+    const on = musicIcon(true)
+    const off = musicIcon(false)
+    expect(on).toContain('fill="currentColor"')
+    expect(off).toContain('fill="currentColor"')
+    expect(on).not.toBe(off)
+    expect(on).not.toBe(soundIcon(false))
+    expect(off).not.toBe(soundIcon(true))
   })
 })

@@ -32,6 +32,17 @@ import {
   throwPower,
   throwPowerBoost,
 } from '@/features/roll-dice/power'
+import {
+  disposeMusic,
+  musicAvail,
+  musicState,
+  musicToggle,
+  musicVolume,
+  onMusicChange,
+  onMusicNotice,
+  probeMusic,
+  setMusicVolume,
+} from '@/features/dnd-music/music'
 import { UI_SCALES, applyUiScale, setUiScale, uiScale } from '@/features/ui-scale/ui-scale'
 import {
   commitTableResult,
@@ -66,6 +77,7 @@ import {
   closeIcon,
   githubIcon,
   menuIcon,
+  musicIcon,
   soundIcon,
   likeIcon,
   telegramIcon,
@@ -251,6 +263,56 @@ export const mountMobileTable = (
     syncSound()
     syncDrawerSound()
   })
+  // Фоновая музыка (2.22): второй тоггл в левой колонке, рядом со звуком.
+  // Стейт-машина живёт в features/dnd-music, рендер — тут; смена стейта
+  // дёргает syncMusic/syncDrawerMusic через onMusicChange (подписка ниже).
+  const musicBtn = document.createElement('button')
+  musicBtn.className = 'mtableIcon mtableMusic'
+  musicBtn.dataset.testid = 'mtable-music'
+  musicBtn.type = 'button'
+  const syncMusic = (): void => {
+    const unavail = musicAvail() === 'unavailable'
+    // YouTube недоступен: кнопка гасится с объяснением (aria-disabled, не
+    // нативный disabled — остаётся фокусируемой, скринридер озвучит причину).
+    // setAttribute, а не toggleAttribute: ARIA читает только "true"/"false".
+    if (unavail) musicBtn.setAttribute('aria-disabled', 'true')
+    else musicBtn.removeAttribute('aria-disabled')
+    if (unavail) {
+      musicBtn.innerHTML = musicIcon(false)
+      musicBtn.setAttribute('aria-label', 'Фоновая музыка недоступна: нет доступа к YouTube')
+      musicBtn.setAttribute('aria-pressed', 'false')
+      musicBtn.removeAttribute('aria-busy')
+      musicBtn.classList.remove('on')
+      return
+    }
+    const s = musicState()
+    if (s === 'loading') {
+      // Пока грузится API/плеер — тот же спиннер, что на бургере.
+      musicBtn.innerHTML = '<span class="mtableSpin" data-testid="mtable-music-spin"></span>'
+      musicBtn.setAttribute('aria-label', 'Загружаю фоновую музыку…')
+      musicBtn.setAttribute('aria-busy', 'true')
+      musicBtn.removeAttribute('aria-pressed')
+      musicBtn.classList.remove('on')
+      return
+    }
+    const on = s === 'playing'
+    musicBtn.innerHTML = musicIcon(on)
+    musicBtn.setAttribute(
+      'aria-label',
+      s === 'paused'
+        ? 'Продолжить фоновую музыку'
+        : on
+          ? 'Выключить фоновую музыку'
+          : 'Включить фоновую музыку',
+    )
+    musicBtn.setAttribute('aria-pressed', String(on))
+    musicBtn.removeAttribute('aria-busy')
+    musicBtn.classList.toggle('on', on)
+  }
+  syncMusic()
+  // musicHost (секция меню ниже) создаётся позже — ссылка живёт в замыкании
+  // и резолвится по первому клику, монтируется раньше любого клика.
+  musicBtn.addEventListener('click', () => musicToggle(musicHost))
   // Шапка: слева звук, по центру пара «+»/бургер (2.15), справа ряд Star.
   const headCtl = document.createElement('div')
   headCtl.className = 'mtableHeadCtl'
@@ -259,7 +321,9 @@ export const mountMobileTable = (
   const headLeft = document.createElement('div')
   headLeft.className = 'mtableHeadLeft'
   headLeft.dataset.testid = 'mtable-head-left'
-  headLeft.append(soundBtn)
+  // Звук первым (позиция не меняется, когда музыка уходит по fit), музыка —
+  // вторым, ближе к паре: она же первой и уступает место на узких.
+  headLeft.append(soundBtn, musicBtn)
   const headSide = document.createElement('div')
   headSide.className = 'mtableHeadSide'
   headSide.dataset.testid = 'mtable-head-side'
@@ -278,6 +342,7 @@ export const mountMobileTable = (
   const fitHeadStar = (): void => {
     headStar.hidden = false
     soundBtn.hidden = false
+    musicBtn.hidden = false
     const measure = () => {
       const hr = head.getBoundingClientRect()
       const cs = getComputedStyle(head)
@@ -289,10 +354,15 @@ export const mountMobileTable = (
         ctl,
       }
     }
+    // Фоновая музыка (2.22) — привилегия: она ближе всех к паре и уступает
+    // первой (атмосфера), звук броска — второй (нужен для игры), Star — третий.
+    let m = measure()
+    const mus = musicBtn.getBoundingClientRect()
+    if (mus.right > m.ctl.left - 1 || m.ctl.right > m.hr.right - m.padR + 1) musicBtn.hidden = true
     // Звук слева: пока пара «+»/бургер упирается в правый контент-бокс —
     // звук виноват в сдвиге (на 320 с полным составом левая колонка выталкивает
     // центр за экран) → прячем (звук дублируется пунктом в бургере).
-    let m = measure()
+    m = measure()
     const snd = soundBtn.getBoundingClientRect()
     if (snd.right > m.ctl.left - 1 || m.ctl.right > m.hr.right - m.padR + 1) soundBtn.hidden = true
     // Ряд Star справа: правее пары и внутри контент-бокса (320/390 с полным
@@ -803,6 +873,79 @@ export const mountMobileTable = (
   })
   sndSection.append(sndTitle, sndToggle, hapToggle)
 
+  // Фоновая музыка (2.22): тоггл (дубль шапки) + громкость + хост iframe.
+  // Хост остаётся в DOM навсегда: при закрытом меню он display:none, а iframe
+  // продолжает играть — так «настоящий» плеер YouTube (реклама, consent,
+  // ручные кнопки) доступен по открытию меню, а шапка остаётся чистым тогглом.
+  const musSection = document.createElement('div')
+  musSection.className = 'mtableSection'
+  musSection.dataset.testid = 'mtable-music-section'
+  const musTitle = document.createElement('span')
+  musTitle.className = 'mtableSectionTitle'
+  musTitle.dataset.testid = 'mtable-music-title'
+  musTitle.textContent = 'Фоновая музыка'
+  const musHint = document.createElement('p')
+  musHint.className = 'mtableSectionHint'
+  musHint.dataset.testid = 'mtable-music-hint'
+  musHint.textContent = 'Играет с YouTube: нужна сеть, реклама возможна'
+  const musToggle = document.createElement('button')
+  musToggle.className = 'mtableWide'
+  musToggle.dataset.testid = 'mtable-music-toggle'
+  musToggle.type = 'button'
+  const syncDrawerMusic = (): void => {
+    const unavail = musicAvail() === 'unavailable'
+    const s = musicState()
+    const on = s === 'playing' && !unavail
+    const text = unavail
+      ? 'Нет доступа к YouTube'
+      : s === 'loading'
+        ? 'Загружаю…'
+        : s === 'paused'
+          ? 'Продолжить фон'
+          : on
+            ? 'Выключить фон'
+            : 'Включить фон'
+    musToggle.innerHTML = `${musicIcon(on)}<span>${text}</span>`
+    musToggle.classList.toggle('on', on)
+    musToggle.setAttribute('aria-pressed', String(on))
+    musToggle.toggleAttribute('aria-busy', !unavail && s === 'loading')
+    // aria-disabled (не нативный disabled): кнопка остаётся в порядке Tab,
+    // скринридер озвучивает причину, тап и так гасится guard'ом в musicToggle.
+    if (unavail) musToggle.setAttribute('aria-disabled', 'true')
+    else musToggle.removeAttribute('aria-disabled')
+    musHint.textContent = unavail
+      ? 'Нет доступа к YouTube — фон недоступен'
+      : 'Играет с YouTube: нужна сеть, реклама возможна'
+  }
+  syncDrawerMusic()
+  // musicHost (ниже по секции) создаётся раньше первого клика — замыкание.
+  musToggle.addEventListener('click', () => musicToggle(musicHost))
+  const musVolRow = document.createElement('div')
+  musVolRow.className = 'mtableMusicVolRow'
+  musVolRow.dataset.testid = 'mtable-music-vol-row'
+  const musVol = document.createElement('input')
+  musVol.className = 'mtableMusicVol'
+  musVol.dataset.testid = 'mtable-music-volume'
+  musVol.type = 'range'
+  musVol.min = '0'
+  musVol.max = '100'
+  musVol.step = '5'
+  musVol.value = String(musicVolume())
+  musVol.setAttribute('aria-label', 'Громкость фона')
+  const musVolVal = document.createElement('span')
+  musVolVal.className = 'mtableMusicVolVal'
+  musVolVal.dataset.testid = 'mtable-music-vol-val'
+  musVolVal.textContent = String(musicVolume())
+  musVol.addEventListener('input', () => {
+    setMusicVolume(Number(musVol.value))
+    musVolVal.textContent = musVol.value
+  })
+  musVolRow.append(musVol, musVolVal)
+  const musicHost = document.createElement('div')
+  musicHost.className = 'mtableMusicHost'
+  musicHost.dataset.testid = 'mtable-music-player'
+  musSection.append(musTitle, musToggle, musVolRow, musicHost, musHint)
+
   // Масштаб интерфейса (2.20): шаги 100–200%, живое применение + персист.
   const scaleSection = document.createElement('div')
   scaleSection.className = 'mtableSection'
@@ -1040,14 +1183,47 @@ export const mountMobileTable = (
 
   socialSection.append(socialTitle, ghLink, tgLink, starLink)
 
-  drawerBody.append(histSection, pwSection, sndSection, scaleSection, aboutSection, socialSection)
+  drawerBody.append(
+    histSection,
+    pwSection,
+    sndSection,
+    musSection,
+    scaleSection,
+    aboutSection,
+    socialSection,
+  )
   drawer.append(drawerHead, drawerBody)
+
+  // Перерисовка обоих тогглов музыки от стейт-машины + тосты на разовые
+  // сообщения (нет сети / нужен повторный тап / ошибка эмбеда).
+  const unsubMusic = onMusicChange(() => {
+    syncMusic()
+    syncDrawerMusic()
+  })
+  const unsubMusicNotice = onMusicNotice((n) => {
+    showToast(
+      n === 'offline'
+        ? 'Нет сети — музыка недоступна'
+        : n === 'blocked'
+          ? 'Нажми ещё раз'
+          : 'Не удалось запустить музыку',
+    )
+  })
 
   section.append(watermark, canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
   requestAnimationFrame(fitWatermark)
   document.fonts?.ready.then(fitWatermark).catch(() => {})
 
   container.appendChild(section)
+
+  // Доступность YouTube (2.22): ранняя проба ТОГО ЖЕ ленивого скрипта API —
+  // до первого тапа кнопки уже знают, есть ли смысл их нажимать; недоступно →
+  // aria-disabled + объяснение (см. syncMusic). Повтор — когда сеть вернулась.
+  const onNetBack = (): void => {
+    if (musicAvail() !== 'ok') void probeMusic()
+  }
+  window.addEventListener('online', onNetBack)
+  void probeMusic()
 
   const openSheet = () => {
     drawer.hidden = true
@@ -1733,6 +1909,10 @@ export const mountMobileTable = (
       window.clearTimeout(clearTimer)
       unsubSetup()
       unsubHistory()
+      unsubMusic()
+      unsubMusicNotice()
+      window.removeEventListener('online', onNetBack)
+      disposeMusic()
       table.dispose()
       container.innerHTML = ''
       if (typeof window !== 'undefined') delete (window as WindowWithMTable).__mtable

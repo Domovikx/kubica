@@ -9,6 +9,38 @@ const collectErrors = (page: Page): string[] => {
   return errors
 }
 
+// Проба доступа (2.22) при монтировании тянет youtube.com/iframe_api — в e2e
+// гасим сеть до youtube моком: детерминизм (не флакаем от нестабильного
+// youtube) и герметичность. Мок ставит заглушку YT и дёргает ready-колбэк —
+// ровно то, что ждёт loadApi. Настоящий сбой сети покрыт отдельным тестом
+// (route.abort ниже — последний зарегистрированный роут выигрывает).
+// Проба доступа (2.22) при монтировании тянет youtube.com/iframe_api — в e2e
+// гасим сеть до youtube моком: детерминизм (не флакаем от нестабильного
+// youtube) и герметичность. Мок — рабочая заглушка YT: стаб Player с
+// onReady/onStateChange, ровно то, что ждут loadApi и тап (цепочка
+// loading → playing проверяется без реальной сети). Настоящий сбой сети
+// покрыт отдельным тестом (route.abort ниже — последний роут выигрывает).
+const YT_STUB =
+  'window.YT={Player:function(t,o){var s=this;s._st=-1;' +
+  's.playVideo=function(){s._st=1;o.events&&o.events.onStateChange&&o.events.onStateChange({data:1,target:s})};' +
+  's.pauseVideo=function(){s._st=2;o.events&&o.events.onStateChange&&o.events.onStateChange({data:2,target:s})};' +
+  's.setVolume=function(){};s.getPlayerState=function(){return s._st};s.destroy=function(){};' +
+  'setTimeout(function(){o.events&&o.events.onReady&&o.events.onReady({target:s})},0)}};' +
+  'window.onYouTubeIframeAPIReady&&window.onYouTubeIframeAPIReady();'
+const mockYouTube = (page: Page): Promise<void> =>
+  page.route(
+    (url) => url.href.includes('youtube'),
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: YT_STUB,
+      }),
+  )
+
+test.beforeEach(async ({ page }) => {
+  await mockYouTube(page)
+})
+
 /** Точка кости на экране — DEV-хук window.__mtable (удержание ≥3 с — бросок). */
 const diePoint = (page: Page) =>
   page.evaluate(
@@ -168,5 +200,104 @@ test('сеты: сохранить → изменить → обновить, у
   await expect(page.locator('.mtableToast')).toHaveText('Набор удалён')
   // Удалён выделенный сет → кнопка снова «Сохранить сет».
   await expect(page.getByRole('button', { name: 'Сохранить сет' })).toBeEnabled()
+  expect(errors).toEqual([])
+})
+
+// 2.22 «Фоновая музыка»: UI тогглов + офлайн-тост + персист громкости.
+// Сеть до YouTube НЕ ходим (ленивая загрузка API) — клики по старту делаем
+// только офлайн (путь без сети) или с заблокированным youtube (второй тест).
+test('музыка: тогглы в шапке и меню, офлайн-тост, громкость переживает reload', async ({
+  page,
+}) => {
+  const errors = collectErrors(page)
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  // Шапка: тоггл выключен, aria отражает состояние.
+  const headBtn = page.getByTestId('mtable-music')
+  await expect(headBtn).toBeVisible()
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  await expect(headBtn).toHaveAttribute('aria-label', 'Включить фоновую музыку')
+  // Офлайн: тап не грузит API, а роняет тост «нет сети» и не меняет стейт.
+  await page.context().setOffline(true)
+  await headBtn.click()
+  await expect(page.getByTestId('mtable-toast')).toHaveText('Нет сети — музыка недоступна')
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  await page.context().setOffline(false)
+  // Меню: секция с тогглом, слайдером (дефолт 40) и хинтом про YouTube.
+  await page.locator('.mtableBurger').click()
+  const section = page.getByTestId('mtable-music-section')
+  await expect(section).toBeVisible()
+  await expect(page.getByTestId('mtable-music-title')).toHaveText('Фоновая музыка')
+  const drawerToggle = page.getByTestId('mtable-music-toggle')
+  await expect(drawerToggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(drawerToggle).toContainText('Включить фон')
+  await expect(page.getByTestId('mtable-music-hint')).toHaveText(
+    'Играет с YouTube: нужна сеть, реклама возможна',
+  )
+  const vol = page.getByTestId('mtable-music-volume')
+  await expect(vol).toHaveValue('40')
+  // Слайдер шагами: 40 + 6×5 = 70, читаемость цифры и персист.
+  for (let i = 0; i < 6; i++) await vol.press('ArrowRight')
+  await expect(vol).toHaveValue('70')
+  await expect(page.getByTestId('mtable-music-vol-val')).toHaveText('70')
+  // Персист: reload → бургер → тот же ползунок и то же значение в хранилище.
+  await page.reload()
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  await page.locator('.mtableBurger').click()
+  await expect(page.getByTestId('mtable-music-volume')).toHaveValue('70')
+  expect(await page.evaluate(() => localStorage.getItem('dice-music-vol'))).toBe('70')
+  expect(errors).toEqual([])
+})
+
+test('музыка: youtube недоступен → кнопки aria-disabled с объяснением', async ({ page }) => {
+  const errors = collectErrors(page)
+  // Ленивый скрипт API — единственная ниточка к youtube; рвём её до загрузки
+  // (поверх мока beforeEach: последний роут — он и работает).
+  await page.route(
+    (url) => url.href.includes('youtube'),
+    (route) => route.abort(),
+  )
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  const headBtn = page.getByTestId('mtable-music')
+  // Проба при монтировании не прошла → шапочная кнопка гасится с причиной.
+  await expect(headBtn).toHaveAttribute('aria-disabled', 'true', { timeout: 15000 })
+  await expect(headBtn).toHaveAttribute(
+    'aria-label',
+    'Фоновая музыка недоступна: нет доступа к YouTube',
+  )
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  // Форс-тап (мимо pointer-checks) — guard в musicToggle гасит: загрузки нет.
+  await headBtn.click({ force: true })
+  await expect(page.getByTestId('mtable-music-spin')).toHaveCount(0)
+  // Меню: тоггл и хинт тоже объясняют недоступность.
+  await page.locator('.mtableBurger').click()
+  const drawerToggle = page.getByTestId('mtable-music-toggle')
+  await expect(drawerToggle).toHaveAttribute('aria-disabled', 'true')
+  await expect(drawerToggle).toContainText('Нет доступа к YouTube')
+  await expect(page.getByTestId('mtable-music-hint')).toHaveText(
+    'Нет доступа к YouTube — фон недоступен',
+  )
+  expect(errors).toEqual([])
+})
+
+// 2.22: детерминированная проверка задержек тапа — loading → playing через мок
+// YT (onReady в следующем тике), пауза синхронна в жесте, повторный старт не
+// залипает в loading. Реальная сеть не участвует.
+test('музыка: тап → loading → playing → пауза → снова playing (мок YT)', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  const headBtn = page.getByTestId('mtable-music')
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  await headBtn.click()
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
+  await expect(page.getByTestId('mtable-music-spin')).toHaveCount(0)
+  // Пауза: onStateChange(PAUSED) синхронно внутри жеста.
+  await headBtn.click()
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  // Второй старт: ресьюм без промежуточного error/watchdog.
+  await headBtn.click()
+  await expect(headBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
   expect(errors).toEqual([])
 })

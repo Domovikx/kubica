@@ -292,6 +292,63 @@ a.mtableIcon {
   display: none;
 }
 
+/* Фоновая музыка (2.22): тоггл в левой колонке — та же ловушка [hidden]
+   (fitHeadStar гасит её первой из-за тесноты) и акцент, пока играет. */
+.mtableMusic[hidden] {
+  display: none;
+}
+
+.mtableMusic.on {
+  color: #ef3124;
+}
+
+/* Секция «Фоновая музыка» в меню: слайдер громкости (тап ≥44 по вертикали,
+   accent-color — акцент трека/башмака) + хост iframe (16:9, скруглён). */
+.mtableMusicVolRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  margin-top: 4px;
+}
+
+.mtableMusicVol {
+  flex: 1;
+  min-width: 0;
+  height: var(--tap);
+  margin: 0;
+  accent-color: #ef3124;
+  cursor: pointer;
+}
+
+.mtableMusicVol:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.mtableMusicVolVal {
+  min-width: 3ch;
+  text-align: right;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: #9aa0aa;
+}
+
+/* Пока игра не запущена — хоста нет геометрии, секция не «дырявится». */
+.mtableMusicHost:empty {
+  display: none;
+}
+
+.mtableMusicHost iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: #000;
+}
+
 .mtableHead a.mtableIcon:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
@@ -698,6 +755,19 @@ input:focus-visible {
 }
 
 .mtableIcon:disabled:hover {
+  background: transparent;
+}
+
+/* 2.22: YouTube недоступен (проба не прошла) — aria-disabled, а не нативный
+   disabled: кнопка остаётся в порядке Tab с объясняющим aria-label, но тускнует
+   и не реагирует на hover/тап (тап гасит guard в musicToggle). */
+.mtableIcon[aria-disabled='true'],
+.mtableWide[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.mtableIcon[aria-disabled='true']:hover {
   background: transparent;
 }
 
