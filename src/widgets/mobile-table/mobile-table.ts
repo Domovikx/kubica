@@ -845,7 +845,7 @@ export const mountMobileTable = (
   scaleSection.append(scaleTitle, scaleRow)
 
   // Сила броска: режим меню (boost 0/0.5/1) складывается с зарядом удержания
-  // и фликом релиза (cap 1.6 — см. fireThrow); тап-удержание ≥2 с и есть бросок.
+  // и фликом релиза (cap 1.6 — см. fireThrow); тап-удержание ≥3 с и есть бросок.
   const pwSection = document.createElement('div')
   pwSection.className = 'mtableSection'
   pwSection.dataset.testid = 'mtable-power-section'
@@ -868,7 +868,7 @@ export const mountMobileTable = (
   const pwHint = document.createElement('p')
   pwHint.className = 'mtableSectionHint'
   pwHint.dataset.testid = 'mtable-power-hint'
-  pwHint.textContent = 'Кость заряжается удержанием 2–4 с — сильнее бросок (и флик при отпускании)'
+  pwHint.textContent = 'Кость заряжается удержанием 3–5 с — сильнее бросок (и флик при отпускании)'
   pwSection.append(pwTitle, ...pwBtns, pwHint)
   const syncPower = (): void => {
     const cur = throwPower()
@@ -1188,16 +1188,16 @@ export const mountMobileTable = (
   /** Кости с состоявшимся броском (остальные — приглушены). */
   const thrownKeys = new Set<string>()
   /**
-   * Зарядка броска (wind-up): удержание ≥2 с на кости. windActive — кувырок
-   * крутится; pendingFire — короткий тап дожигает до 2-й секунды (мёртвых
+   * Зарядка броска (wind-up): удержание ≥3 с на кости. windActive — кувырок
+   * крутится; pendingFire — короткий тап дожигает до 3-й секунды (мёртвых
    * тапов нет). Защита от случайного переброса теперь сама зарядка:
-   * 2 с удержания — не «щелчок».
+   * 3 с удержания — не «щелчок».
    */
   let windActive = false
   let pendingFire: number | null = null
-  /** Минимум удержания до броска и время полного заряда (2 с → 4 с). */
-  const MIN_HOLD_MS = 2000
-  const CHARGE_FULL_MS = 4000
+  /** Минимум удержания до броска и время полного заряда (3 с → 5 с). */
+  const MIN_HOLD_MS = 3000
+  const CHARGE_FULL_MS = 5000
 
   /** Фаза стола для тестов/чекеров: empty | loading | ready | charging | rolling. */
   const syncPhase = (total: number): string => {
@@ -1411,8 +1411,10 @@ export const mountMobileTable = (
   /**
    * Бросок пачкой. powerBoost = режим меню + заряд удержания + флик релиза
    * (кап 1.6); flick — направленный швырок XZ из флика пальцем (мировые
-   * координаты, см. table.flickVec). Зарядка отдается физике: позу кувырка
-   * не откатываем — спавн подхватывает без визуального рывка.
+   * координаты, см. table.flickVec). Зарядка уходит в режим подхвата: кувырок
+   * крутится до конца сливки (~0.3 с), а его ось/скорость уходят в реальное
+   * ω тела (step.omega) — раскрутка продолжается в физику, без freeze-кадра,
+   * телепорта спавна и «чужого» перехода вращения.
    */
   const throwAll = (powerBoost = 0, flick?: { x: number; z: number }): void => {
     if (rolling || disposed) return
@@ -1436,7 +1438,7 @@ export const mountMobileTable = (
       screenUp,
       onStep: (key: string, _die: DieId, step: Parameters<StepCallback>[0]) => {
         void _die
-        table.syncBody(key, step.pos, step.quat)
+        table.syncBody(key, step.pos, step.quat, step.omega)
       },
       onCollide: (die: DieId, i: number) => {
         lastHit = performance.now()
@@ -1581,7 +1583,8 @@ export const mountMobileTable = (
   /**
    * Снять зарядку: restore=true — позы всех костей в базу (отмена);
    * 'spin' — в базу, но крутка кости keepId остаётся (осмотр при
-   * отпускании <2 с сдвинувшимся курсором).
+   * отпускании <3 с сдвинувшимся курсором). Без броска — плавный
+   * winddown ~0.4 с (фидбек «резкая остановка раскрутки»).
    */
   const endWind = (restore: boolean | 'spin', keepId?: string): void => {
     windActive = false
@@ -1590,13 +1593,14 @@ export const mountMobileTable = (
     refreshChrome(setup.get())
   }
   /**
-   * Релиз зарядки: сила = меню + удержание (2 с → 0, 4 с → +0.5) + флик
-   * пальцем (+0.4); кувырок не откатываем — физспавн подхватывает позу.
+   * Релиз зарядки: сила = меню + удержание (3 с → 0, 5 с → +0.5) + флик
+   * пальцем (+0.4); кувырок не откатываем — он продолжается в подхвате,
+   * уходя в реальное ω тела (оси/скорость броска).
    */
   const fireThrow = (heldMs: number, vxPx: number, vyPx: number): void => {
     windActive = false
     if (rolling || disposed) {
-      // Пока добирали 2 с — стол ушёл в другой бросок: зарядку гасим молча.
+      // Пока добирали 3 с — стол ушёл в другой бросок: зарядку гасим молча.
       table.windup(false)
       stopRattle()
       return
@@ -1608,10 +1612,10 @@ export const mountMobileTable = (
     throwAll(boost, table.flickVec(vxPx, vyPx))
   }
 
-  // Жест на поле: удержание на кости ≥2 с — зарядка; движение при зажатой
+  // Жест на поле: удержание на кости ≥3 с — зарядка; движение при зажатой
   // кнопке зарядку НЕ прерывает (кувырок идёт, кость ещё крутится трекболом
-  // под курсором). Отпускание: ≥2 с — бросок (заряд + флик); раньше — добор
-  // до 2 с (мёртвых тапов нет), но если курсор сдвинулся >8 px — это осмотр:
+  // под курсором). Отпускание: ≥3 с — бросок (заряд + флик); раньше — добор
+  // до 3 с (мёртвых тапов нет), но если курсор сдвинулся >8 px — это осмотр:
   // зарядка гаснет (эта кость остаётся в крутке, остальные — в базу), броска
   // нет. Драг по фону — ничего (камера статична). Сила — заряд + флик + меню.
   canvas.addEventListener('pointerdown', (e) => {
@@ -1669,13 +1673,13 @@ export const mountMobileTable = (
       const vx = (up.clientX - sample.x) / dt
       const vy = (up.clientY - sample.y) / dt
       if (held >= MIN_HOLD_MS) {
-        // Зарядка пережила движение — время решает: ≥2 с бросаем.
+        // Зарядка пережила движение — время решает: ≥3 с бросаем.
         fireThrow(held, vx, vy)
       } else if (moved) {
         // Осмотр: крутка этой кости остаётся, остальные — в базу.
         endWind('spin', dieId)
       } else {
-        // Добор зарядки до 2 с: тап не «мёртвый», просто бросает на отметке.
+        // Добор зарядки до 3 с: тап не «мёртвый», просто бросает на отметке.
         pendingFire = window.setTimeout(() => {
           pendingFire = null
           fireThrow(MIN_HOLD_MS, vx, vy)
@@ -1700,7 +1704,7 @@ export const mountMobileTable = (
     relayout()
   })
 
-  // Тесты/чекерам нужны координаты кости (удержание ≥2 с — единственный
+  // Тесты/чекерам нужны координаты кости (удержание ≥3 с — единственный
   // триггер броска): DEV-хук собирается только dev-сборкой, в прод не попадает.
   if (import.meta.env.DEV) {
     ;(window as WindowWithMTable).__mtable = { diePoint: () => table.findDiePoint() }

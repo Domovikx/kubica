@@ -9,7 +9,7 @@ const collectErrors = (page: Page): string[] => {
   return errors
 }
 
-/** Точка кости на экране — DEV-хук window.__mtable (удержание ≥2 с — бросок). */
+/** Точка кости на экране — DEV-хук window.__mtable (удержание ≥3 с — бросок). */
 const diePoint = (page: Page) =>
   page.evaluate(
     () =>
@@ -55,10 +55,10 @@ test('пара d4+d6: удержание кости бросает, истори
   await expect(page.locator('.mtableIcon[aria-label="Меню"] svg')).toHaveCount(1)
   const pt = await diePoint(page)
   expect(pt).not.toBeNull()
-  // Бросок требует зарядки ≥2 с: жмем, держим, отпускаем (тап не бросает).
+  // Бросок требует зарядки ≥3 с: жмем, держим, отпускаем (тап не бросает).
   await page.mouse.move(pt!.x, pt!.y)
   await page.mouse.down()
-  await page.waitForTimeout(2100)
+  await page.waitForTimeout(3200)
   await page.mouse.up()
   await page
     .waitForFunction(
@@ -102,7 +102,7 @@ test('сдвиг курсора при удержании зарядку не п
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'charging')
   await page.mouse.move(pt!.x + 40, pt!.y + 25, { steps: 5 })
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'charging')
-  await page.waitForTimeout(2300)
+  await page.waitForTimeout(3300)
   await page.mouse.up()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'rolling', { timeout: 5000 })
   expect(errors).toEqual([])

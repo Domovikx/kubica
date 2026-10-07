@@ -39,16 +39,44 @@ interface DieView {
     t: number
     dur: number
   } | null
-  /** Зарядка (wind-up): база для кувырка/дрожи; null — не в зарядке. */
+  /** Зарядка (wind-up): база для кувырка; null — не в зарядке. */
   wind: {
     pos: THREE.Vector3
     quat: THREE.Quaternion
     axis: THREE.Vector3
     /** Фазы «пьяного» дрейфа оси: удержание не детерминировано (античит). */
     ph: [number, number, number]
-    /** Фазы дрожи по осям. */
-    jph: [number, number, number]
+    /**
+     * Winddown/подхват: null — активная зарядка. 'full'/'spin' — плавное
+     * гашение без броска (~0.4 с); 'handoff' — кувырок продолжается, пока
+     * сливка не закончится; после первого syncBody axis/mag хранят реальное
+     * ω тела (unit-ось + величина) — вращение в броске продолжается, а не
+     * сменяется чужой осью.
+     */
+    down: {
+      t: number
+      mode: 'full' | 'spin' | 'handoff'
+      axis?: THREE.Vector3
+      mag?: number
+    } | null
   } | null
+  /**
+   * Подхват физики: ~0.3 с сливки — позиция от точки подхвата к летящему
+   * телу, ориентация от ЖИВОГО кувырка (spinQ) к кватерниону тела: ось и
+   * скорость вращения не обрываются (фидбек «раскрутка должна продолжиться»).
+   */
+  blend: {
+    t0: number
+    fromPos: THREE.Vector3
+    toPos: [number, number, number]
+    toQuat: THREE.Quaternion
+  } | null
+  /**
+   * Накопитель вращения кувырка на время сливки: пока идёт blend, tumble
+   * крутит этот кватернион, а root = slerp(spinQ, тело) — исходник вращения
+   * живёт и на подхвате, без стоп-кадра и «чужого» геодезианта.
+   */
+  spinQ: THREE.Quaternion | null
 }
 
 export interface Table {
@@ -66,11 +94,16 @@ export interface Table {
   ) => void
   removeDie: (id: string) => void
   hasDie: (id: string) => boolean
-  /** Живая синхронизация с физ-телом (позиция + кватернион каждый тик). */
+  /**
+   * Живая синхронизация с физ-телом (позиция + кватернион каждый тик).
+   * omega — вектор ω тела (репорт физики): в режиме подхвата его ось/величина
+   * становятся целью кувырка, чтобы вращение продолжалось, а не менялось.
+   */
   syncBody: (
     id: string,
     pos: readonly [number, number, number],
     q: readonly [number, number, number, number],
+    omega?: readonly [number, number, number],
   ) => void
   /** Одно движение сразу на финальную позу (низ ровно + цифра прямо). */
   presentTo: (
@@ -98,13 +131,16 @@ export interface Table {
    */
   spinDie: (id: string, dxPx: number, dyPx: number) => void
   /**
-   * Зарядка броска (wind-up): кости приподнимаются, хаотично кувыркаются
-   * (пьяная прецессия с рандомными фазами — позу/момент релиза не подгадать,
-   * античит) и дрожат ∝ удержанию. restore=false — снять, оставив позу в
-   * кувырке (тут же бросаем: физспавн подхватывает, рывка нет);
-   * restore=true — откат поз к базе (зарядка отменена, следа не остаётся);
-   * restore='spin' — в базу, но у keepId оставить текущий кватернион
-   * (осмотр: крутка пользователя сохраняется, кость приземляется).
+   * Зарядка броска (wind-up): кости приподнимаются в «руку» и хаотично
+   * кувыркаются (пьяная прецессия с рандомными фазами — позу/момент релиза
+   * не подгадать, античит); позиционной тряски нет (фидбек: приятнее одно
+   * вращение). restore=false — режим подхвата: кувырок продолжается до
+   * окончания сливки (~0.3 с, см. syncBody), а с первого syncBody его ось и
+   * скорость уходят в реальное ω тела — вращение на броске продолжается,
+   * а не сменяется «чем-то иным»; без физики снимается по таймауту ~1 с.
+   * restore=true/'spin' — гашение без броска плавным winddown ~0.4 с
+   * (фидбек «скорость 10 → резко 5»): кувырок затухает, посадка в базу без
+   * телепорта; в режиме 'spin' у keepId кватернион юзера остаётся.
    */
   windup: (on: boolean, restore?: boolean | 'spin', keepId?: string) => void
   /**
@@ -372,7 +408,16 @@ export const createTable = (
           .setFromObject(root)
           .getCenter(new THREE.Vector3())
           .applyMatrix4(new THREE.Matrix4().copy(root.matrixWorld).invert())
-        dice.set(id, { root, unitSize, localCenter, present: null, glide: null, wind: null })
+        dice.set(id, {
+          root,
+          unitSize,
+          localCenter,
+          present: null,
+          glide: null,
+          wind: null,
+          blend: null,
+          spinQ: null,
+        })
         frameCamera()
         onLoad?.()
       },
@@ -389,11 +434,46 @@ export const createTable = (
     dice.delete(id)
   }
 
-  const syncBody: Table['syncBody'] = (id, pos, q) => {
+  /** Длительность сливки позы зарядки с телом при подхвате физики. */
+  const HANDOFF_MS = 300
+  /** Физика не пришла за позой (ошибка) — снимаем зарядку, а не крутим вечно. */
+  const HANDOFF_TIMEOUT_MS = 1000
+  const syncBody: Table['syncBody'] = (id, pos, q, omega) => {
     const view = dice.get(id)
     if (!view || disposed) return
     view.present = null
     view.glide = null
+    const w = view.wind
+    if (w?.down?.mode === 'handoff') {
+      const down = w.down
+      // Реальное ω тела — цель оси и скорости кувырка (обновляется каждый
+      // подшаг): к моменту окончания сливки вращение уже совпадает с физикой.
+      // Только репорт физики, на поток random() не влияет (античит цел).
+      if (omega) {
+        const len = Math.hypot(omega[0], omega[1], omega[2])
+        if (len > 1e-6) {
+          if (!down.axis) down.axis = new THREE.Vector3()
+          down.axis.set(omega[0] / len, omega[1] / len, omega[2] / len)
+          down.mag = len
+        }
+      }
+      // Позу ведёт кувырок (spinQ продолжает крутиться, см. tumble), сюда —
+      // только цель: update() каждый кадр собирает сливку из живого вращения
+      // к телу. Первый подхват семет blend из текущей позы — щелчка нет.
+      if (!view.blend) {
+        view.spinQ = view.root.quaternion.clone()
+        view.blend = {
+          t0: performance.now(),
+          fromPos: view.root.position.clone(),
+          toPos: [pos[0], pos[1], pos[2]],
+          toQuat: new THREE.Quaternion(q[0], q[1], q[2], q[3]),
+        }
+        return
+      }
+      view.blend.toPos = [pos[0], pos[1], pos[2]]
+      view.blend.toQuat.set(q[0], q[1], q[2], q[3])
+      return
+    }
     view.root.position.set(pos[0], pos[1], pos[2])
     view.root.quaternion.set(q[0], q[1], q[2], q[3])
   }
@@ -404,6 +484,10 @@ export const createTable = (
       onDone?.()
       return
     }
+    // Позу под свой контроль: зарядка/сливка подхвата кончились.
+    view.wind = null
+    view.blend = null
+    view.spinQ = null
     const to = new THREE.Quaternion(q[0], q[1], q[2], q[3]).normalize()
     if (view.root.quaternion.angleTo(to) < 0.035) {
       view.root.quaternion.copy(to)
@@ -433,6 +517,10 @@ export const createTable = (
       return
     }
     view.present = null
+    // Позу под свой контроль: зарядка/сливка подхвата кончились.
+    view.wind = null
+    view.blend = null
+    view.spinQ = null
     view.glide = {
       fromX: view.root.position.x,
       fromZ: view.root.position.z,
@@ -538,12 +626,81 @@ export const createTable = (
     view.root.position.copy(center).add(offset)
   }
 
-  // Зарядка (wind-up): кувырок с пьяной прецессией + подъём + дрожь ∝ удержанию.
-  // Фазы дрейфа рандомны на каждый старт — позу/момент релиза не подгадать.
+  // Зарядка (wind-up): кувырок с пьяной прецессией + плавный подъём в «руку»
+  // (тряски позиции нет — фидбек: приятнее одно вращение). Фазы дрейфа
+  // рандомны на каждый старт — позу/момент релиза не подгадать.
   let windOn = false
   let windT = 0
   const windTmpV = new THREE.Vector3()
   const windTmpQ = new THREE.Quaternion()
+  /** Длительность плавного гашения кувырка без броска (фидбек «резкий стоп»). */
+  const WIND_DOWN_MS = 400
+  type WindView = NonNullable<DieView['wind']>
+  /**
+   * Профиль скорости кувырка: ease-in старт (без щелчка 0→4) и cap ≈
+   * типичному спавн-ω физики (6–15 при заряде) — на моменте броска
+   * ступеньки «скорость 10 → резко 5» нет. Чисто визуальный: честность
+   * броска (поток ω, пол, поза) не зависит от профиля.
+   */
+  const windAuto = (): number => Math.min(10, 3 + windT * 5.5) * Math.min(1, windT / 0.3)
+  /**
+   * Кувырок вокруг центра (пивот как в spinDie), скорость — speed·dt.
+   * Обычно ось плавно дрейфует («пьяный» прецесс); в режиме подхвата сливки
+   * ось уходит в реальное ω тела (цель из syncBody) — вращение на броске
+   * продолжается, а не подменяется. Ротация в подхвате копится в view.spinQ
+   * (root собирает update: root = slerp(spinQ, тело)) — исходник вращения
+   * живёт до конца сливки, стоп-кадра нет.
+   */
+  const tumble = (view: DieView, w: WindView, speed: number, dt: number): void => {
+    const down = w.down
+    const blending = down?.mode === 'handoff' && view.blend !== null && view.spinQ !== null
+    if (blending && down?.axis && view.blend) {
+      // Сходимость к оси ω тела ровно за время сливки (цель обновляет
+      // syncBody каждый подшаг): к k=1 ось и скорость совпали с физикой.
+      const k = Math.min(1, (performance.now() - view.blend.t0) / HANDOFF_MS)
+      windTmpV.copy(down.axis)
+      w.axis.lerp(windTmpV, Math.min(1, k)).normalize()
+    } else if (down?.mode !== 'handoff') {
+      windTmpV
+        .set(
+          Math.sin(1.9 * windT + w.ph[0]),
+          Math.sin(2.7 * windT + w.ph[1]),
+          Math.sin(1.3 * windT + w.ph[2]),
+        )
+        .normalize()
+      w.axis.lerp(windTmpV, Math.min(1, dt * 2)).normalize()
+    }
+    // Подхват до seed (первый syncBody): ось пока замирает — доли секунды.
+    windTmpQ.setFromAxisAngle(w.axis, speed * dt)
+    const target = view.blend && view.spinQ ? view.spinQ : view.root.quaternion
+    const s = view.root.scale.x
+    const center = spinTmpC
+      .copy(view.localCenter)
+      .multiplyScalar(s)
+      .applyQuaternion(view.root.quaternion)
+      .add(view.root.position)
+    const offset = spinTmpO.copy(view.root.position).sub(center).applyQuaternion(windTmpQ)
+    target.premultiply(windTmpQ)
+    view.root.position.copy(center).add(offset)
+  }
+  /**
+   * Кадр активной зарядки/подхвата: кувырок + плавный подъём в «руку»
+   * (позиционной тряски нет). В подхвате скорость плавно уходит в |ω| тела
+   * (цель из syncBody) — ступеньки «10 → 5» нет, раскрутка продолжается.
+   */
+  const windFrame = (view: DieView, w: WindView, dt: number): void => {
+    let speed = windAuto()
+    const down = w.down
+    if (down?.mode === 'handoff' && down.mag !== undefined && view.blend) {
+      const k = Math.min(1, (performance.now() - view.blend.t0) / HANDOFF_MS)
+      speed += (down.mag - speed) * k
+    }
+    tumble(view, w, speed, dt)
+    const follow = Math.min(1, dt * 10)
+    view.root.position.x += (w.pos.x - view.root.position.x) * follow
+    view.root.position.y += (w.pos.y + view.unitSize * 0.25 - view.root.position.y) * follow
+    view.root.position.z += (w.pos.z - view.root.position.z) * follow
+  }
   const windup: Table['windup'] = (on, restore = true, keepId) => {
     if (disposed) return
     if (on) {
@@ -551,6 +708,12 @@ export const createTable = (
       windOn = true
       windT = 0
       for (const view of dice.values()) {
+        // Возобновление после winddown: якорь базы не пересоздаём.
+        // Режим подхвата не снимаем — физика ещё не забрала позу.
+        if (view.wind) {
+          if (view.wind.down?.mode !== 'handoff') view.wind.down = null
+          continue
+        }
         if (view.present || view.glide) continue
         const axis = new THREE.Vector3(
           Math.random() - 0.5,
@@ -562,22 +725,27 @@ export const createTable = (
           quat: view.root.quaternion.clone(),
           axis: axis.lengthSq() < 1e-6 ? axis.set(1, 0, 0) : axis.normalize(),
           ph: [Math.random() * 6.283, Math.random() * 6.283, Math.random() * 6.283],
-          jph: [Math.random() * 6.283, Math.random() * 6.283, Math.random() * 6.283],
+          down: null,
         }
       }
       return
     }
     windOn = false
-    for (const [id, view] of dice.entries()) {
-      if (!view.wind) continue
-      if (restore === 'spin' && id === keepId) {
-        // Осмотр: приземляем, но кватернион пользователя (крутка) не трогаем.
-        view.root.position.copy(view.wind.pos)
-      } else if (restore !== false) {
-        view.root.position.copy(view.wind.pos)
-        view.root.quaternion.copy(view.wind.quat)
+    if (restore === false) {
+      // Подхват (бросок/реролл): кувырок продолжается до конца сливки с
+      // телом (syncBody семет blend, update собирает кадры) — freeze-дыры и
+      // «чужого» перехода нет: ось/скорость уходят в реальное ω тела. Если
+      // бросок не случился — таймаут HANDOFF_TIMEOUT_MS снимает сам.
+      for (const view of dice.values()) {
+        if (view.wind && view.wind.down?.mode !== 'handoff')
+          view.wind.down = { t: 0, mode: 'handoff' }
       }
-      view.wind = null
+      return
+    }
+    // Гашение без броска — плавный winddown вместо резкого стопа/телепорта.
+    for (const [id, view] of dice.entries()) {
+      if (!view.wind || view.wind.down?.mode === 'handoff') continue
+      view.wind.down = { t: 0, mode: restore === 'spin' && id === keepId ? 'spin' : 'full' }
     }
   }
 
@@ -633,38 +801,71 @@ export const createTable = (
     if (windOn) windT += dt
     for (const view of dice.values()) {
       // Зарядка: кувырок вокруг центра (пивот как в spinDie) с прецессией
-      // оси, подъём в «руку» и дрожь ∝ удержанию. Якорь — базовая поза
-      // (без дрейфа): позиция тянется к lift+jitter, не копит ошибку.
+      // оси + плавный подъём в «руку» (тряски позиции нет). Якорь — базовая
+      // поза (без дрейфа): позиция тянется к lift, не копит ошибку.
       if (view.wind) {
         const w = view.wind
-        const auto = Math.min(16, 4 + windT * 8)
-        windTmpV
-          .set(
-            Math.sin(1.9 * windT + w.ph[0]),
-            Math.sin(2.7 * windT + w.ph[1]),
-            Math.sin(1.3 * windT + w.ph[2]),
+        if (w.down?.mode === 'handoff') {
+          // Подхват (релиз в бросок): кувырок живёт до конца сливки (см.
+          // blend ниже) — вращение продолжается в реальное ω тела, а не
+          // подменяется. Таймаут — только пока сливки нет (физика не
+          // запустилась — снимаем зарядку, а не крутим вечно).
+          w.down.t += dt
+          if (!view.blend && w.down.t * 1000 > HANDOFF_TIMEOUT_MS) {
+            view.wind = null
+          } else {
+            windFrame(view, w, dt)
+          }
+        } else if (w.down) {
+          // Winddown (без броска): кувырок плавно гаснет, посадка в базу —
+          // без резкого стопа скорости и телепорта (фидбек «10 → резко 5»).
+          w.down.t += dt
+          const k = Math.min(1, (w.down.t * 1000) / WIND_DOWN_MS)
+          const e = 1 - (1 - k) * (1 - k)
+          tumble(view, w, windAuto() * (1 - e), dt)
+          if (w.down.mode === 'full') {
+            // Отмена: подтяжка кватерниона к базе ∝ прогрессу (при k=1 —
+            // точная копия, остаток slerp незаметен <1°).
+            view.root.quaternion.slerp(w.quat, Math.min(1, e * dt * 20))
+          }
+          // 'spin': крутка юзера (кватернион) остаётся — кость просто садится.
+          const follow = Math.min(1, dt * 10)
+          view.root.position.x += (w.pos.x - view.root.position.x) * follow
+          view.root.position.y += (w.pos.y - view.root.position.y) * follow
+          view.root.position.z += (w.pos.z - view.root.position.z) * follow
+          if (k >= 1) {
+            view.root.position.copy(w.pos)
+            if (w.down.mode !== 'spin') view.root.quaternion.copy(w.quat)
+            view.wind = null
+          }
+        } else {
+          // Активная зарядка: только вращение + плавный подъём (тряски нет).
+          windFrame(view, w, dt)
+        }
+        // Сливка подхвата (см. DieView.blend): позиция — smoothstep к
+        // летящему телу (телепорт спавна сглажен), ориентация — от ЖИВОГО
+        // кувырка (spinQ, его крутит tumble) к кватерниону тела: ось и
+        // скорость вращения не обрываются — раскрутка продолжается в
+        // физику (фидбек «все ожидают продолжение, а не странный переход»).
+        const b = view.blend
+        const spin = view.spinQ
+        if (w.down?.mode === 'handoff' && b && spin) {
+          const k = Math.min(1, (now - b.t0) / HANDOFF_MS)
+          const p = k * k * (3 - 2 * k)
+          const pe = 1 - (1 - k) * (1 - k)
+          view.root.position.set(
+            b.fromPos.x + (b.toPos[0] - b.fromPos.x) * p,
+            b.fromPos.y + (b.toPos[1] - b.fromPos.y) * p,
+            b.fromPos.z + (b.toPos[2] - b.fromPos.z) * p,
           )
-          .normalize()
-        w.axis.lerp(windTmpV, Math.min(1, dt * 2)).normalize()
-        windTmpQ.setFromAxisAngle(w.axis, auto * dt)
-        const s = view.root.scale.x
-        const center = spinTmpC
-          .copy(view.localCenter)
-          .multiplyScalar(s)
-          .applyQuaternion(view.root.quaternion)
-          .add(view.root.position)
-        const offset = spinTmpO.copy(view.root.position).sub(center).applyQuaternion(windTmpQ)
-        view.root.quaternion.premultiply(windTmpQ)
-        view.root.position.copy(center).add(offset)
-        const amp = Math.min(0.08, 0.015 + windT * 0.05) * view.unitSize
-        const jt = now / 1000
-        const tx = w.pos.x + Math.sin(jt * 13.7 + w.jph[0]) * amp
-        const tz = w.pos.z + Math.sin(jt * 17.3 + w.jph[1]) * amp
-        const ty = w.pos.y + view.unitSize * 0.25 + Math.sin(jt * 11.1 + w.jph[2]) * amp
-        const follow = Math.min(1, dt * 10)
-        view.root.position.x += (tx - view.root.position.x) * follow
-        view.root.position.y += (ty - view.root.position.y) * follow
-        view.root.position.z += (tz - view.root.position.z) * follow
+          view.root.quaternion.slerpQuaternions(spin, b.toQuat, pe)
+          if (k >= 1) {
+            // Дальше позу ведёт чистая физика (обычные копии syncBody).
+            view.wind = null
+            view.blend = null
+            view.spinQ = null
+          }
+        }
       }
       // Одно движение сразу на финал (full-slerp короткой дугой + лёгкий
       // подскок в середине, чтобы углы не скребли пол).

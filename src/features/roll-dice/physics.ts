@@ -39,6 +39,12 @@ export interface BodyStep {
   vel: [number, number, number]
   lin: number
   ang: number
+  /**
+   * Вектор ω тела (как есть, без фильтрации). Столу нужен для визуального
+   * подхвата зарядки: кувырок уходит в это вращение, а не в чужую ось.
+   * Только репорт — на поток random() и честность броска не влияет.
+   */
+  omega?: [number, number, number]
 }
 
 export type StepCallback = (step: BodyStep) => void
@@ -605,6 +611,7 @@ export const createPhysicsWorld = async (opts?: {
         vel: [0, 0, 0],
         lin: 0,
         ang: 0,
+        omega: [p.body.angularVelocity.x, p.body.angularVelocity.y, p.body.angularVelocity.z],
       })
       p.finish(true)
       return
@@ -624,6 +631,7 @@ export const createPhysicsWorld = async (opts?: {
       vel: [p.body.velocity.x, p.body.velocity.y, p.body.velocity.z],
       lin,
       ang,
+      omega: [p.body.angularVelocity.x, p.body.angularVelocity.y, p.body.angularVelocity.z],
     })
     // Затяжное пересечение (стопка трётся дольше ~0.75 с сим-времени): растащить
     // принудительно, при любых скоростях, — иначе марафон без финиша.
