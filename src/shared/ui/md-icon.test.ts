@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addIcon,
+  checkIcon,
   clearAllIcon,
   closeIcon,
   githubIcon,
@@ -52,6 +53,7 @@ describe('md-icon', () => {
       menuIcon(),
       addIcon(),
       closeIcon(),
+      checkIcon(),
       clearAllIcon(),
       githubIcon(),
       telegramIcon(),
@@ -67,6 +69,15 @@ describe('md-icon', () => {
   it('убрать всё — валидный svg, не крестик', () => {
     expect(clearAllIcon()).toContain('<svg')
     expect(clearAllIcon()).not.toBe(closeIcon())
+  })
+
+  // 2.24: ✓ «Готово» — морф-состояние крестика закрытия после изменения в меню.
+  it('галочка — валидный svg, currentColor, не совпадает с крестиком', () => {
+    const check = checkIcon()
+    expect(check).toContain('<svg')
+    expect(check).toContain('fill="currentColor"')
+    expect(check).toContain('aria-hidden="true"')
+    expect(check).not.toBe(closeIcon())
   })
 
   // 2.17: бренды (simple-icons) — 24×24; лайк — octicon-star GitHub (сетка 16,

@@ -226,6 +226,29 @@ body[data-mode='mtable'] .result {
   height: var(--icon-head);
 }
 
+/* 2.24: морф крестика в ✓ «Готово» после изменения в меню — короткий кроссфейд с
+   поворотом; при prefers-reduced-motion смена мгновенная (правило ниже). */
+.mtableMorph svg {
+  animation: mtableMorphIn 160ms ease;
+}
+
+@keyframes mtableMorphIn {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mtableMorph svg {
+    animation: none;
+  }
+}
+
 /* Ряд Star в шапке (2.17): ссылка на репо живёт как обычная кнопка
    .mtableIcon (тап ≥44, hover/active), контент — ряд как на GitHub. */
 a.mtableIcon {
@@ -787,6 +810,7 @@ input:focus-visible {
 /* display:flex в классах ниже перебивает UA-стиль [hidden] — возвращаем. */
 .mtableSheet[hidden],
 .mtableDrawer[hidden],
+.mtableMusicCard[hidden],
 .mtableBackdrop[hidden] {
   display: none;
 }
@@ -971,6 +995,38 @@ input:focus-visible {
     width: calc(100% - 24px);
     max-height: calc(100% - 32px);
   }
+}
+
+/* 2.23: карточка музыки — та же геометрия центрированного шита (3-й оверлей,
+   один backdrop/closeOverlays с шитом и дровером; форма — tasks/mvp-2/2.23). */
+.mtableMusicCard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  width: min(calc(360px * var(--ui-scale)), calc(100% - 48px));
+  max-height: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
+  background: #121419;
+  border: 1px solid #2a2e36;
+  border-radius: 14px;
+  overflow: hidden;
+  animation: mtablePop 0.16s ease-out;
+}
+
+/* Узкие экраны: карточка шире (поля 12px). */
+@media (max-width: 600px) {
+  .mtableMusicCard {
+    width: calc(100% - 24px);
+    max-height: calc(100% - 32px);
+  }
+}
+
+/* Единственная секция внутри карточки — разделитель снизу не нужен. */
+.mtableMusicCard .mtableSection {
+  border-bottom: none;
 }
 
 @keyframes mtablePop {

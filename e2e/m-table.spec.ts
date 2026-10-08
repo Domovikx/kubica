@@ -70,7 +70,7 @@ test('пустой стол: хинт, две менюшки шапки, кно�
   await expect(page.locator('.mtableAdd')).toHaveText('2d20')
   await expect(firstChip).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: 'Обновить набор' })).toBeVisible()
-  await page.getByLabel('Закрыть выбор костей').click()
+  await page.getByTestId('mtable-sheet-close').click()
   expect(errors).toEqual([])
 })
 
@@ -81,7 +81,7 @@ test('пара d4+d6: удержание кости бросает, истори
   await page.locator('.mtableAdd').click()
   await page.getByRole('button', { name: 'Добавить d4' }).click()
   await page.getByRole('button', { name: 'Добавить d6' }).click()
-  await page.getByLabel('Закрыть выбор костей').click()
+  await page.getByTestId('mtable-sheet-close').click()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'ready')
   // Кнопка набора показывает состав; суммы ещё нет — на бургере иконка меню.
   await expect(page.locator('.mtableAdd')).toHaveText('d4 d6')
@@ -124,7 +124,7 @@ test('сдвиг курсора при удержании зарядку не п
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   await page.locator('.mtableAdd').click()
   await page.getByRole('button', { name: 'Добавить d6' }).click()
-  await page.getByLabel('Закрыть выбор костей').click()
+  await page.getByTestId('mtable-sheet-close').click()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'ready')
   const pt = await diePoint(page)
   expect(pt).not.toBeNull()
@@ -158,13 +158,52 @@ test('шит: степперы считают, минус на нуле молч
   await page.getByRole('button', { name: 'Добавить d6' }).click()
   // Минус уже активен (на столе 2×d4); проверяем, пока шторка открыта.
   await expect(minusD4).toBeEnabled()
-  await page.getByLabel('Закрыть выбор костей').click()
+  await page.getByTestId('mtable-sheet-close').click()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'ready')
   await expect(page.locator('.mtableAdd')).toHaveText('2d4 d6')
   await page.locator('.mtableAdd').click()
   await page.getByRole('button', { name: 'Убрать все' }).click()
   await expect(page.locator('.mtable')).toHaveAttribute('data-phase', 'empty')
   await expect(page.locator('.mtableHint')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('2.24: изменение в меню → крестик морфится в ✓ «Готово», открытие сбрасывает', async ({
+  page,
+}) => {
+  const errors = collectErrors(page)
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  // Шит: открыли без изменений — крестик «Закрыть», path не менялся.
+  await page.locator('.mtableAdd').click()
+  const sheetClose = page.getByTestId('mtable-sheet-close')
+  await expect(sheetClose).toHaveAttribute('aria-label', 'Закрыть выбор костей')
+  const restPath = await sheetClose.locator('path').getAttribute('d')
+  // Изменили состав — ✓ «Готово» (другая path), тап закрывает как раньше.
+  await page.getByRole('button', { name: 'Добавить d6' }).click()
+  await expect(sheetClose).toHaveAttribute('aria-label', 'Готово')
+  expect(await sheetClose.locator('path').getAttribute('d')).not.toBe(restPath)
+  await sheetClose.click()
+  await expect(page.locator('.mtableSheet')).toBeHidden()
+  // Повторное открытие сбрасывает dirty — снова крестик.
+  await page.locator('.mtableAdd').click()
+  await expect(sheetClose).toHaveAttribute('aria-label', 'Закрыть выбор костей')
+  await sheetClose.click()
+  // Дровер: своя исходная метка, тот же морф после изменения настройки.
+  await page.locator('.mtableBurger').click()
+  const drawerClose = page.getByTestId('mtable-drawer-close')
+  await expect(drawerClose).toHaveAttribute('aria-label', 'Закрыть меню')
+  await page.getByRole('button', { name: 'Масштаб интерфейса 150%' }).click()
+  await expect(drawerClose).toHaveAttribute('aria-label', 'Готово')
+  await expect(page.getByTestId('mtable-toast')).toHaveText('Масштаб 150%')
+  await drawerClose.click()
+  await expect(page.locator('.mtableDrawer')).toBeHidden()
+  // Escape — обычный dismiss, даже «грязным» (ничего не теряется: всё live).
+  await page.locator('.mtableBurger').click()
+  await page.getByRole('button', { name: 'Масштаб интерфейса 100%' }).click()
+  await expect(drawerClose).toHaveAttribute('aria-label', 'Готово')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.mtableDrawer')).toBeHidden()
   expect(errors).toEqual([])
 })
 
@@ -204,34 +243,36 @@ test('сеты: сохранить → изменить → обновить, у
   expect(errors).toEqual([])
 })
 
-// 2.22 «Фоновая музыка»: UI тогглов + офлайн-тост + персист громкости.
-// Сеть до YouTube НЕ ходим (ленивая загрузка API) — клики по старту делаем
-// только офлайн (путь без сети) или с заблокированным youtube (второй тест).
-test('музыка: тогглы в шапке и меню, офлайн-тост, громкость переживает reload', async ({
-  page,
-}) => {
+// 2.22/2.23 «Фоновая музыка»: вход по кнопке шапки → карточка, офлайн-тост
+// от тоггла внутри, персист громкости. Сеть до YouTube НЕ ходим (ленивая
+// загрузка API) — клики по старту делаем только офлайн (путь без сети) или с
+// заблокированным youtube (второй тест).
+test('музыка: меню по кнопке шапки, офлайн-тост, громкость переживает reload', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
-  // Шапка: тоггл выключен, aria отражает состояние.
+  // Шапка — вход в меню (2.23): aria-haspopup, без pressed (состояние —
+  // иконка снаружи, тоггл внутри карточки).
   const headBtn = page.getByTestId('mtable-music')
   await expect(headBtn).toBeVisible()
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
-  await expect(headBtn).toHaveAttribute('aria-label', 'Включить фоновую музыку')
-  // Офлайн: тап не грузит API, а роняет тост «нет сети» и не меняет стейт.
+  await expect(headBtn).toHaveAttribute('aria-haspopup', 'dialog')
+  await expect(headBtn).toHaveAttribute('aria-label', 'Фоновая музыка')
+  expect(await headBtn.getAttribute('aria-pressed')).toBeNull()
+  // Офлайн: тап открывает карточку; тост «нет сети» роняет тоггл внутри.
   await page.context().setOffline(true)
   await headBtn.click()
+  const card = page.getByTestId('mtable-music-card')
+  await expect(card).toBeVisible()
+  await expect(page.getByTestId('mtable-music-card-title')).toHaveText('Фоновая музыка')
+  await expect(page.getByTestId('mtable-music-section')).toBeVisible()
+  const toggle = page.getByTestId('mtable-music-toggle')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await toggle.click()
   await expect(page.getByTestId('mtable-toast')).toHaveText('Нет сети — музыка недоступна')
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
   await page.context().setOffline(false)
-  // Меню: секция с тогглом, слайдером (дефолт 40) и хинтом про YouTube.
-  await page.locator('.mtableBurger').click()
-  const section = page.getByTestId('mtable-music-section')
-  await expect(section).toBeVisible()
-  await expect(page.getByTestId('mtable-music-title')).toHaveText('Фоновая музыка')
-  const drawerToggle = page.getByTestId('mtable-music-toggle')
-  await expect(drawerToggle).toHaveAttribute('aria-pressed', 'false')
-  await expect(drawerToggle).toContainText('Включить фон')
+  // Состав карточки: тоггл, хинт про YouTube, слайдер (дефолт 40).
+  await expect(toggle).toContainText('Включить фон')
   await expect(page.getByTestId('mtable-music-hint')).toHaveText(
     'Играет с YouTube: нужна сеть, реклама возможна',
   )
@@ -241,11 +282,19 @@ test('музыка: тогглы в шапке и меню, офлайн-тос�
   for (let i = 0; i < 6; i++) await vol.press('ArrowRight')
   await expect(vol).toHaveValue('70')
   await expect(page.getByTestId('mtable-music-vol-val')).toHaveText('70')
-  // Персист: reload → бургер → тот же ползунок и то же значение в хранилище.
+  // 2.24: изменение в карточке → крестик становится ✓ «Готово», тап закрывает.
+  const cardClose = page.getByTestId('mtable-music-close')
+  await expect(cardClose).toHaveAttribute('aria-label', 'Готово')
+  await cardClose.click()
+  await expect(card).toBeHidden()
+  // Персист: reload → вход по шапке → тот же ползунок и хранилище; чистое
+  // открытие сбрасывает dirty — снова крестик «Закрыть».
   await page.reload()
   await expect(page.locator('.mtableCanvas')).toBeVisible()
-  await page.locator('.mtableBurger').click()
-  await expect(page.getByTestId('mtable-music-volume')).toHaveValue('70')
+  await page.getByTestId('mtable-music').click()
+  await expect(card).toBeVisible()
+  await expect(cardClose).toHaveAttribute('aria-label', 'Закрыть фоновую музыку')
+  await expect(vol).toHaveValue('70')
   expect(await page.evaluate(() => localStorage.getItem('dice-music-vol'))).toBe('70')
   expect(errors).toEqual([])
 })
@@ -267,15 +316,16 @@ test('музыка: youtube недоступен → кнопки aria-disabled 
     'aria-label',
     'Фоновая музыка недоступна: нет доступа к YouTube',
   )
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
-  // Форс-тап (мимо pointer-checks) — guard в musicToggle гасит: загрузки нет.
+  await expect(headBtn).toHaveAttribute('aria-haspopup', 'dialog')
+  // Форс-тап (мимо pointer-checks) открывает карточку — там объяснение;
+  // загрузки API нет (guard в musicToggle), спиннер не появляется.
   await headBtn.click({ force: true })
+  await expect(page.getByTestId('mtable-music-card')).toBeVisible()
   await expect(page.getByTestId('mtable-music-spin')).toHaveCount(0)
-  // Меню: тоггл и хинт тоже объясняют недоступность.
-  await page.locator('.mtableBurger').click()
-  const drawerToggle = page.getByTestId('mtable-music-toggle')
-  await expect(drawerToggle).toHaveAttribute('aria-disabled', 'true')
-  await expect(drawerToggle).toContainText('Нет доступа к YouTube')
+  // Тоггл и хинт карточки тоже объясняют недоступность (переезд из бургера).
+  const toggle = page.getByTestId('mtable-music-toggle')
+  await expect(toggle).toHaveAttribute('aria-disabled', 'true')
+  await expect(toggle).toContainText('Нет доступа к YouTube')
   await expect(page.getByTestId('mtable-music-hint')).toHaveText(
     'Нет доступа к YouTube — фон недоступен',
   )
@@ -284,21 +334,28 @@ test('музыка: youtube недоступен → кнопки aria-disabled 
 
 // 2.22: детерминированная проверка задержек тапа — loading → playing через мок
 // YT (onReady в следующем тике), пауза синхронна в жесте, повторный старт не
-// залипает в loading. Реальная сеть не участвует.
+// залипает в loading. Реальная сеть не участвует. 2.23: стартуем тогглом
+// внутри карточки, состояние дублируется иконкой шапки (класс on).
 test('музыка: тап → loading → playing → пауза → снова playing (мок YT)', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/kubica/')
   await expect(page.locator('.mtableCanvas')).toBeVisible()
   const headBtn = page.getByTestId('mtable-music')
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
   await headBtn.click()
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
+  await expect(page.getByTestId('mtable-music-card')).toBeVisible()
+  const toggle = page.getByTestId('mtable-music-toggle')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
+  await expect(headBtn).toHaveClass(/\bon\b/)
   await expect(page.getByTestId('mtable-music-spin')).toHaveCount(0)
   // Пауза: onStateChange(PAUSED) синхронно внутри жеста.
-  await headBtn.click()
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'false')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(headBtn).not.toHaveClass(/\bon\b/)
   // Второй старт: ресьюм без промежуточного error/watchdog.
-  await headBtn.click()
-  await expect(headBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
+  await expect(headBtn).toHaveClass(/\bon\b/)
   expect(errors).toEqual([])
 })
