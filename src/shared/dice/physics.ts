@@ -15,6 +15,8 @@ import {
   type DieId,
 } from '@/entities/dice-geometry/geometry'
 import { ARENA_APOTHEM, GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
+// quat-математика — один источник в face-orient (DRY: дубли в этом файле удалены).
+import { applyQuatToVec, quatFromUnitVectors, quatMul } from './face-orient'
 import type { Quat } from './readout'
 
 type Cannon = typeof import('cannon-es')
@@ -156,43 +158,6 @@ const clampSpan = (v: number, half: number, r: number): number => {
 
 type Vec3 = [number, number, number]
 
-const vDot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-const qApply = (v: Vec3, q: Quat): Vec3 => {
-  const [x, y, z] = v
-  const [qx, qy, qz, qw] = q
-  const ix = qw * x + qy * z - qz * y
-  const iy = qw * y + qz * x - qx * z
-  const iz = qw * z + qx * y - qy * x
-  const iw = -qx * x - qy * y - qz * z
-  return [
-    ix * qw + iw * -qx + iy * -qz - iz * -qy,
-    iy * qw + iw * -qy + iz * -qx - ix * -qz,
-    iz * qw + iw * -qz + ix * -qy - iy * -qx,
-  ]
-}
-
-const qFromUnitVectors = (a: Vec3, b: Vec3): Quat => {
-  const d = Math.max(-1, Math.min(1, vDot(a, b)))
-  const cx = a[1] * b[2] - a[2] * b[1]
-  const cy = a[2] * b[0] - a[0] * b[2]
-  const cz = a[0] * b[1] - a[1] * b[0]
-  const s = Math.sqrt((1 + d) * 2)
-  const inv = 1 / s
-  return [cx * inv, cy * inv, cz * inv, s / 2]
-}
-
-const qMul = (a: Quat, b: Quat): Quat => {
-  const [ax, ay, az, aw] = a
-  const [bx, by, bz, bw] = b
-  return [
-    aw * bx + ax * bw + ay * bz - az * by,
-    aw * by - ax * bz + ay * bw + az * bx,
-    aw * bz + ax * by - ay * bx + az * bw,
-    aw * bw - ax * bx - ay * by - az * bz,
-  ]
-}
-
 // Порог доснапа: поворот < 15°, а половина минимального угла между соседними
 // нормалями ≥ 20.9° (d20; остальные шире) — верх/низ и исход не меняются.
 const SNAP_MIN_DOT = Math.cos((15 * Math.PI) / 180)
@@ -210,7 +175,7 @@ export const snapFlat = (die: DieId, quat: Quat): Quat => {
   if (die === 'd4') {
     const worlds = normalizedVerts('d4')
       .map((v) => toModelFrame('d4', v))
-      .map((v) => qApply(v, quat))
+      .map((v) => applyQuatToVec(v, quat))
     let best = 0
     let bestY = -Infinity
     worlds.forEach((w, vi) => {
@@ -221,11 +186,11 @@ export const snapFlat = (die: DieId, quat: Quat): Quat => {
     })
     const wn = asUnit(worlds[best])
     if (wn[1] < SNAP_MIN_DOT) return quat
-    return qMul(qFromUnitVectors(wn, [0, 1, 0]), quat)
+    return quatMul(quatFromUnitVectors(wn, [0, 1, 0]), quat)
   }
   const worlds = faceNormals(die)
     .map((n) => toModelFrame(die, n))
-    .map((n) => qApply(n, quat))
+    .map((n) => applyQuatToVec(n, quat))
   let best = 0
   let bestDown = Infinity
   worlds.forEach((w, fi) => {
@@ -236,7 +201,7 @@ export const snapFlat = (die: DieId, quat: Quat): Quat => {
   })
   const wn = asUnit(worlds[best])
   if (-wn[1] < SNAP_MIN_DOT) return quat
-  return qMul(qFromUnitVectors(wn, [0, -1, 0]), quat)
+  return quatMul(quatFromUnitVectors(wn, [0, -1, 0]), quat)
 }
 
 /**
@@ -281,11 +246,11 @@ const vertsInside = (p: DicePose, q: DicePose, margin: number): boolean => {
   const sP = bodyScale(p.die)
   const wns = faceNormals(q.die)
     .map((n) => toModelFrame(q.die, n))
-    .map((n) => qApply(n, q.quat))
+    .map((n) => applyQuatToVec(n, q.quat))
   for (const v of normalizedVerts(p.die)) {
     const vm = toModelFrame(p.die, v)
     const scaled: Vec3 = [vm[0] * sP, vm[1] * sP, vm[2] * sP]
-    const w = qApply(scaled, p.quat)
+    const w = applyQuatToVec(scaled, p.quat)
     const rx = p.pos[0] + w[0] - q.pos[0]
     const ry = p.pos[1] + w[1] - q.pos[1]
     const rz = p.pos[2] + w[2] - q.pos[2]
@@ -766,7 +731,7 @@ export const createPhysicsWorld = async (opts?: {
         if (spawnQuat) {
           let minY = Infinity
           for (const v of scaled) {
-            const w = qApply(v, [spawnQuat[0], spawnQuat[1], spawnQuat[2], spawnQuat[3]])
+            const w = applyQuatToVec(v, [spawnQuat[0], spawnQuat[1], spawnQuat[2], spawnQuat[3]])
             if (w[1] < minY) minY = w[1]
           }
           halfDown = -minY + 1
@@ -897,13 +862,6 @@ export const createPhysicsWorld = async (opts?: {
               raw[0] * snapped[0] + raw[1] * snapped[1] + raw[2] * snapped[2] + raw[3] * snapped[3],
             )
             const quat = 2 * Math.acos(Math.min(1, dot)) < 0.035 ? snapped : raw
-            // ВРЕМЕННО для калибровки: угол до снапа (0 = уже плоский)
-            const same =
-              Math.abs(quat[0] - raw[0]) +
-              Math.abs(quat[1] - raw[1]) +
-              Math.abs(quat[2] - raw[2]) +
-              Math.abs(quat[3] - raw[3])
-            console.log(`[snap] die=${die} changed=${same > 1e-9}`)
             if (opts?.keepStatic) {
               // Пачка: осевшая кость остаётся статическим препятствием до конца
               // броска — живые обязаны огибать её, а не застывать внутри.

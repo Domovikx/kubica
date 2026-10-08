@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { tickPoolWorld } from '@/features/dice-pool/pool'
-import { tickRolls } from '@/features/roll-dice/quick-roll'
 import { mountMobileTable } from '@/widgets/mobile-table/mobile-table'
 
 /**
@@ -27,8 +25,6 @@ export const HomePage = () => {
     let raf = 0
     const animate = (): void => {
       if (!document.hidden) {
-        tickRolls()
-        tickPoolWorld()
         grid.update()
       }
       raf = requestAnimationFrame(animate)

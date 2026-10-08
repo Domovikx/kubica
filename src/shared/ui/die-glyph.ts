@@ -1,6 +1,6 @@
 // Контурные SVG-глифы костей для меню (шторка «+ Кости», палитры).
 // Чистая функция → строка SVG (stroke currentColor, 24×24).
-import type { DieId } from '@/entities/dice-geometry/geometry'
+import type { DieId } from '@/shared/dice/die-id'
 
 const SHAPES: Record<DieId, string> = {
   d4: '<polygon points="12,4 20,19 4,19"/>',

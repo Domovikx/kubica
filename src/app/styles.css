@@ -166,13 +166,6 @@ body {
   color: var(--alfa-red);
 }
 
-.resultSum {
-  width: 100%;
-  font-size: 13px;
-  text-align: center;
-  color: var(--muted);
-}
-
 /* Разбивка пула 2.3: удержана — ярко, сброшена — приглушена и зачёркнута */
 .resultParts {
   width: 100%;

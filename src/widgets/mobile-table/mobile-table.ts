@@ -8,14 +8,9 @@ import {
   type HistoryEntry,
   type PoolPart,
 } from '@/entities/roll-history/history'
-import {
-  quatForD4VertexUp,
-  quatForValueDown,
-  quatMul,
-  quatYaw,
-} from '@/features/roll-dice/face-orient'
-import { diceOverlap, type DicePose, type StepCallback } from '@/features/roll-dice/physics'
-import { resolveD4Below, screenUpWorld } from '@/features/roll-dice/readout'
+import { quatForD4VertexUp, quatForValueDown, quatMul, quatYaw } from '@/shared/dice/face-orient'
+import { diceOverlap, type DicePose, type StepCallback } from '@/shared/dice/physics'
+import { resolveD4Below, screenUpWorld } from '@/shared/dice/readout'
 import {
   buzz as vibrate,
   hapticsEnabled,
@@ -25,7 +20,7 @@ import {
   setMuted,
   startRattle,
   stopRattle,
-} from '@/features/roll-dice/sound'
+} from '@/shared/dice/sound'
 import {
   THROW_POWERS,
   setThrowPower,
@@ -47,17 +42,13 @@ import { UI_SCALES, applyUiScale, setUiScale, uiScale } from '@/features/ui-scal
 import {
   commitTableResult,
   labelTableResult,
-  layoutSlots,
   rollTable,
-  slotsToWorld,
   tickTableWorld,
   type TableDieResult,
 } from '@/features/table-roll/table-roll'
 import {
   expandInstances,
   getSetupStore,
-  MAX_PER_DIE,
-  MAX_TOTAL,
   totalCount,
   type TableCounts,
 } from '@/features/table-setup/table-setup'
@@ -84,7 +75,12 @@ import {
   vibrationIcon,
 } from '@/shared/ui/md-icon'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/die-glyph'
-import { hideResult } from '@/shared/ui/result-pop'
+import { fmtTime, shortSet } from './format'
+import { computeLayout } from './layout'
+import { createChrome } from './chrome'
+import { createGestures } from './gestures'
+import { createStarCounter } from './stars'
+import { createWatermark } from './watermark'
 import './mobile-table.css'
 
 const buzz = (die: DieId, value: number): void => {
@@ -96,32 +92,6 @@ const buzz = (die: DieId, value: number): void => {
 interface Instance {
   die: DieId
   key: string
-}
-
-const fmtTime = (at: number): string => {
-  const d = new Date(at)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-/** Краткая сводка набора для кнопки («d4×1+d6×2», пусто — «пусто»). */
-const summarize = (counts: TableCounts): string => {
-  const parts: string[] = []
-  for (const die of DIE_IDS) {
-    const n = counts[die] ?? 0
-    if (n > 0) parts.push(`${die}×${n}`)
-  }
-  return parts.length > 0 ? parts.join('+') : 'пусто'
-}
-
-/** Короткая запись набора для шапки/заголовка шторки («2d4 d12»). */
-const shortSet = (counts: TableCounts): string => {
-  const parts: string[] = []
-  for (const die of DIE_IDS) {
-    const n = counts[die] ?? 0
-    if (n > 0) parts.push(n > 1 ? `${n}${die}` : die)
-  }
-  return parts.join(' ')
 }
 
 /** DEV-хук для тестов/чекеров: точка кости на экране (см. mountMobileTable). */
@@ -151,56 +121,8 @@ export const mountMobileTable = (
   // Декорация для SR: итог озвучивает кнопка (aria-live ниже).
   canvas.setAttribute('aria-hidden', 'true')
 
-  // Водяной знак (фидбэк: «если нельзя сделать маленьким — надо сделать
-  // большим»): гигантское «Kubica» почти во всю ширину `.mtable`, ПОД канвой
-  // (канва прозрачная, см. table.ts alpha) и под шапкой — фоновая подложка,
-  // как крупный логотип-призрак по центру сцены. Декор — только для глаз.
-  const watermark = document.createElement('div')
-  watermark.className = 'mtableWatermark'
-  watermark.dataset.testid = 'mtable-watermark'
-  watermark.setAttribute('aria-hidden', 'true')
-  const wmText = document.createElement('span')
-  wmText.className = 'mtableWatermarkText'
-  wmText.textContent = 'Kubica'
-  watermark.append(wmText)
-  // Адаптивка под экран (фидбэк): широкий → по горизонтали, узкий → по
-  // вертикали, квадратный → под 45°. Угол считаем от пропорций ВЬЮПОРТА
-  // (контейнер на десктопе зажат max-width 720 — по нему «широта» не видна),
-  // длину — по контейнеру: растягиваем почти во всю доступную длину с
-  // эстетическим отступом от краёв, масштаб шрифта меряем на лету.
-  const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
-  const fitWatermark = (): void => {
-    const r = watermark.getBoundingClientRect()
-    if (r.width < 1 || r.height < 1) return
-    const vw = window.innerWidth || r.width
-    const vh = window.innerHeight || r.height
-    const aspect = vw / Math.max(vh, 1)
-    // ≥1.5 — широко → 0°; ровно 1 (квадрат) → 45°; ≤2/3 — узко → 90°.
-    const angle =
-      aspect >= 1
-        ? 45 * clamp01((1.5 - aspect) / 0.5)
-        : 45 + 45 * clamp01((1 - aspect) / (1 - 2 / 3))
-    const rad = (angle * Math.PI) / 180
-    const cos = Math.cos(rad)
-    const sin = Math.sin(rad)
-    const pad = Math.min(48, Math.max(16, Math.round(Math.min(r.width, r.height) * 0.06)))
-    const availW = r.width - 2 * pad
-    const availH = r.height - 2 * pad
-    // Длина отрезка той же ориентации, что влезает в бокс (по диагонали —
-    // min сторон / cos45).
-    const along = Math.min(
-      cos > 0.001 ? availW / cos : Number.POSITIVE_INFINITY,
-      sin > 0.001 ? availH / sin : Number.POSITIVE_INFINITY,
-    )
-    // Меряем ширину строки при 100px (без поворота) → масштаб под `along`.
-    wmText.style.transform = 'none'
-    wmText.style.fontSize = '100px'
-    const w100 = wmText.getBoundingClientRect().width
-    if (w100 < 1) return
-    const fs = (along / w100) * 100
-    wmText.style.fontSize = `${Math.round(fs * 10) / 10}px`
-    wmText.style.transform = angle > 0.05 ? `rotate(${angle}deg)` : 'none'
-  }
+  // Водяной знак — в watermark.ts (адаптив под вьюпорт, декор для глаз).
+  const watermark = createWatermark()
 
   const head = document.createElement('div')
   head.className = 'mtableHead'
@@ -239,15 +161,6 @@ export const mountMobileTable = (
   headStarLabel.textContent = 'Star'
   headStar.innerHTML = likeIcon()
   headStar.append(headStarLabel, headStarCount)
-  const syncHeadStarAria = (): void => {
-    headStar.setAttribute(
-      'aria-label',
-      headStarCount.hidden
-        ? 'Оценить репозиторий на GitHub (откроется в новой вкладке)'
-        : `Оценить репозиторий Kubica на GitHub, звёзд: ${headStarCount.textContent} (откроется в новой вкладке)`,
-    )
-  }
-  syncHeadStarAria()
   const soundBtn = document.createElement('button')
   soundBtn.className = 'mtableIcon mtableSound'
   soundBtn.dataset.testid = 'mtable-sound'
@@ -422,16 +335,6 @@ export const mountMobileTable = (
   hintInfo.dataset.testid = 'mtable-hint-info'
   hintInfo.textContent = 'Kubica — стол для бросков костей'
   hint.append(hintGlyph, hintTitle, hintSub, hintCta, hintInfo)
-
-  /** Статус вместо композиции (грузится / ошибка): одна строка, без CTA. */
-  const hintStatus = (text: string, disabled: boolean) => {
-    hintTitle.textContent = text
-    hintSub.hidden = true
-    hintCta.hidden = true
-    hintInfo.hidden = true
-    hint.hidden = false
-    hint.disabled = disabled
-  }
 
   // Итог броска визуально нигде (суммы — по граням, история — в меню):
   // для скринридера — невидимый живой регион (бывший aria-live на кнопке).
@@ -1087,7 +990,7 @@ export const mountMobileTable = (
   )
 
   // Лайкалка: ссылка на репозиторий проекта; счётчик звёзд — опциональный
-  // (см. loadStars): при отсутствии сети/лимите API и при 0 — просто скрыт,
+  // (см. stars.ts): при отсутствии сети/лимите API и при 0 — просто скрыт,
   // не спиннер.
   const starLink = document.createElement('a')
   starLink.className = 'mtableSocial mtableStar'
@@ -1104,82 +1007,16 @@ export const mountMobileTable = (
   starCount.dataset.testid = 'star-count'
   starCount.hidden = true
   starLink.append(starName, starCount)
-  const syncStarAria = (): void => {
-    starLink.setAttribute(
-      'aria-label',
-      starCount.hidden
-        ? 'Оценить репозиторий Kubica звездой на GitHub (откроется в новой вкладке)'
-        : `Оценить репозиторий Kubica на GitHub, звёзд: ${starCount.textContent} (откроется в новой вкладке)`,
-    )
-  }
-  syncStarAria()
 
-  // Счётчик звёзд: кэш в localStorage на сутки + GitHub API без токена
-  // (rate limit 60/ч на IP — кэш держит расход в ≤1 запроса/сутки на
-  // посетителя). Деградация тихая: offline/403/429/любая ошибка → счётчик
-  // остаётся скрытым (или в прежнем значении из кэша), без ретраев.
-  const STAR_KEY = 'kubica-stars'
-  const STAR_TTL_MS = 24 * 60 * 60 * 1000
-  let starsAsked = false
-  const showStars = (n: number): void => {
-    // Шторка: 0 звёзд — не социальное доказательство, мету-счётчик прячем
-    // (сама строка-ссылка живёт всегда), показываем от 1.
-    starCount.hidden = n < 1
-    starCount.textContent = starCount.hidden ? '' : String(n)
-    // Шапка — ряд как на GitHub: цифра видна всегда, когда она известна
-    // (GitHub показывает и 0); без данных/офлайн пилюля скрыта.
-    headStarCount.textContent = String(n)
-    headStarCount.hidden = false
-    syncStarAria()
-    syncHeadStarAria()
-  }
-  const loadStars = (): void => {
-    if (starsAsked) return
-    starsAsked = true
-    let cached: { at: number; n: number } | null = null
-    try {
-      const raw = localStorage.getItem(STAR_KEY)
-      const parsed: unknown = raw === null ? null : JSON.parse(raw)
-      if (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        typeof (parsed as { at?: unknown }).at === 'number' &&
-        typeof (parsed as { n?: unknown }).n === 'number'
-      ) {
-        cached = parsed as { at: number; n: number }
-      }
-    } catch {
-      cached = null
-    }
-    if (cached) {
-      showStars(cached.n)
-      if (Date.now() - cached.at < STAR_TTL_MS) return
-    }
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
-    void fetch('https://api.github.com/repos/Domovikx/kubica', {
-      headers: { Accept: 'application/vnd.github+json' },
-    })
-      .then((res): Promise<unknown> =>
-        res.ok ? res.json() : Promise.reject(new Error(String(res.status))),
-      )
-      .then((data: unknown) => {
-        const n =
-          typeof data === 'object' && data !== null
-            ? (data as { stargazers_count?: unknown }).stargazers_count
-            : undefined
-        if (typeof n !== 'number') return
-        showStars(n)
-        try {
-          localStorage.setItem(STAR_KEY, JSON.stringify({ at: Date.now(), n }))
-        } catch {
-          // без хранилища живём — просто будем ходить в API реже
-        }
-      })
-      .catch(() => {
-        // тихо: остаёмся на кэше или без счётчика
-      })
-  }
-  loadStars()
+  // Счётчик звёзд (кэш localStorage на сутки + GitHub API без токена,
+  // тихая деградация) — в stars.ts, сюда только связка двух узлов.
+  const stars = createStarCounter({
+    headLink: headStar,
+    headCount: headStarCount,
+    menuLink: starLink,
+    menuCount: starCount,
+  })
+  stars.load()
 
   socialSection.append(socialTitle, ghLink, tgLink, starLink)
 
@@ -1210,9 +1047,9 @@ export const mountMobileTable = (
     )
   })
 
-  section.append(watermark, canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
-  requestAnimationFrame(fitWatermark)
-  document.fonts?.ready.then(fitWatermark).catch(() => {})
+  section.append(watermark.el, canvas, head, foot, hint, live, backdrop, sheet, drawer, toast)
+  requestAnimationFrame(watermark.fit)
+  document.fonts?.ready.then(watermark.fit).catch(() => {})
 
   container.appendChild(section)
 
@@ -1237,8 +1074,8 @@ export const mountMobileTable = (
     sheet.hidden = true
     drawer.hidden = false
     backdrop.hidden = false
-    // Счётчик звёзд тянем лениво — при первом открытии меню (см. loadStars).
-    loadStars()
+    // Счётчик звёзд тянем лениво — при первом открытии меню (см. stars.ts).
+    stars.load()
     drawerClose.focus()
   }
   const closeOverlays = () => {
@@ -1327,11 +1164,11 @@ export const mountMobileTable = (
     // (случайная ориентация) стартует от хаоса, без видимого рывка.
     windActive = true
     section.dataset.phase = 'charging'
-    table.windup(true)
+    table.windup({ on: true })
     startRattle()
     window.setTimeout(() => {
       windActive = false
-      table.windup(false, false)
+      table.windup({ on: false, restore: false })
       throwAll(throwPowerBoost())
     }, 350)
   }
@@ -1364,109 +1201,47 @@ export const mountMobileTable = (
   /** Кости с состоявшимся броском (остальные — приглушены). */
   const thrownKeys = new Set<string>()
   /**
-   * Зарядка броска (wind-up): удержание ≥3 с на кости. windActive — кувырок
-   * крутится; pendingFire — короткий тап дожигает до 3-й секунды (мёртвых
-   * тапов нет). Защита от случайного переброса теперь сама зарядка:
-   * 3 с удержания — не «щелчок».
+   * Зарядка броска (wind-up): удержание ≥3 с на кости — кувырок крутится.
+   * Вся логика отпускания/добора — в gestures.ts; флаг живёт здесь,
+   * потому что его читает панель (chrome) и трогают reroll/throwAll.
    */
   let windActive = false
-  let pendingFire: number | null = null
-  /** Минимум удержания до броска и время полного заряда (3 с → 5 с). */
-  const MIN_HOLD_MS = 3000
-  const CHARGE_FULL_MS = 5000
 
-  /** Фаза стола для тестов/чекеров: empty | loading | ready | charging | rolling. */
-  const syncPhase = (total: number): string => {
-    const phase =
-      total === 0
-        ? 'empty'
-        : rolling
-          ? 'rolling'
-          : windActive
-            ? 'charging'
-            : loadedKeys.size < instances.length
-              ? 'loading'
-              : 'ready'
-    section.dataset.phase = phase
-    return phase
-  }
-
+  // Панель состояния (фаза/бургер/кнопка/хинт/футер/шторка) — в chrome.ts;
+  // здесь только связка живого состояния замыкания с DOM.
+  const chrome = createChrome({
+    state: () => ({
+      rolling,
+      charging: windActive,
+      loadError,
+      loaded: loadedKeys.size,
+      instances: instances.length,
+      lastResult,
+      activeSet,
+    }),
+    els: {
+      section,
+      burger,
+      foot,
+      footParts,
+      diceBtn,
+      hint,
+      hintTitle,
+      hintSub,
+      hintCta,
+      hintInfo,
+      sheetTitle,
+      sheetClear,
+      rowCounts,
+      rowRoots,
+      getChips: () => chipEls,
+      saveBtn,
+      fitHeadStar,
+    },
+  })
   /** Состав набора — на кнопке («2d4 d12»), сумма — на бургере, разбивка — в футере. */
-  const refreshChrome = (counts: TableCounts) => {
-    const total = totalCount(counts)
-    const phase = syncPhase(total)
-    // На бургере — крупная сумма последнего броска (иконка меню — до броска),
-    // лоадер — пока кости летят. Разбивка — в футере.
-    if (rolling) {
-      burger.innerHTML = '<span class="mtableSpin" data-testid="mtable-spin"></span>'
-      burger.disabled = true
-      burger.setAttribute('aria-busy', 'true')
-    } else {
-      burger.disabled = false
-      burger.removeAttribute('aria-busy')
-      if (lastResult) burger.textContent = String(lastResult.total)
-      else burger.innerHTML = menuIcon()
-    }
-    burger.classList.toggle('hasSum', !rolling && lastResult !== null)
-    // Футер: разбивка пробелами («4 3 1 6 4 8 8 1 10 5»).
-    if (lastResult && !rolling) {
-      const breakdown = formatParts(lastResult.parts).join(' ')
-      footParts.textContent = breakdown
-      foot.hidden = false
-      foot.title = breakdown
-    } else {
-      foot.hidden = true
-    }
-    const short = shortSet(counts)
-    // Пусто — значок «+» (пара бургер-иконке), состав — текстом: он информативен,
-    // без него кнопка становится «слепой». aria-label/title — в обоих состояниях.
-    const label = total > 0 ? `Выбор костей: ${short}` : 'Выбор костей'
-    diceBtn.setAttribute('aria-label', label)
-    diceBtn.title = total > 0 ? summarize(counts) : label
-    if (total > 0) diceBtn.textContent = short
-    // Значок ставим один раз на пустое состояние (firstElementChild — svg, текста нет).
-    else if (diceBtn.firstElementChild === null) diceBtn.innerHTML = addIcon()
-    // Хинт-empty-state: пусто (композиция → шит) / грузится (disabled) /
-    // ошибка загрузки; кости есть — hidden.
-    if (loadError) {
-      hintStatus(`Не загрузилась: ${loadError}`, false)
-    } else if (total === 0) {
-      hintTitle.textContent = 'Добавь кости на стол'
-      hintSub.textContent = 'Пресеты и любой состав — внутри'
-      hintSub.hidden = false
-      hintCta.hidden = false
-      hintInfo.hidden = false
-      hint.hidden = false
-      hint.disabled = false
-    } else if (phase === 'loading') {
-      hintStatus(`Гружу… ${loadedKeys.size}/${instances.length}`, true)
-    } else {
-      hint.hidden = true
-    }
-    if (total === 0) hideResult()
-    // Заголовок шторки: пусто — функция панели, иначе — набор значений.
-    sheetTitle.textContent = short || 'Выбор костей'
-    sheetClear.disabled = total === 0
-    for (const die of DIE_IDS) {
-      const n = counts[die] ?? 0
-      const span = rowCounts.get(die)
-      if (span) span.textContent = String(n)
-      const root = rowRoots.get(die)
-      root?.classList.toggle('on', n > 0)
-      const [minus, plus] = root?.querySelectorAll('button') ?? []
-      if (minus instanceof HTMLButtonElement) minus.disabled = rolling || n <= 0
-      if (plus instanceof HTMLButtonElement)
-        plus.disabled = rolling || n >= MAX_PER_DIE || total >= MAX_TOTAL
-    }
-    for (const btn of chipEls) {
-      const on = btn.dataset.set === activeSet
-      btn.classList.toggle('on', on)
-      btn.setAttribute('aria-pressed', String(on))
-    }
-    saveBtn.textContent = activeSet ? 'Обновить набор' : 'Сохранить сет'
-    saveBtn.disabled = rolling || total === 0
-    // Состав мог изменить ширину шапки — пересаживаем лайк (см. fitHeadStar).
-    fitHeadStar()
+  const refreshChrome = (counts: TableCounts): void => {
+    chrome.refresh(counts)
   }
 
   const addInstance = (inst: Instance, i: number) => {
@@ -1499,11 +1274,8 @@ export const mountMobileTable = (
   }
 
   /**
-   * Канва (известные ширина/высота + отступы шапки и футера) → inner-
-   * прямоугольник → рациональное деление на N костей. Масштаб m (ед./px)
-   * = шаг ячейки в мире / шаг в px: сетка, камера и границы физики живут
-   * в одном масштабе — кость занимает свою ячейку одинаково на любом
-   * экране, а одиночная кость не растекается (потолок ячейки).
+   * Канва + отступы шапки/футера → план (слоты/камера/границы) — чистая
+   * математика в layout.ts, тут только DOM-измерения и применение плана.
    */
   const applyLayout = (): void => {
     const cw = Math.max(1, canvas.clientWidth)
@@ -1520,28 +1292,17 @@ export const mountMobileTable = (
     const bottom = Math.max(0, cRect.bottom - foot.getBoundingClientRect().top)
     footParts.textContent = parts
     foot.hidden = wasHidden
-    const rect = { w: cw, h: Math.max(1, ch - top - bottom) }
-    const biggest = instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0)
-    const gap = Math.max(24, biggest * 1.55)
-    const plan = layoutSlots(instances.length, rect)
-    const m = gap / plan.cell
-    slots = slotsToWorld(plan, m, { x: 0, y: top + rect.h / 2 - ch / 2 })
-    // setFit под канву: при fit = размер·m/2.5 frameCamera даёт ровно
-    // 1 px ↔ m ед. (видимая высота = need·1.25) — сетка садится в канву.
-    table.setFit((cw * m) / 2.5, (ch * m) / 2.5)
-    // «Стол» при броске = та же канва минус верх/низ; врезка под кромку,
-    // но не больше ячейки (иначе борт упрётся в лежащую у кости кость).
-    const inset = Math.min(8, plan.cell * 0.15)
-    // Борт обязан отстоять от крайнего слота не меньше чем на полупоперечник
-    // кости (иначе спавн/каток у стены клинит — «покой в воздухе» и слабая
-    // раскрутка от выдавливания солвером). pad — по самой крупной кости пачки.
-    const pad = biggest + 3
-    const maxSlotX = slots.reduce((a, s) => Math.max(a, Math.abs(s.x)), 0)
-    const maxSlotZ = slots.reduce((a, s) => Math.max(a, Math.abs(s.z)), 0)
-    physBounds = {
-      hx: Math.max(1, (rect.w / 2 - inset) * m, maxSlotX + pad),
-      hz: Math.max(1, (rect.h / 2 - inset) * m, maxSlotZ + pad),
-    }
+    const plan = computeLayout({
+      canvasW: cw,
+      canvasH: ch,
+      top,
+      bottom,
+      count: instances.length,
+      biggest: instances.reduce((m, v) => Math.max(m, physMaxDim(v.die)), 0),
+    })
+    slots = plan.slots
+    table.setFit(plan.fitW, plan.fitH)
+    physBounds = plan.physBounds
   }
 
   /**
@@ -1595,7 +1356,7 @@ export const mountMobileTable = (
   const throwAll = (powerBoost = 0, flick?: { x: number; z: number }): void => {
     if (rolling || disposed) return
     windActive = false
-    table.windup(false, false)
+    table.windup({ on: false, restore: false })
     const thrown = [...instances]
     if (thrown.length === 0) return
     const thrownSlots = slots.map((s) => ({ ...s }))
@@ -1669,8 +1430,17 @@ export const mountMobileTable = (
           }
           finishPack()
         })
-        .catch(() => {
-          if (!disposed) finishPack()
+        .catch((err: unknown) => {
+          // Отказ физмира/rollTable: раньше молчал (юзер видел «ничего не
+          // происходит») — репортим причину и возвращаем кнопку в idle.
+          console.error('[table] Бросок пачкой упал', err)
+          if (disposed) return
+          const nothing = final.size === 0
+          finishPack()
+          if (nothing) {
+            showToast('Бросок сорвался — кинь ещё раз')
+            live.textContent = 'Бросок не удался'
+          }
         })
     }
     const finishPack = (): void => {
@@ -1756,123 +1526,21 @@ export const mountMobileTable = (
     )
   }
 
-  /**
-   * Снять зарядку: restore=true — позы всех костей в базу (отмена);
-   * 'spin' — в базу, но крутка кости keepId остаётся (осмотр при
-   * отпускании <3 с сдвинувшимся курсором). Без броска — плавный
-   * winddown ~0.4 с (фидбек «резкая остановка раскрутки»).
-   */
-  const endWind = (restore: boolean | 'spin', keepId?: string): void => {
-    windActive = false
-    table.windup(false, restore, keepId)
-    stopRattle()
-    refreshChrome(setup.get())
-  }
-  /**
-   * Релиз зарядки: сила = меню + удержание (3 с → 0, 5 с → +0.5) + флик
-   * пальцем (+0.4); кувырок не откатываем — он продолжается в подхвате,
-   * уходя в реальное ω тела (оси/скорость броска).
-   */
-  const fireThrow = (heldMs: number, vxPx: number, vyPx: number): void => {
-    windActive = false
-    if (rolling || disposed) {
-      // Пока добирали 3 с — стол ушёл в другой бросок: зарядку гасим молча.
-      table.windup(false)
-      stopRattle()
-      return
-    }
-    const charge = Math.max(0, Math.min(1, (heldMs - MIN_HOLD_MS) / (CHARGE_FULL_MS - MIN_HOLD_MS)))
-    const flick01 = Math.min(1, Math.hypot(vxPx, vyPx) / 1.5)
-    const boost = Math.min(1.6, throwPowerBoost() + 0.5 * charge + 0.4 * flick01)
-    table.windup(false, false)
-    throwAll(boost, table.flickVec(vxPx, vyPx))
-  }
-
-  // Жест на поле: удержание на кости ≥3 с — зарядка; движение при зажатой
-  // кнопке зарядку НЕ прерывает (кувырок идёт, кость ещё крутится трекболом
-  // под курсором). Отпускание: ≥3 с — бросок (заряд + флик); раньше — добор
-  // до 3 с (мёртвых тапов нет), но если курсор сдвинулся >8 px — это осмотр:
-  // зарядка гаснет (эта кость остаётся в крутке, остальные — в базу), броска
-  // нет. Драг по фону — ничего (камера статична). Сила — заряд + флик + меню.
-  canvas.addEventListener('pointerdown', (e) => {
-    if (!e.isPrimary || rolling) return
-    const x = e.clientX
-    const y = e.clientY
-    const t = performance.now()
-    const dieId = table.pickDieId(x, y)
-    if (!dieId) return
-    // Захват указателя: отпускание за краем канвы/над шапкой не теряется.
-    try {
-      canvas.setPointerCapture(e.pointerId)
-    } catch {
-      /* указатель уже свободен */
-    }
-    // Новое нажатие перекрывает висящий доброс от короткого тапа.
-    if (pendingFire !== null) {
-      window.clearTimeout(pendingFire)
-      pendingFire = null
-    }
-    if (!windActive) {
-      windActive = true
-      section.dataset.phase = 'charging'
-      table.windup(true)
-      startRattle()
-      vibrate(10)
-    }
-    let lastX = x
-    let lastY = y
-    let moved = false
-    // Последний сэмпл движения — скорость флика в момент релиза (px/мс).
-    let sample = { t, x, y }
-    const onMove = (mv: PointerEvent) => {
-      if (!mv.isPrimary) return
-      const dx = mv.clientX - lastX
-      const dy = mv.clientY - lastY
-      lastX = mv.clientX
-      lastY = mv.clientY
-      const now = performance.now()
-      if (now - sample.t >= 16) sample = { t: now, x: mv.clientX, y: mv.clientY }
-      if (!moved && Math.hypot(mv.clientX - x, mv.clientY - y) > 8) moved = true
-      if (moved) table.spinDie(dieId, dx, dy)
-    }
-    const cleanup = () => {
-      canvas.removeEventListener('pointermove', onMove)
-      canvas.removeEventListener('pointerup', onUp)
-      canvas.removeEventListener('pointercancel', onCancel)
-      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
-    }
-    const onUp = (up: PointerEvent) => {
-      cleanup()
-      if (!up.isPrimary) return
-      const held = performance.now() - t
-      const dt = Math.max(1, performance.now() - sample.t)
-      const vx = (up.clientX - sample.x) / dt
-      const vy = (up.clientY - sample.y) / dt
-      if (held >= MIN_HOLD_MS) {
-        // Зарядка пережила движение — время решает: ≥3 с бросаем.
-        fireThrow(held, vx, vy)
-      } else if (moved) {
-        // Осмотр: крутка этой кости остаётся, остальные — в базу.
-        endWind('spin', dieId)
-      } else {
-        // Добор зарядки до 3 с: тап не «мёртвый», просто бросает на отметке.
-        pendingFire = window.setTimeout(() => {
-          pendingFire = null
-          fireThrow(MIN_HOLD_MS, vx, vy)
-        }, MIN_HOLD_MS - held)
-      }
-    }
-    const onCancel = () => {
-      cleanup()
-      if (pendingFire !== null) {
-        window.clearTimeout(pendingFire)
-        pendingFire = null
-      }
-      endWind(true)
-    }
-    canvas.addEventListener('pointermove', onMove)
-    canvas.addEventListener('pointerup', onUp)
-    canvas.addEventListener('pointercancel', onCancel)
+  // Жест на поле (зарядка/осмотр/добор/релиз) — в gestures.ts.
+  const gestures = createGestures({
+    canvas,
+    section,
+    table,
+    isRolling: () => rolling,
+    isDisposed: () => disposed,
+    wind: {
+      isCharging: () => windActive,
+      setCharging: (on: boolean) => {
+        windActive = on
+      },
+    },
+    throwAll,
+    refresh: () => refreshChrome(setup.get()),
   })
 
   requestAnimationFrame(() => {
@@ -1895,14 +1563,11 @@ export const mountMobileTable = (
       table.resize()
       relayout()
       fitHeadStar()
-      fitWatermark()
+      watermark.fit()
     },
     dispose() {
       disposed = true
-      if (pendingFire !== null) {
-        window.clearTimeout(pendingFire)
-        pendingFire = null
-      }
+      gestures.cancelPending()
       stopRattle()
       document.removeEventListener('keydown', onKey)
       window.clearTimeout(toastTimer)

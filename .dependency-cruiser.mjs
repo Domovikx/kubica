@@ -19,7 +19,10 @@ export default {
     // FSD: импорты только вниз по слоям app → pages → widgets → features → entities.
     // Исключения (не архитектурные зависимости):
     // - *.css — колокализованные стили слайса, а не связь модулей;
-    // - *.test.ts — тесты импортируют свой же модуль по определению.
+    // - *.test.ts — тесты импортируют свой же модуль по определению;
+    // - модули одного слайса (mobile-table → chrome/layout/…, table-setup →
+    //   presets) — колокализация, а не импорт «друг друга» между слайсами
+    //   ($1 в to.pathNot — имя слайса-источника из from.path).
     {
       name: 'fsd-no-upward-imports',
       severity: 'error',
@@ -31,15 +34,18 @@ export default {
       name: 'fsd-widgets-down-only',
       severity: 'error',
       comment: 'Виджеты не импортируют страницы, приложение и друг друга.',
-      from: { path: 'src/widgets/[^/]+', pathNot: '\\.test\\.tsx?$' },
-      to: { path: 'src/(app|pages|widgets)', pathNot: '\\.css$' },
+      from: { path: '^src/widgets/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      to: { path: 'src/(app|pages|widgets)', pathNot: ['\\.css$', '^src/widgets/$1/'] },
     },
     {
       name: 'fsd-features-down-only',
       severity: 'error',
       comment: 'Фичи не импортируют виджеты, страницы и приложение.',
-      from: { path: 'src/features/[^/]+', pathNot: '\\.test\\.tsx?$' },
-      to: { path: 'src/(app|pages|widgets|features)', pathNot: '\\.css$' },
+      from: { path: '^src/features/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      to: {
+        path: 'src/(app|pages|widgets|features)',
+        pathNot: ['\\.css$', '^src/features/$1/'],
+      },
     },
     {
       name: 'fsd-entities-down-only',

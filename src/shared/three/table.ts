@@ -1,6 +1,6 @@
 // Общий стеклянный стол: одна сцена/камера снизу, N костей-мешей.
-// Сознательно повторяет настройку сцены viewer.ts (свет/кадр/твины), а не
-// переиспользует Viewer: одиночные витрины — эталоны, их не рефакторим.
+// Настройка сцены (свет/кадр/твины) сознательно повторяет бывший viewer.ts —
+// одиночные витрины были эталоном; сам модуль удалён (0 потребителей).
 // Консолидация в stage-фабрику — follow-up 2.7.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -93,7 +93,6 @@ export interface Table {
     onError?: () => void,
   ) => void
   removeDie: (id: string) => void
-  hasDie: (id: string) => boolean
   /**
    * Живая синхронизация с физ-телом (позиция + кватернион каждый тик).
    * omega — вектор ω тела (репорт физики): в режиме подхвата его ось/величина
@@ -114,8 +113,6 @@ export interface Table {
   ) => void
   /** Плавный возврат в слот по полу (поза не трогается). */
   glideTo: (id: string, x: number, z: number, onDone?: () => void, durMs?: number) => void
-  /** Луч в любую кость: тап мимо костей — не бросок. */
-  pickAny: (clientX: number, clientY: number) => boolean
   /** Луч в конкретную кость: id инстанса (key) или null. */
   pickDieId: (clientX: number, clientY: number) => string | null
   /**
@@ -142,7 +139,7 @@ export interface Table {
    * (фидбек «скорость 10 → резко 5»): кувырок затухает, посадка в базу без
    * телепорта; в режиме 'spin' у keepId кватернион юзера остаётся.
    */
-  windup: (on: boolean, restore?: boolean | 'spin', keepId?: string) => void
+  windup: (opts: { on: boolean; restore?: boolean | 'spin'; keepId?: string }) => void
   /**
    * Приглушить кость до первого броска (грани есть, но «не горят» —
    * иначе цифры читаются как состоявшийся результат).
@@ -572,8 +569,6 @@ export const createTable = (
     return null
   }
 
-  const pickAny: Table['pickAny'] = (clientX, clientY) => pickDieId(clientX, clientY) !== null
-
   const findDiePoint: Table['findDiePoint'] = () => {
     if (disposed || dice.size === 0) return null
     const rect = canvas.getBoundingClientRect()
@@ -701,7 +696,7 @@ export const createTable = (
     view.root.position.y += (w.pos.y + view.unitSize * 0.25 - view.root.position.y) * follow
     view.root.position.z += (w.pos.z - view.root.position.z) * follow
   }
-  const windup: Table['windup'] = (on, restore = true, keepId) => {
+  const windup: Table['windup'] = ({ on, restore = true, keepId }) => {
     if (disposed) return
     if (on) {
       if (windOn) return
@@ -935,11 +930,9 @@ export const createTable = (
   return {
     addDie,
     removeDie,
-    hasDie: (id) => dice.has(id),
     syncBody,
     presentTo,
     glideTo,
-    pickAny,
     pickDieId,
     findDiePoint,
     spinDie,

@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 180 * 1000,
   expect: { timeout: 60 * 1000 },
   fullyParallel: true,
-  forbidOnly: false,
+  forbidOnly: true,
   // Retry ×1 (BP): удержание-тест таймингозависим от rAF/SwiftShader и в
   // полных прогонах (3 проекта × 6 тестов + dev-сервер) проседает под
   // нагрузкой — точечно проходит стабильно. on-first-retry ниже как раз под это.

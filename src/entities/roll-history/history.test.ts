@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createHistoryStore, formatParts, type PoolPart } from './history'
-import type { RollResult } from '@/features/roll-dice/roll-store'
+import {
+  createHistoryStore,
+  formatLabel,
+  formatParts,
+  type PoolPart,
+  type RollInput,
+} from './history'
 
 const memStorage = () => {
   const data = new Map<string, string>()
@@ -15,12 +20,10 @@ const memStorage = () => {
   }
 }
 
-const result = (over: Partial<RollResult> = {}): RollResult => ({
+const result = (over: Partial<RollInput> = {}): RollInput => ({
   die: 'd20',
   value: 17,
   display: '17',
-  quat: [0, 0, 0, 1],
-  settled: true,
   at: 1000,
   ...over,
 })
@@ -105,6 +108,55 @@ describe('roll-history', () => {
     expect(h2.list()[0].label).toBe('2d20kh1')
     expect(h2.list()[0].parts).toHaveLength(2)
     expect(h2.list()[1].parts).toBeUndefined()
+  })
+
+  it('не-массив в хранилище читается как пустая история', () => {
+    const storage = memStorage()
+    storage.setItem('dice-rolls-v1', JSON.stringify({ die: 'd6' }))
+    expect(createHistoryStore(storage).list()).toEqual([])
+  })
+
+  it('мусорные записи отфильтрованы, валидные остаются', () => {
+    const storage = memStorage()
+    storage.setItem(
+      'dice-rolls-v1',
+      JSON.stringify([
+        null,
+        'строка',
+        { die: 'd6' },
+        { die: 'd6', value: 4, at: 1000 },
+        { die: 5, value: 1, at: 1 },
+      ]),
+    )
+    const list = createHistoryStore(storage).list()
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ die: 'd6', value: 4, at: 1000 })
+  })
+
+  it('запись — только поля истории: лишнего в JSON нет', () => {
+    const storage = memStorage()
+    const h = createHistoryStore(storage)
+    h.add(result({ label: '2d20kh1' }))
+    h.add(result({ at: 2000 }))
+    const raw = storage.getItem('dice-rolls-v1') as string
+    const parsed = JSON.parse(raw) as Array<Record<string, unknown>>
+    expect(Object.keys(parsed[0]).sort()).toEqual(['at', 'die', 'display', 'value'])
+    expect(Object.keys(parsed[1]).sort()).toEqual(['at', 'die', 'display', 'label', 'value'])
+    expect(raw).not.toContain('undefined')
+  })
+})
+
+describe('formatLabel: лейбл для показа', () => {
+  it('плюс-разделитель костей → пробел', () => {
+    expect(formatLabel('d4+d6')).toBe('d4 d6')
+    expect(formatLabel('d20+d6')).toBe('d20 d6')
+    expect(formatLabel('4d6+2d4')).toBe('4d6 2d4')
+  })
+
+  it('модификаторы и минус остаются частью нотации', () => {
+    expect(formatLabel('2d20kh1+5')).toBe('2d20kh1+5')
+    expect(formatLabel('4d6-L')).toBe('4d6-L')
+    expect(formatLabel('8d6')).toBe('8d6')
   })
 })
 

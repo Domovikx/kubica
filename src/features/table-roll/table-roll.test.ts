@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { DieId } from '@/entities/dice-geometry/geometry'
-import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
-import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
-import type { Quat } from '@/features/roll-dice/readout'
+import { createPhysicsWorld, type PhysicsWorld } from '@/shared/dice/physics'
+import { pumpUntilSettled } from '@/shared/dice/test-pump'
+import type { Quat } from '@/shared/dice/readout'
 import {
   labelTableResult,
   layoutSlots,

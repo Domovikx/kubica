@@ -9,7 +9,7 @@ import {
   saveCustomPreset,
   uniquePresetName,
 } from './presets'
-import { emptyCounts, totalCount } from './table-setup'
+import { emptyCounts, MAX_TOTAL, totalCount } from './table-setup'
 
 const memStorage = () => {
   const data = new Map<string, string>()
@@ -64,5 +64,25 @@ describe('table presets', () => {
     expect(uniquePresetName([])).toBe('Сет 1')
     expect(uniquePresetName([{ name: 'Сет 1' }])).toBe('Сет 2')
     expect(uniquePresetName([{ name: 'Сет 1' }, { name: 'Сет 3' }])).toBe('Сет 2')
+  })
+
+  it('битый JSON своих наборов → пусто, без падения', () => {
+    const s = memStorage()
+    s.setItem('kubica-presets-v1', 'не json {{{')
+    expect(loadCustomPresets(s)).toEqual([])
+    s.setItem('kubica-presets-v1', '{"name":"не массив"}')
+    expect(loadCustomPresets(s)).toEqual([])
+  })
+
+  it('свой набор клампится капами: на кость и на стол', () => {
+    const s = memStorage()
+    saveCustomPreset('Гора d6', { ...emptyCounts(), d6: 99 }, s)
+    saveCustomPreset('Пара', { ...emptyCounts(), d6: 8, d20: 8 }, s)
+    const list = loadCustomPresets(s)
+    expect(list.find((p) => p.name === 'Гора d6')?.counts.d6).toBe(8)
+    const pair = list.find((p) => p.name === 'Пара')
+    expect(pair?.counts.d6).toBe(8)
+    expect(pair?.counts.d20).toBe(2)
+    expect(totalCount(pair!.counts)).toBeLessThanOrEqual(MAX_TOTAL)
   })
 })

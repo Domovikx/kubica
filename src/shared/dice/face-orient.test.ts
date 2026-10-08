@@ -18,6 +18,7 @@ import {
   quatYaw,
   toModelFrame,
 } from './face-orient'
+import { readBottomRoll, readRoll } from './readout'
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const norm = (v: Vec3): number => Math.hypot(v[0], v[1], v[2])
@@ -181,4 +182,32 @@ describe('face-orient: калибровка кадра GLB (репорт пол�
       expect(dot(got, want) / (l * t)).toBeGreaterThan(0.9999)
     })
   }
+})
+
+describe('face-orient × readout: сверка независимым читальщиком', () => {
+  // Кватернион из face-orient кладёт грань/вершину наверх (вниз) — результат
+  // обязан читаться тем же значением кодом readout (кросс-модульный оракул:
+  // два разных тракта геометрии не должны расходиться).
+  const viewDir: Vec3 = [0.42, 0.61, 0.67]
+  const valuesOf = (die: DieId): number[] => faceNormals(die).map((_, fi) => faceValue(die, fi))
+
+  for (const die of ['d6', 'd8', 'd10', 'd12', 'd20'] as const) {
+    it(`${die}: quatForValueUp → readRoll читает ровно положенное значение`, () => {
+      for (const v of valuesOf(die)) {
+        expect(readRoll(die, quatForValueUp(die, v, viewDir))).toBe(v)
+      }
+    })
+
+    it(`${die}: quatForValueDown → readBottomRoll читает то же снизу`, () => {
+      for (const v of valuesOf(die)) {
+        expect(readBottomRoll(die, quatForValueDown(die, v, viewDir))).toBe(v)
+      }
+    })
+  }
+
+  it('d4: quatForD4VertexUp → readRoll читает значение верхней вершины', () => {
+    for (const v of [1, 2, 3, 4]) {
+      expect(readRoll('d4', quatForD4VertexUp(v, viewDir))).toBe(v)
+    }
+  })
 })

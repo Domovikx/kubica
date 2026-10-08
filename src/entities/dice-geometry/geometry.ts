@@ -2,9 +2,12 @@
 // Зеркало tools/dice_set.scad (unit-вершины, грани, opposite-таблицы, values_for).
 // Чистый TS без three-зависимостей: вершины — [x, y, z], грани — индексы.
 // Нормировка как в SCAD: вершины делятся на inradius → плоскости граней на 1.0.
+import type { DieId } from '@/shared/dice/die-id'
 
 export type Vec3 = [number, number, number]
-export type DieId = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20'
+// Источник DieId — shared (shared/ui/die-glyph не ходит в entities); реэкспорт,
+// чтобы существующие потребители не меняли путь импорта.
+export type { DieId } from '@/shared/dice/die-id'
 
 const PHI = (1 + Math.sqrt(5)) / 2
 

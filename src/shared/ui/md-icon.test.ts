@@ -6,7 +6,6 @@ import {
   githubIcon,
   menuIcon,
   musicIcon,
-  presetsIcon,
   soundIcon,
   likeIcon,
   telegramIcon,
@@ -35,9 +34,34 @@ describe('md-icon', () => {
     expect(menu).not.toBe(close)
   })
 
-  it('пресеты — валидный svg', () => {
-    expect(presetsIcon()).toContain('<svg')
-    expect(presetsIcon()).not.toBe(menuIcon())
+  it('добавить — валидный svg, своя path у кнопки набора', () => {
+    const add = addIcon()
+    expect(add).toContain('<svg')
+    expect(add).toContain('fill="currentColor"')
+    expect(add).not.toBe(menuIcon())
+    expect(add).not.toBe(closeIcon())
+  })
+
+  it('все экспортируемые иконки — svg с aria-hidden и без дублей path', () => {
+    const all = [
+      soundIcon(false),
+      soundIcon(true),
+      vibrationIcon(),
+      musicIcon(true),
+      musicIcon(false),
+      menuIcon(),
+      addIcon(),
+      closeIcon(),
+      clearAllIcon(),
+      githubIcon(),
+      telegramIcon(),
+      likeIcon(),
+    ]
+    for (const svg of all) {
+      expect(svg).toContain('<svg')
+      expect(svg).toContain('aria-hidden="true"')
+    }
+    expect(new Set(all).size).toBe(all.length)
   })
 
   it('убрать всё — валидный svg, не крестик', () => {

@@ -5,9 +5,9 @@
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import { normalize, type RollExpr } from '@/entities/dice-notation/notation'
 import { formatLabel, getHistoryStore, type PoolPart } from '@/entities/roll-history/history'
-import { createPhysicsWorld, cryptoRandom, type PhysicsWorld } from '@/features/roll-dice/physics'
-import { displayValue, readRoll, scoreValue } from '@/features/roll-dice/readout'
-import { playThock, stopRattle } from '@/features/roll-dice/sound'
+import { createPhysicsWorld, cryptoRandom, type PhysicsWorld } from '@/shared/dice/physics'
+import { displayValue, readRoll, scoreValue } from '@/shared/dice/readout'
+import { playThock, stopRattle } from '@/shared/dice/sound'
 import { showResult } from '@/shared/ui/result-pop'
 
 export type { PoolPart }
@@ -124,14 +124,7 @@ const getPoolWorld = (): Promise<PhysicsWorld> => {
   return poolWorld
 }
 
-/** Продвинуть висящие броски пула. Вызывает rAF-цикл приложения каждый кадр. */
-export const tickPoolWorld = (): void => {
-  if (poolWorld) {
-    void poolWorld.then((world) => world.tick())
-  }
-}
-
-/** Бросок пула: общий ленивый физмир + очередь (как quickRoll для одиночных). */
+/** Бросок пула: общий ленивый физмир + очередь. */
 export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> => {
   const run = async (): Promise<PoolResult> => {
     const world = await getPoolWorld()
@@ -153,7 +146,7 @@ export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> =>
         label: result.label,
         parts: result.parts,
       })
-      showResult(formatLabel(result.label), String(result.total), undefined, result.parts)
+      showResult(formatLabel(result.label), String(result.total), result.parts)
       return result
     } finally {
       stopRattle()

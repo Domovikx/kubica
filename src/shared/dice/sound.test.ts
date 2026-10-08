@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { hitParams, playThock, rattleHit, startRattle, stopRattle } from './sound'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  hapticsEnabled,
+  hitParams,
+  isMuted,
+  playThock,
+  rattleHit,
+  setHaptics,
+  setMuted,
+  startRattle,
+  stopRattle,
+} from './sound'
 
 const seeded = (seq: number[]) => {
   let i = 0
@@ -68,5 +78,61 @@ describe('sound: безопасность без AudioContext (node/headless)', 
       playThock('d20')
       stopRattle()
     }).not.toThrow()
+  })
+})
+
+describe('sound: тумблеры мьюта и вибро (персист)', () => {
+  // vitest-окружение — node: localStorage нет, стабим свой (in-memory).
+  const store = new Map<string, string>()
+
+  beforeEach(() => {
+    store.clear()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('дефолт: звук вкл, вибро вкл; roundtrip переживает перечитывание', () => {
+    expect(isMuted()).toBe(false)
+    expect(hapticsEnabled()).toBe(true)
+    setMuted(true)
+    setHaptics(false)
+    expect(isMuted()).toBe(true)
+    expect(hapticsEnabled()).toBe(false)
+    setMuted(false)
+    setHaptics(true)
+    expect(isMuted()).toBe(false)
+    expect(hapticsEnabled()).toBe(true)
+  })
+
+  it('битые значения в хранилище не выключают звук и вибро молча', () => {
+    store.set('dice-muted', 'да')
+    store.set('dice-haptics', 'нет')
+    expect(isMuted()).toBe(false)
+    expect(hapticsEnabled()).toBe(true)
+  })
+
+  it('битое хранилище (бросает) — тумблеры на дефолтах, без падения', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('quota')
+      },
+      setItem: () => {
+        throw new Error('quota')
+      },
+      removeItem: () => {
+        throw new Error('quota')
+      },
+    })
+    expect(isMuted()).toBe(false)
+    expect(hapticsEnabled()).toBe(true)
+    expect(() => setMuted(true)).not.toThrow()
+    expect(() => setHaptics(false)).not.toThrow()
   })
 })

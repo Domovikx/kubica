@@ -302,3 +302,19 @@ describe('readout: верхняя грань/вершина', () => {
     expect(scoreValue('const', 0)).toBe(0)
   })
 })
+
+describe('readout: верх экрана', () => {
+  it('screenUpWorld: нормализованная горизонталь взгляда, y=0', () => {
+    expect(screenUpWorld([0, 0.9, 0.1])).toEqual([0, 0, 1])
+    const up = screenUpWorld([3, 5, 4])
+    expect(up[1]).toBe(0)
+    expect(up[0]).toBeCloseTo(0.6, 10)
+    expect(up[2]).toBeCloseTo(0.8, 10)
+    expect(Math.hypot(up[0], up[2])).toBeCloseTo(1, 10)
+  })
+
+  it('screenUpWorld: взгляд строго вверх и нулевой вектор — фолбэк +Z без NaN', () => {
+    expect(screenUpWorld([0, 1, 0])).toEqual([0, 0, 1])
+    expect(screenUpWorld([0, 0, 0])).toEqual([0, 0, 1])
+  })
+})

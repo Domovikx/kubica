@@ -1,7 +1,5 @@
 import { createRoot } from 'react-dom/client'
-import { Provider } from 'react-redux'
 import { App } from './App'
-import { store } from './store'
 import './styles.css'
 
 // Режим стола — синхронно до первого рендера: CSS body[data-mode='mtable']
@@ -20,11 +18,7 @@ const boot = async (): Promise<void> => {
       console.error('[msw] не запустился, работаем без моков:', error)
     }
   }
-  createRoot(document.getElementById('root')!).render(
-    <Provider store={store}>
-      <App />
-    </Provider>,
-  )
+  createRoot(document.getElementById('root')!).render(<App />)
 }
 
 void boot()

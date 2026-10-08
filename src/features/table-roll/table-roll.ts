@@ -5,18 +5,14 @@
 import type { DieId, Vec3 } from '@/entities/dice-geometry/geometry'
 import type { PoolPart } from '@/entities/roll-history/history'
 import { formatLabel, getHistoryStore } from '@/entities/roll-history/history'
-import {
-  createPhysicsWorld,
-  type PhysicsWorld,
-  type StepCallback,
-} from '@/features/roll-dice/physics'
+import { createPhysicsWorld, type PhysicsWorld, type StepCallback } from '@/shared/dice/physics'
 import {
   displayValue,
   readBottomRoll,
   resolveD4Below,
   scoreValue,
   type Quat,
-} from '@/features/roll-dice/readout'
+} from '@/shared/dice/readout'
 import { hideResult, showResult } from '@/shared/ui/result-pop'
 
 export interface TableDieRequest {
@@ -153,7 +149,7 @@ export const commitTableResult = (
     hideResult()
     return
   }
-  showResult(formatLabel(labelled.label), String(labelled.total), undefined, labelled.parts)
+  showResult(formatLabel(labelled.label), String(labelled.total), labelled.parts)
 }
 
 /** Внутренний прямоугольник канвы под раскладку (px): канва минус отступы. */

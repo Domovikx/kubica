@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { parseNotation } from '@/entities/dice-notation/notation'
 import { formatParts } from '@/entities/roll-history/history'
 import { createWorldDriver, simulatePool, type PoolDriver } from './pool'
-import { createPhysicsWorld, type PhysicsWorld } from '@/features/roll-dice/physics'
-import { displayValue } from '@/features/roll-dice/readout'
-import { pumpUntilSettled } from '@/features/roll-dice/test-pump'
+import { createPhysicsWorld, type PhysicsWorld } from '@/shared/dice/physics'
+import { displayValue } from '@/shared/dice/readout'
+import { pumpUntilSettled } from '@/shared/dice/test-pump'
 
 /** Детерминированный драйвер: значения выдаются по очереди вызовов. */
 const stubDriver = (values: number[]): PoolDriver => {
