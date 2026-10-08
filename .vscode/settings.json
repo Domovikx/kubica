@@ -1,5 +1,5 @@
 {
-  // Автоформат при сохранении (Prettier) + автофикс markdownlint
+  "window.title": "${dirty}${rootNameShort}",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
@@ -8,5 +8,10 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.wordWrap": "on"
-  }
+  },
+  "workbench.tree.indent": 20,
+  "explorer.compactFolders": false,
+  "explorer.confirmDelete": true,
+  "explorer.confirmDragAndDrop": true,
+  "terminal.integrated.defaultProfile.windows": "Git Bash"
 }
