@@ -27,8 +27,8 @@ const YT_STUB =
   's.setVolume=function(){};s.getPlayerState=function(){return s._st};s.destroy=function(){};' +
   'setTimeout(function(){o.events&&o.events.onReady&&o.events.onReady({target:s})},0)}};' +
   'window.onYouTubeIframeAPIReady&&window.onYouTubeIframeAPIReady();'
-const mockYouTube = (page: Page): Promise<void> =>
-  page.route(
+const mockYouTube = async (page: Page): Promise<void> => {
+  await page.route(
     (url) => url.href.includes('youtube'),
     (route) =>
       route.fulfill({
@@ -36,6 +36,7 @@ const mockYouTube = (page: Page): Promise<void> =>
         body: YT_STUB,
       }),
   )
+}
 
 test.beforeEach(async ({ page }) => {
   await mockYouTube(page)
