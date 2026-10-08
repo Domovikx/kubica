@@ -20,16 +20,15 @@ export const createWatermark = (): Watermark => {
   wmText.textContent = 'Kubica'
   watermark.append(wmText)
   // Адаптивка под экран (фидбэк): широкий → по горизонтали, узкий → по
-  // вертикали, квадратный → под 45°. Угол считаем от пропорций ВЬЮПОРТА
-  // (контейнер на десктопе зажат max-width 720 — по нему «широта» не видна),
-  // длину — по контейнеру: растягиваем почти во всю доступную длину с
-  // эстетическим отступом от краёв, масштаб шрифта меряем на лету.
+  // вертикали, квадратный → под 45°. Угол и доступный бокс считаем от
+  // контейнера (.mtable = вьюпорт, max-width 720 снят) — один источник,
+  // без «угол от вьюпорта, длина от контейнера». Растягиваем почти во всю
+  // доступную длину с эстетическим отступом от краёв, масштаб шрифта меряем
+  // на лету.
   const fit = (): void => {
     const r = watermark.getBoundingClientRect()
     if (r.width < 1 || r.height < 1) return
-    const vw = window.innerWidth || r.width
-    const vh = window.innerHeight || r.height
-    const aspect = vw / Math.max(vh, 1)
+    const aspect = r.width / Math.max(r.height, 1)
     // ≥1.5 — широко → 0°; ровно 1 (квадрат) → 45°; ≤2/3 — узко → 90°.
     const angle =
       aspect >= 1
@@ -41,19 +40,20 @@ export const createWatermark = (): Watermark => {
     const pad = Math.min(48, Math.max(16, Math.round(Math.min(r.width, r.height) * 0.06)))
     const availW = r.width - 2 * pad
     const availH = r.height - 2 * pad
-    // Длина отрезка той же ориентации, что влезает в бокс (по диагонали —
-    // min сторон / cos45).
-    const along = Math.min(
-      cos > 0.001 ? availW / cos : Number.POSITIVE_INFINITY,
-      sin > 0.001 ? availH / sin : Number.POSITIVE_INFINITY,
-    )
-    // Меряем ширину строки при 100px (без поворота) → масштаб под `along`.
+    // Меряем строку при 100px (без поворота): ширина w100 и высота бокса h100.
     wmText.style.transform = 'none'
     wmText.style.fontSize = '100px'
-    const w100 = wmText.getBoundingClientRect().width
+    const box = wmText.getBoundingClientRect()
+    const w100 = box.width
+    const h100 = box.height
     if (w100 < 1) return
-    const fs = (along / w100) * 100
-    wmText.style.fontSize = `${Math.round(fs * 10) / 10}px`
+    // Повёрнутый бокс строки — не нулевой толщины: W·cos + H·sin ≤ availW,
+    // H·cos + W·sin ≤ availH (угол 0..90°, sin/cos ≥ 0). ratio = H/W при
+    // 100px, отсюда fs = min(availW/(cos+ratio·sin), availH/(sin+ratio·cos))
+    // / w100 · 100 — иначе длинная строка обрезалась по толщине строки.
+    const ratio = h100 / w100
+    const fs = (Math.min(availW / (cos + ratio * sin), availH / (sin + ratio * cos)) / w100) * 100
+    wmText.style.fontSize = `${Math.floor(fs * 10) / 10}px`
     wmText.style.transform = angle > 0.05 ? `rotate(${angle}deg)` : 'none'
   }
   return { el: watermark, fit }

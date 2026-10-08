@@ -197,31 +197,3 @@ body {
     opacity: 1;
   }
 }
-
-@media (max-width: 768px) {
-  .topbar {
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px 16px;
-  }
-
-  .title {
-    width: 100%;
-    order: 3;
-    font-size: 15px;
-  }
-
-  .hint {
-    display: none;
-  }
-
-  .result {
-    top: 16%;
-  }
-}
-
-@media (max-width: 480px) {
-  .attribution {
-    text-align: center;
-  }
-}

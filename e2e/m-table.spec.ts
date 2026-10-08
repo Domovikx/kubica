@@ -317,6 +317,21 @@ test('музыка: youtube недоступен → кнопки aria-disabled 
     'Фоновая музыка недоступна: нет доступа к YouTube',
   )
   await expect(headBtn).toHaveAttribute('aria-haspopup', 'dialog')
+  // Строка в дровере гаснет тем же расчётом (musicEntry), а тап ВСЁ РАВНО
+  // открывает карточку — там объяснение и disabled-тоггл (2.23).
+  await page.getByTestId('mtable-burger').click()
+  const drawerRow = page.getByTestId('mtable-drawer-music')
+  await expect(drawerRow).toHaveAttribute('aria-haspopup', 'dialog')
+  await expect(drawerRow).toHaveAttribute('aria-disabled', 'true')
+  await expect(drawerRow).toHaveAttribute(
+    'aria-label',
+    'Фоновая музыка недоступна: нет доступа к YouTube',
+  )
+  // Форс-тап (мимо pointer-checks, как у кнопки шапки) — карточка открывается.
+  await drawerRow.click({ force: true })
+  await expect(page.getByTestId('mtable-music-card')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('mtable-music-card')).toBeHidden()
   // Форс-тап (мимо pointer-checks) открывает карточку — там объяснение;
   // загрузки API нет (guard в musicToggle), спиннер не появляется.
   await headBtn.click({ force: true })
@@ -357,5 +372,35 @@ test('музыка: тап → loading → playing → пауза → снова
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-pressed', 'true', { timeout: 3000 })
   await expect(headBtn).toHaveClass(/\bon\b/)
+  expect(errors).toEqual([])
+})
+
+// Фикс: вход в карточку музыки из дровера — на ≤360 кнопка шапки уходит по
+// fitHeadStar (приоритет music→sound→star), пункт в меню делает фичу доступной
+// на всех ширинах (дубль со шапкой принят). Тап, как и по шапке (2.23), —
+// открыть карточку, не тоггл.
+test('музыка: пункт в дровере → карточка, состояние playing симметрично', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/kubica/')
+  await expect(page.locator('.mtableCanvas')).toBeVisible()
+  await page.getByTestId('mtable-burger').click()
+  const row = page.getByTestId('mtable-drawer-music')
+  await expect(row).toBeVisible()
+  await expect(row).toHaveAttribute('aria-haspopup', 'dialog')
+  await expect(row).toHaveText('Фоновая музыка')
+  await row.click()
+  await expect(page.getByTestId('mtable-music-card')).toBeVisible()
+  await expect(page.getByTestId('mtable-drawer')).toBeHidden()
+  // Playing из карточки подсвечивает строку дровера классом on — общий
+  // musicEntry, никакой отдельной логики синхронизации.
+  await page.getByTestId('mtable-music-toggle').click()
+  await expect(page.getByTestId('mtable-music-toggle')).toHaveAttribute('aria-pressed', 'true', {
+    timeout: 3000,
+  })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('mtable-music-card')).toBeHidden()
+  await page.getByTestId('mtable-burger').click()
+  await expect(row).toBeVisible()
+  await expect(row).toHaveClass(/\bon\b/)
   expect(errors).toEqual([])
 })

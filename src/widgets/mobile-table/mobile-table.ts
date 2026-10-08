@@ -180,14 +180,22 @@ export const mountMobileTable = (
   // Фоновая музыка (2.22): в левой колонке рядом со звуком. 2.23: кнопка —
   // вход в отдельное меню (aria-haspopup), не тоггл; play/pause живёт внутри
   // карточки (секция переехала из бургера). Стейт-машина в features/dnd-music,
-  // рендер — тут; смена стейта дёргает syncMusic/syncCardMusic (onMusicChange).
+  // рендер — тут; смена стейта дёргает syncMusic/syncCardMusic/syncDrawerMusic
+  // (onMusicChange; общий расчёт — musicEntry, см. ниже).
   const musicBtn = document.createElement('button')
   musicBtn.className = 'mtableIcon mtableMusic'
   musicBtn.dataset.testid = 'mtable-music'
   musicBtn.type = 'button'
   musicBtn.setAttribute('aria-haspopup', 'dialog')
-  const syncMusic = (): void => {
+  // Один расчёт стейта на два входа (кнопка шапки + строка дровера): так
+  // aria-disabled/индикация playing не разъезжаются между ними.
+  const musicEntry = (): { unavail: boolean; loading: boolean; on: boolean } => {
     const unavail = musicAvail() === 'unavailable'
+    const s = musicState()
+    return { unavail, loading: !unavail && s === 'loading', on: !unavail && s === 'playing' }
+  }
+  const syncMusic = (): void => {
+    const { unavail, loading, on } = musicEntry()
     // YouTube недоступен: кнопка гасится с объяснением (aria-disabled, не
     // нативный disabled — остаётся фокусируемой, скринридер озвучит причину;
     // тап всё равно открывает карточку — там тоггл и хинт объясняют почему).
@@ -201,8 +209,7 @@ export const mountMobileTable = (
       musicBtn.classList.remove('on')
       return
     }
-    const s = musicState()
-    if (s === 'loading') {
+    if (loading) {
       // Пока грузится API/плеер — тот же спиннер, что на бургере.
       musicBtn.innerHTML = '<span class="mtableSpin" data-testid="mtable-music-spin"></span>'
       musicBtn.setAttribute('aria-label', 'Загружаю фоновую музыку…')
@@ -212,7 +219,6 @@ export const mountMobileTable = (
     }
     // Вход в меню: label статичен («Включить/Выключить» врало бы — тап не
     // переключает); состояние звучит внутри карточки, снаружи — иконка note/off.
-    const on = s === 'playing'
     musicBtn.innerHTML = musicIcon(on)
     musicBtn.setAttribute('aria-label', 'Фоновая музыка')
     musicBtn.removeAttribute('aria-pressed')
@@ -771,7 +777,34 @@ export const mountMobileTable = (
     setHaptics(!hapticsEnabled())
     syncHaptics()
   })
-  sndSection.append(sndTitle, sndToggle, hapToggle)
+  // Пункт «Фоновая музыка» в меню: на ≤360 кнопка шапки уходит по fitHeadStar
+  // (приоритет music→sound→star) — вход в карточку иначе недостижим. Дубль со
+  // шапкой принят: тап, как и по шапке (2.23), — открыть карточку, не тоггл; она
+  // сама спрячет дровер (openMusicCard). Стейт рисуем общим musicEntry.
+  const musRow = document.createElement('button')
+  musRow.className = 'mtableWide'
+  musRow.dataset.testid = 'mtable-drawer-music'
+  musRow.type = 'button'
+  musRow.setAttribute('aria-haspopup', 'dialog')
+  const syncDrawerMusic = (): void => {
+    const { unavail, on } = musicEntry()
+    musRow.innerHTML = `${musicIcon(on)}<span>Фоновая музыка</span>`
+    musRow.classList.toggle('on', on)
+    // Как у кнопки шапки: aria-disabled + причина в label; тап всё равно
+    // открывает карточку — там объяснение и disabled-тоггл.
+    if (unavail) {
+      musRow.setAttribute('aria-disabled', 'true')
+      musRow.setAttribute('aria-label', 'Фоновая музыка недоступна: нет доступа к YouTube')
+    } else {
+      musRow.removeAttribute('aria-disabled')
+      musRow.setAttribute('aria-label', 'Фоновая музыка')
+    }
+  }
+  syncDrawerMusic()
+  // openMusicCard объявляется ниже (блок оверлеев) — вызов только по клику,
+  // после монтирования, поэтому ссылка в замыкании безопасна (как у musicBtn).
+  musRow.addEventListener('click', () => openMusicCard())
+  sndSection.append(sndTitle, sndToggle, hapToggle, musRow)
 
   // 2.23: отдельное меню музыки — карточка-модалка (3-й оверлей по образцу
   // шита/дровера, форма по ресёрчу tasks/mvp-2/2.23). Секция переехала сюда из
@@ -1047,6 +1080,7 @@ export const mountMobileTable = (
   const unsubMusic = onMusicChange(() => {
     syncMusic()
     syncCardMusic()
+    syncDrawerMusic()
   })
   const unsubMusicNotice = onMusicNotice((n) => {
     showToast(
