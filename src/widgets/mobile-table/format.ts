@@ -1,5 +1,6 @@
 // Форматирование набора и времени для шапки, шторки и истории (без DOM).
-import { DIE_IDS } from '@/entities/dice-geometry/geometry'
+import { DIE_IDS, type DieId } from '@/entities/dice-geometry/geometry'
+import type { PoolPart } from '@/entities/roll-history/history'
 import type { TableCounts } from '@/features/table-setup/table-setup'
 
 export const fmtTime = (at: number): string => {
@@ -26,4 +27,16 @@ export const shortSet = (counts: TableCounts): string => {
     if (n > 0) parts.push(n > 1 ? `${n}${die}` : die)
   }
   return parts.join(' ')
+}
+
+/** Экстремумы грани для подсветки: 1/0 — провал, верх — золото. */
+const MAX_FACE: Record<DieId, number> = { d4: 4, d6: 6, d8: 8, d10: 9, d12: 12, d20: 20 }
+
+/** Класс части разбивки: провал/максимум (отсчёт 1-в-1 из mobile-table.ts). */
+export const partClass = (p: PoolPart): string => {
+  if (!(DIE_IDS as readonly string[]).includes(p.die)) return ''
+  const die = p.die as DieId
+  if (p.value === 1 || (die === 'd10' && p.value === 0)) return 'partMin'
+  if (p.value === MAX_FACE[die]) return 'partMax'
+  return ''
 }

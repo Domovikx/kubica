@@ -4,7 +4,6 @@
 // с частями в одну запись истории и один поп (паттерн пула 2.3).
 import type { DieId, Vec3 } from '@/entities/dice-geometry/geometry'
 import type { PoolPart } from '@/entities/roll-history/history'
-import { formatLabel, getHistoryStore } from '@/entities/roll-history/history'
 import { createPhysicsWorld, type PhysicsWorld, type StepCallback } from '@/shared/dice/physics'
 import {
   displayValue,
@@ -13,7 +12,6 @@ import {
   scoreValue,
   type Quat,
 } from '@/shared/dice/readout'
-import { hideResult, showResult } from '@/shared/ui/result-pop'
 
 export interface TableDieRequest {
   /** Ключ инстанса (`d6#1`): маршрутизация синхры/презентации при дублях. */
@@ -125,31 +123,6 @@ export const labelTableResult = (results: readonly TableDieResult[]): TableLabel
     total: parts.reduce((sum, p) => sum + scoreValue(p.die, p.value), 0),
     parts,
   }
-}
-
-/**
- * Одна запись истории + один поп с частями (паттерн пула 2.3).
- * opts.pop=false — без попа (стол итог не показывает, только озвучивает SR).
- */
-export const commitTableResult = (
-  results: readonly TableDieResult[],
-  labelled: TableLabelled,
-  opts?: { pop?: boolean },
-): void => {
-  if (results.length === 0) return
-  getHistoryStore().add({
-    die: results[0].die,
-    value: labelled.total,
-    display: String(labelled.total),
-    at: Date.now(),
-    label: labelled.label,
-    parts: labelled.parts,
-  })
-  if (opts?.pop === false) {
-    hideResult()
-    return
-  }
-  showResult(formatLabel(labelled.label), String(labelled.total), labelled.parts)
 }
 
 /** Внутренний прямоугольник канвы под раскладку (px): канва минус отступы. */

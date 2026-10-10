@@ -28,14 +28,17 @@ export default {
       severity: 'error',
       comment: 'Запрещены импорты вверх по слоям FSD (см. docs/ARCHITECTURE.md).',
       from: { path: 'src/pages', pathNot: '\\.test\\.tsx?$' },
-      to: { path: 'src/(app|pages)', pathNot: '\\.css$' },
+      to: { path: 'src/(app|pages)', pathNot: ['\\.css$', '^src/app/(store|hooks)(\\.ts)?$'] },
     },
     {
       name: 'fsd-widgets-down-only',
       severity: 'error',
       comment: 'Виджеты не импортируют страницы, приложение и друг друга.',
       from: { path: '^src/widgets/([^/]+)', pathNot: '\\.test\\.tsx?$' },
-      to: { path: 'src/(app|pages|widgets)', pathNot: ['\\.css$', '^src/widgets/$1/'] },
+      to: {
+        path: 'src/(app|pages|widgets)',
+        pathNot: ['\\.css$', '^src/widgets/$1/', '^src/app/(store|hooks)(\\.ts)?$'],
+      },
     },
     {
       name: 'fsd-features-down-only',
@@ -44,15 +47,15 @@ export default {
       from: { path: '^src/features/([^/]+)', pathNot: '\\.test\\.tsx?$' },
       to: {
         path: 'src/(app|pages|widgets|features)',
-        pathNot: ['\\.css$', '^src/features/$1/'],
+        pathNot: ['\\.css$', '^src/features/$1/', '^src/app/(store|hooks)(\\.ts)?$'],
       },
     },
     {
       name: 'fsd-entities-down-only',
       severity: 'error',
-      comment: 'Сущности не импортируют ничего выше shared.',
+      comment: 'Сущности не импортируют ничего выше shared (внешние пакеты и shared — можно).',
       from: { path: 'src/entities/[^/]+', pathNot: '\\.test\\.tsx?$' },
-      to: { pathNot: 'src/shared' },
+      to: { pathNot: ['^src/shared', '^node_modules'] },
     },
   ],
   options: {

@@ -4,11 +4,10 @@
 // Суммы/сортировка — через scoreValue: у d10 грань «0» читается как 10.
 import type { DieId } from '@/entities/dice-geometry/geometry'
 import { normalize, type RollExpr } from '@/entities/dice-notation/notation'
-import { formatLabel, getHistoryStore, type PoolPart } from '@/entities/roll-history/history'
-import { createPhysicsWorld, cryptoRandom, type PhysicsWorld } from '@/shared/dice/physics'
+import type { PoolPart } from '@/entities/roll-history/history'
+import { cryptoRandom, type PhysicsWorld } from '@/shared/dice/physics'
 import { displayValue, readRoll, scoreValue } from '@/shared/dice/readout'
-import { playThock, stopRattle } from '@/shared/dice/sound'
-import { showResult } from '@/shared/ui/result-pop'
+import { playThock } from '@/shared/dice/sound'
 
 export type { PoolPart }
 
@@ -115,47 +114,3 @@ export const createWorldDriver = (
     return { value, display: displayValue(die, value) }
   },
 })
-
-let poolWorld: Promise<PhysicsWorld> | null = null
-let poolQueue: Promise<unknown> = Promise.resolve()
-
-const getPoolWorld = (): Promise<PhysicsWorld> => {
-  if (!poolWorld) poolWorld = createPhysicsWorld()
-  return poolWorld
-}
-
-/** Бросок пула: общий ленивый физмир + очередь. */
-export const rollPool = (expr: RollExpr, label?: string): Promise<PoolResult> => {
-  const run = async (): Promise<PoolResult> => {
-    const world = await getPoolWorld()
-    // Без таймерного рокота: в полёте тишина, стучат только живые удары
-    // (onCollide драйвера выше) + финальный тук посадки
-    try {
-      const result = await simulatePool(expr, createWorldDriver(world), label)
-      const firstDie = expr.terms.find((t) => t.term.kind === 'dice')
-      const entryDie =
-        firstDie?.term.kind === 'dice' && firstDie.term.sides !== 100
-          ? (`d${firstDie.term.sides}` as DieId)
-          : ('d10' as DieId) // прокси для d100-пулов и констант до richer-истории
-      playThock(entryDie)
-      getHistoryStore().add({
-        die: entryDie,
-        value: result.total,
-        display: String(result.total),
-        at: Date.now(),
-        label: result.label,
-        parts: result.parts,
-      })
-      showResult(formatLabel(result.label), String(result.total), result.parts)
-      return result
-    } finally {
-      stopRattle()
-    }
-  }
-  const task = poolQueue.then(run, run)
-  poolQueue = task.catch((err: unknown) => {
-    console.error('[rollPool]', err)
-    return undefined
-  })
-  return task
-}
