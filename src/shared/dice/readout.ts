@@ -12,8 +12,8 @@ import {
   vertexValue,
   type DieId,
   type Vec3,
-} from '@/entities/dice-geometry/geometry'
-import { applyQuatToVec, quatFromUnitVectors, quatMul, quatYaw } from './face-orient'
+} from '@/entities/diceGeometry/geometry'
+import { applyQuatToVec, quatFromUnitVectors, quatMul, quatYaw } from './faceOrient.utils'
 
 export type Quat = [number, number, number, number]
 

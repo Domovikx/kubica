@@ -13,10 +13,10 @@ import {
   outwardTriangles,
   toModelFrame,
   type DieId,
-} from '@/entities/dice-geometry/geometry'
+} from '@/entities/diceGeometry/geometry'
 import { ARENA_APOTHEM, GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
 // quat-математика — один источник в face-orient (DRY: дубли в этом файле удалены).
-import { applyQuatToVec, quatFromUnitVectors, quatMul } from './face-orient'
+import { applyQuatToVec, quatFromUnitVectors, quatMul } from './faceOrient.utils'
 import type { Quat } from './readout'
 
 type Cannon = typeof import('cannon-es')

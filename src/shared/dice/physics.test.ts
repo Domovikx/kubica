@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { bodyScale } from '@/entities/dice-geometry/geometry'
+import { bodyScale } from '@/entities/diceGeometry/geometry'
 import { readRoll, topFaceIndex, topVertexIndex } from './readout'
 import { createPhysicsWorld, diceOverlap, snapFlat, type DicePose } from './physics'
-import { pumpUntilSettled } from './test-pump'
-import { quatFromUnitVectors } from './face-orient'
+import { pumpUntilSettled } from './testPump.utils'
+import { quatFromUnitVectors } from './faceOrient.utils'
 import {
   faceNormals,
   normalizedVerts,
   toModelFrame,
   type DieId,
-} from '@/entities/dice-geometry/geometry'
+} from '@/entities/diceGeometry/geometry'
 import type { Quat } from './readout'
 
 const seeded = (seed: number) => {

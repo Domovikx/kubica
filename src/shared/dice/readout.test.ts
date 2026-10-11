@@ -6,8 +6,8 @@ import {
   toModelFrame,
   vertexValue,
   type DieId,
-} from '@/entities/dice-geometry/geometry'
-import { applyQuatToVec, quatMul, quatYaw } from './face-orient'
+} from '@/entities/diceGeometry/geometry'
+import { applyQuatToVec, quatMul, quatYaw } from './faceOrient.utils'
 import {
   bottomFaceIndex,
   displayValue,
