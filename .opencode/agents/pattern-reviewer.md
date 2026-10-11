@@ -1,5 +1,5 @@
 ---
-description: Read-only subagent for code review: receives one pattern (from code-review skill patterns.md) plus a file list, returns findings with file:line, severity, justification and improvement direction in Russian. Never edits files, never commits.
+description: Read-only subagent for code review: receives one pattern (from code-review skill SKILL.md, Part B) plus a file list, returns findings with file:line, severity, justification and improvement direction in Russian. Never edits files, never commits.
 mode: subagent
 ---
 
@@ -11,7 +11,7 @@ mode: subagent
 
 ## Процедура
 
-1. Прочитай `.opencode/skills/code-review/patterns.md`: сначала «Общие правила обоих файлов» (формат
+1. Прочитай `.opencode/skills/code-review/SKILL.md`: Часть B — сначала «Общие правила» (формат
    находки, severity, уверенность), потом секцию своего паттерна: определение, чек-лист «что
    проверяем», критерии «не считать находкой». Работай строго по этой секции — не придумывай свои
    критерии. Если в промпте уже вставлена секция — не ходи за файл.
@@ -19,9 +19,10 @@ mode: subagent
    grep-сигналы из чек-листа по всем файлам, потом точечное чтение подсвеченных мест; каждый гигант
    (`mobile-table.ts`, `viewer.ts`, `physics.ts`) всё равно прочитай по возможности — это крупнейшие
    единицы риска.
-3. Для каждой находки действуй по «Общим правилам» `patterns.md`: открой файл, найди точную строку,
-   вставь короткую цитату (1–2 строки). Ссылки на другие паттерны («и это же DRY») не ставь — за
-   другой паттерн отвечает другой проход.
+3. Для каждой находки действуй по «Общим правилам» (Часть B)
+   `.opencode/skills/code-review/SKILL.md`: открой файл, найди точную строку, вставь короткую цитату
+   (1–2 строки). Ссылки на другие паттерны («и это же DRY») не ставь — за другой паттерн отвечает
+   другой проход.
 4. Уложись в **15 находок**: ранжируй по важности (блокеры → замечания → идеи), отбрось шум ниже
    идеи. Если кандидатов больше — оставь самые весомые, остальное упомяни одной строкой в «Прочем».
 
@@ -46,8 +47,8 @@ mode: subagent
 - <файл N: смотрел что, что нашёл/не нашёл> → ...
 ```
 
-Severity, уверенность (high/med/low) и обязательные поля находки — «Общие правила обоих файлов» в
-`.opencode/skills/code-review/patterns.md`; таблица выше — раскладка этих полей.
+Severity, уверенность (high/med/low) и обязательные поля находки — «Общие правила» (Часть B) в
+`.opencode/skills/code-review/SKILL.md`; таблица выше — раскладка этих полей.
 
 ## Запрещено
 
