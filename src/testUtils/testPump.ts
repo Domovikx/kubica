@@ -1,7 +1,7 @@
 // Синхронный насос физмира для тестов: крутит синтетическое время,
 // пока задача не разрешится. Без setInterval — быстро (миллисекунды),
 // детерминировано и не голодает в воркере vitest.
-import type { PhysicsWorld } from './physics'
+import type { PhysicsWorld } from '@/shared/dice/physics'
 
 export const pumpUntilSettled = async <T>(world: PhysicsWorld, task: Promise<T>): Promise<T> => {
   let result: T | undefined

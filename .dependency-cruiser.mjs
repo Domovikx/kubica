@@ -53,13 +53,25 @@ export default {
     {
       name: 'fsd-entities-down-only',
       severity: 'error',
-      comment: 'Сущности не импортируют ничего выше shared (внешние пакеты и shared — можно).',
-      from: { path: 'src/entities/[^/]+', pathNot: '\\.test\\.tsx?$' },
-      to: { pathNot: ['^src/shared', '^node_modules'] },
+      comment:
+        'Сущности не импортируют выше shared и чужие слайсы своего слоя (свой слайс/ shared/ пакеты — можно).',
+      from: { path: '^src/entities/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      to: { pathNot: ['\\.css$', '^src/entities/$1/', '^src/shared', '^node_modules'] },
+    },
+    {
+      name: 'fsd-shared-no-upward',
+      severity: 'error',
+      comment:
+        'Shared — нижний слой: не импортирует entities/features/widgets/pages/app (как и dieId.utils: «shared не импортирует entities»).',
+      from: { path: 'src/shared/', pathNot: '\\.test\\.tsx?$' },
+      to: { path: '^src/(entities|features|widgets|pages|app)/' },
     },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
+    // type-only импорты — настоящие связи: иначе no-orphans шумит (ложный
+    // dieId.utils), а кросс-импорты import type обходят fsd-правила молча.
+    tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],

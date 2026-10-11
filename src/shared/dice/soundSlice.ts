@@ -3,10 +3,9 @@
 // пишет localStorage и стопит рокот) и диспатчит то же значение в слайс;
 // движок читает localStorage напрямую (isMuted/hapticsEnabled) — ключи те же.
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { hapticsEnabled, isMuted } from './sound'
+import { HAPTICS_KEY, hapticsEnabled, isMuted, MUTE_KEY } from './sound'
 
-export const MUTE_KEY = 'dice-muted'
-export const HAPTICS_KEY = 'dice-haptics'
+export { HAPTICS_KEY, MUTE_KEY } from './sound'
 
 export const loadMuted = (storage?: Pick<Storage, 'getItem'> | null): boolean => {
   try {

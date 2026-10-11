@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { DieId } from '@/entities/diceGeometry/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import { createPhysicsWorld, type PhysicsWorld } from '@/shared/dice/physics'
-import { pumpUntilSettled } from '@/shared/dice/testPump.utils'
+import { pumpUntilSettled } from '@/testUtils/testPump'
 import type { Quat } from '@/shared/dice/readout'
 import {
   labelTableResult,

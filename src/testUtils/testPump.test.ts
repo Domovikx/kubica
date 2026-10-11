@@ -2,8 +2,8 @@
 // Фиксируем контракт: результат дожидается возврата по ходу прокачки,
 // невыполнимая задача падает по бюджету шагов, а не виснет вечно.
 import { describe, expect, it } from 'vitest'
-import type { PhysicsWorld } from './physics'
-import { pumpUntilSettled } from './testPump.utils'
+import type { PhysicsWorld } from '@/shared/dice/physics'
+import { pumpUntilSettled } from './testPump'
 
 const stubWorld = (onTick?: () => void): PhysicsWorld => ({
   roll: async () => ({ quat: [0, 0, 0, 1], settled: true, steps: 1 }),

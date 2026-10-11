@@ -2,7 +2,8 @@
 // Логика капов и персист-ключи — 1:1 к прежнему table-setup.ts (e2e/чекеры
 // читают kubica-table-v1 напрямую). Запись в storage — app/persist glue.
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { DIE_IDS, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import { emptyCounts, MAX_PER_DIE, MAX_TOTAL, totalCount, type TableCounts } from './tableSetup'
 
 export const SETUP_KEY = 'kubica-table-v1'

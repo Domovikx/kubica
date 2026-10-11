@@ -6,8 +6,8 @@
 // 1.8–5 кГц (decay 30–90 мс) + тело стола 150–220 Гц + фетр (lowpass).
 // «Тряска в руке» и «приземление» — разные текстуры (см. startRattle/playThock).
 
-const MUTE_KEY = 'dice-muted'
-const HAPTICS_KEY = 'dice-haptics'
+export const MUTE_KEY = 'dice-muted'
+export const HAPTICS_KEY = 'dice-haptics'
 
 let ctx: AudioContext | null = null
 let rattleTimer: number | null = null

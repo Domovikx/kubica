@@ -4,7 +4,7 @@ import { formatParts } from '@/entities/rollHistory/history'
 import { createWorldDriver, simulatePool, type PoolDriver } from './pool'
 import { createPhysicsWorld, type PhysicsWorld } from '@/shared/dice/physics'
 import { displayValue } from '@/shared/dice/readout'
-import { pumpUntilSettled } from '@/shared/dice/testPump.utils'
+import { pumpUntilSettled } from '@/testUtils/testPump'
 
 /** Детерминированный драйвер: значения выдаются по очереди вызовов. */
 const stubDriver = (values: number[]): PoolDriver => {

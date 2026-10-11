@@ -9,8 +9,8 @@ import {
   normalizedVerts,
   outwardTriangles,
   vertexValue,
-  type DieId,
 } from './geometry'
+import type { DieId } from './dieId.utils'
 
 const OPP_SUM: Record<DieId, number> = { d4: 0, d6: 7, d8: 9, d10: 9, d12: 13, d20: 21 }
 

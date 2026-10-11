@@ -2,7 +2,7 @@
 // kh/kl/dh/dl применяются внутри своего терма; d100 до 2.5 — крипто-RNG 1..100
 // (физической пары d10+d% ещё нет), остальные кости — телами cannon-es.
 // Суммы/сортировка — через scoreValue: у d10 грань «0» читается как 10.
-import type { DieId } from '@/entities/diceGeometry/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import { normalize, type RollExpr } from '@/entities/diceNotation/notation'
 import type { PoolPart } from '@/entities/rollHistory/history'
 import { cryptoRandom, type PhysicsWorld } from '@/shared/dice/physics'

@@ -25,6 +25,14 @@ export default defineConfig([
     },
   },
   {
+    // Но слой app обязан ходить в виджет через публичный API (index.ts):
+    // прямые импорты внутренностей (mtUiSlice и т.п.) дрейфуют контракт виджета.
+    files: ['./src/app/**'],
+    rules: {
+      'fsd/no-public-api-sidestep': 'error',
+    },
+  },
+  {
     // Конвенция: в shared двери не нужны (прямые импорты, tree-shaking через Vite).
     files: ['./src/shared/**'],
     rules: {
@@ -42,6 +50,15 @@ export default defineConfig([
     files: ['./src/entities/model/**'],
     rules: {
       'fsd/no-segments-on-sliced-layers': 'off',
+    },
+  },
+  {
+    // Техдолг: слайсы без сегментов не индексируются steiger — pages/home
+    // (импорт виджета) невидим, поэтому mobileTable ложно «без ссылок».
+    // Вернуть после сегментизации pages (волна 4 FSD-задачи).
+    files: ['./src/widgets/mobileTable/**'],
+    rules: {
+      'fsd/insignificant-slice': 'off',
     },
   },
   {

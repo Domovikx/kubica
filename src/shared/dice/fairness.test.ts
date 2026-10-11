@@ -5,7 +5,8 @@
 // RNG сидирован (mulberry32): тест детерминирован, флаков alpha-уровня нет;
 // равномерность выборки от сида не зависит.
 import { describe, expect, it } from 'vitest'
-import { faceCount, type DieId } from '@/entities/diceGeometry/geometry'
+import { faceCount } from './geometry'
+import type { DieId } from './dieId.utils'
 import { topFaceIndex, topVertexIndex, type Quat } from './readout'
 
 const mulberry32 = (seed: number): (() => number) => {

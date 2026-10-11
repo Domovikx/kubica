@@ -1,5 +1,6 @@
 // Форматирование набора и времени для шапки, шторки и истории (без DOM).
-import { DIE_IDS, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import type { PoolPart } from '@/entities/rollHistory/history'
 import type { TableCounts } from '@/features/tableSetup/tableSetup'
 

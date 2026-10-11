@@ -29,15 +29,14 @@ import {
   faceVertIndices,
   normalizedVerts,
   toModelFrame,
-  type DieId,
   type Vec3,
-} from '@/entities/diceGeometry/geometry'
-import type { Quat } from './readout'
+} from './geometry'
+import type { DieId } from './dieId.utils'
 
 export type Mat3 = [[number, number, number], [number, number, number], [number, number, number]]
 
-/** Реэкспорт кадра модели (источник — geometry.ts; тест тянет отсюда). */
-export { toModelFrame } from '@/entities/diceGeometry/geometry'
+/** Кватернион [x, y, z, w] — базовый тип кватернион-математики (читает readout/physics). */
+export type Quat = [number, number, number, number]
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const cross = (a: Vec3, b: Vec3): Vec3 => [

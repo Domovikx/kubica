@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  faceNormals,
-  faceValue,
-  normalizedVerts,
-  toModelFrame,
-  vertexValue,
-  type DieId,
-} from '@/entities/diceGeometry/geometry'
+import { faceNormals, faceValue, normalizedVerts, toModelFrame, vertexValue } from './geometry'
+import type { DieId } from './dieId.utils'
 import { applyQuatToVec, quatMul, quatYaw } from './faceOrient.utils'
 import {
   bottomFaceIndex,

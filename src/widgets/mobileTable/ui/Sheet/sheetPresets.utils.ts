@@ -1,6 +1,7 @@
 // Утилиты пресетов шторки: отображаемые наборы (встроенные с тенями своих
 // переопределений + свои), сравнение counts. Только для папки Sheet.
-import { DIE_IDS, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import {
   BUILT_IN_PRESETS,
   loadCustomPresets,

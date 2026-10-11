@@ -12,8 +12,8 @@ import {
   normalizedVerts,
   outwardTriangles,
   toModelFrame,
-  type DieId,
-} from '@/entities/diceGeometry/geometry'
+} from './geometry'
+import type { DieId } from './dieId.utils'
 import { ARENA_APOTHEM, GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
 // quat-математика — один источник в face-orient (DRY: дубли в этом файле удалены).
 import { applyQuatToVec, quatFromUnitVectors, quatMul } from './faceOrient.utils'

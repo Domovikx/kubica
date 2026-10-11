@@ -2,7 +2,8 @@
 // зарядка/жесты, синхронизация пачки костей. Логика 1-в-1 из прежнего
 // mountMobileTable легаси-виджета (удалён в A3), но состояние читает из
 // RTK-store (getState снаружи React) — единый источник правды для рендера.
-import { DIE_IDS, faceValue, physMaxDim, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS, faceValue, physMaxDim } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import { formatLabel, formatParts, type HistoryEntry } from '@/entities/rollHistory/history'
 import {
   quatForD4VertexUp,
@@ -26,7 +27,7 @@ import { computeLayout } from './layout'
 import { createGestures } from './gestures'
 import { setupActions } from '@/features/tableSetup/setupSlice'
 import { historyActions } from '@/entities/rollHistory/historySlice'
-import { mtUiActions } from './mtUiSlice'
+import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import type { AppDispatch, RootState } from '@/app/store'
 import { hideResult } from '@/shared/ui/resultPop.utils'
 

@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { addIcon } from '@/shared/ui/mdIcon.utils'
 import { dieGlyph } from '@/shared/ui/dieGlyph.utils'
 import { selectMtUi, selectPhase, selectTotal } from '../selectors'
-import { mtUiActions } from '../mtUiSlice'
+import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 
 const styles = stylex.create({
   hint: {

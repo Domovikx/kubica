@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIE_IDS } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
 import { DEFAULT_SELECTED, MODELS } from './models'
 
 describe('models registry', () => {

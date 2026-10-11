@@ -39,7 +39,7 @@ import {
   soundActions,
   soundReducer,
 } from '@/shared/dice/soundSlice'
-import { mtUiActions, mtUiReducer } from '@/widgets/mobileTable/mtUiSlice'
+import { mtUiActions, mtUiReducer } from '@/features/tableUi/mtUiSlice'
 
 type PersistStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 

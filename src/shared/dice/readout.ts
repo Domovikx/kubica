@@ -10,12 +10,18 @@ import {
   normalizedVerts,
   toModelFrame,
   vertexValue,
-  type DieId,
   type Vec3,
-} from '@/entities/diceGeometry/geometry'
-import { applyQuatToVec, quatFromUnitVectors, quatMul, quatYaw } from './faceOrient.utils'
+} from './geometry'
+import type { DieId } from './dieId.utils'
+import {
+  applyQuatToVec,
+  quatFromUnitVectors,
+  quatMul,
+  quatYaw,
+  type Quat,
+} from './faceOrient.utils'
 
-export type Quat = [number, number, number, number]
+export type { Quat } from './faceOrient.utils'
 
 /** Индекс верхней грани (макс. проекция нормали на +Y). Нормали — кадр модели. */
 export const topFaceIndex = (die: DieId, quat: Quat): number => {

@@ -3,7 +3,8 @@
 // Живёт внутри общей обёртки .mtableRows (порядок DOM 1-в-1 с легаси).
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch } from '@/app/hooks'
-import { DIE_IDS, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import { setupActions } from '@/features/tableSetup/setupSlice'
 import { MAX_PER_DIE, MAX_TOTAL, type TableCounts } from '@/features/tableSetup/tableSetup'
 import { DIE_HINTS, dieGlyph } from '@/shared/ui/dieGlyph.utils'

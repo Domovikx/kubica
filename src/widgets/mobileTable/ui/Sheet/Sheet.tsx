@@ -13,7 +13,7 @@ import {
 } from '@/features/tableSetup/presets'
 import { buzz as vibrate } from '@/shared/dice/sound'
 import { checkIcon, clearAllIcon, closeIcon } from '@/shared/ui/mdIcon.utils'
-import { mtUiActions } from '../../mtUiSlice'
+import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import { selectCounts, selectMtUi, selectRolling, selectTotal } from '../../selectors'
 import { shortSet } from '../../format'
 import { iconStyles } from '../../mt.stylex'

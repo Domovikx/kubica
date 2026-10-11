@@ -5,9 +5,10 @@ import {
   faceValue,
   faceVertIndices,
   normalizedVerts,
-  type DieId,
+  toModelFrame,
   type Vec3,
-} from '@/entities/diceGeometry/geometry'
+} from './geometry'
+import type { DieId } from './dieId.utils'
 import {
   applyQuatToVec,
   faceIndexForValue,
@@ -16,7 +17,6 @@ import {
   quatForValueUp,
   quatMul,
   quatYaw,
-  toModelFrame,
 } from './faceOrient.utils'
 import { readBottomRoll, readRoll } from './readout'
 

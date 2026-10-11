@@ -2,7 +2,8 @@
 // кувыркаются вместе (тела сталкиваются — честная горсть). Чтение — снизу:
 // грань на столе (д6), верхняя-на-экране вершина (д4). Результат — суммой
 // с частями в одну запись истории и один поп (паттерн пула 2.3).
-import type { DieId, Vec3 } from '@/entities/diceGeometry/geometry'
+import type { Vec3 } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 import type { PoolPart } from '@/entities/rollHistory/history'
 import { createPhysicsWorld, type PhysicsWorld, type StepCallback } from '@/shared/dice/physics'
 import {

@@ -1,6 +1,7 @@
 // Набор стола: сколько каких костей на поле (N инстансов, а не 0/1).
 // Чистые функции и капы — тестируются без DOM; хранение — RTK-слайс setup-slice.
-import { DIE_IDS, type DieId } from '@/entities/diceGeometry/geometry'
+import { DIE_IDS } from '@/shared/dice/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 
 /** Лимит инстансов одной кости (фаербол 8d6 влезает). */
 export const MAX_PER_DIE = 8

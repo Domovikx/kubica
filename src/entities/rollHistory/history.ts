@@ -1,6 +1,6 @@
 // История бросков: типы и чистые форматтеры (лейбл/разбивка).
 // Хранение/подписка/лимит — RTK-слайс history-slice (персист glue — app/store).
-import type { DieId } from '@/entities/diceGeometry/geometry'
+import type { DieId } from '@/shared/dice/dieId.utils'
 
 /** Минимальная форма результата броска (структурно совместима с RollResult из стора). */
 export interface RollInput {
