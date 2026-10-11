@@ -21,131 +21,12 @@ import {
   selectRolling,
   selectSound,
   selectUiScale,
-} from '../selectors'
-import { shortSet, summarize } from '../format'
-import { iconStyles } from '../mt.stylex'
-import { useHeadStarFit, type HeadFitRefs } from '../hooks/useFitHeadStar'
-import { useStarCount } from '../hooks/useStars'
-
-const styles = stylex.create({
-  head: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 6,
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)',
-    alignItems: 'center',
-    gap: 10,
-    paddingTop: 'calc(8px + env(safe-area-inset-top))',
-    paddingLeft: 12,
-    paddingRight: 12,
-    paddingBottom: 8,
-  },
-  headLeft: {
-    gridColumn: 1,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    justifySelf: 'start',
-  },
-  headCtl: {
-    position: 'relative',
-    gridColumn: 2,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    justifyContent: 'center',
-  },
-  headSide: {
-    gridColumn: 3,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    justifySelf: 'end',
-  },
-  /** Ряд Star: своя база (min-w:0, шкала --icon-like), ссылка, не кнопка. */
-  star: {
-    display: 'inline-flex',
-    minWidth: 0,
-    minHeight: 'var(--tap)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingLeft: 6,
-    paddingRight: 6,
-    paddingTop: 0,
-    paddingBottom: 0,
-    // Shorthand `border` stylex молча не компилирует (0.19.1) — суб-свойства.
-    borderWidth: 'medium',
-    borderStyle: 'none',
-    borderColor: 'currentColor',
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    color: '#f0f2f5',
-    fontFamily: 'inherit',
-    fontSize: 'var(--fs-body)',
-    fontWeight: 800,
-    textDecorationLine: 'none',
-    cursor: 'pointer',
-    ':hover': {
-      backgroundColor: 'rgba(255,255,255,0.06)',
-    },
-    ':active': {
-      backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    ':focus-visible': {
-      outline: '2px solid #fff',
-      outlineOffset: 2,
-    },
-  },
-  /** Кнопка набора: «+» / текст состава (p-0 из iconStyles.body не нужен). */
-  add: {
-    display: 'inline-flex',
-    minWidth: 'var(--tap)',
-    minHeight: 'var(--tap)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Shorthand `border` stylex молча не компилирует (0.19.1) — суб-свойства.
-    borderWidth: 'medium',
-    borderStyle: 'none',
-    borderColor: 'currentColor',
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    color: '#f0f2f5',
-    fontFamily: 'inherit',
-    fontWeight: 800,
-    cursor: 'pointer',
-    ':hover': {
-      backgroundColor: 'rgba(255,255,255,0.06)',
-    },
-    ':active': {
-      backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 0,
-    paddingBottom: 0,
-    fontSize: 'min(var(--fs-sec), calc(16px * var(--ui-scale)))',
-    whiteSpace: 'nowrap',
-    maxWidth: 'calc(100vw - 48px - var(--tap))',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  /** Бургер: сумма/меню/лоадер, headline-шкала (base — iconStyles.btn). */
-  burger: {
-    padding: 0,
-    fontSize: 'var(--fs-headline)',
-  },
-  burgerSum: {
-    color: '#ef3124',
-  },
-  /** Музыка включена (легаси onstate:text-...). */
-  musicOn: {
-    color: '#ef3124',
-  },
-})
+} from '../../selectors'
+import { shortSet, summarize } from '../../format'
+import { iconStyles } from '../../mt.stylex'
+import { useHeadStarFit, type HeadFitRefs } from '../../hooks/useFitHeadStar'
+import { useStarCount } from '../../hooks/useStars'
+import { headStyles as s } from './Head.stylex'
 
 export interface HeadProps {
   headRef: React.RefObject<HTMLDivElement | null>
@@ -207,27 +88,27 @@ export const Head = (props: HeadProps): React.JSX.Element => {
       starCount === null ? ' hidden' : ''
     }>${starCount === null ? '' : starCount}</span>`
 
-  const sxHead = stylex.props(styles.head)
-  const sxLeft = stylex.props(styles.headLeft)
+  const sxHead = stylex.props(s.head)
+  const sxLeft = stylex.props(s.headLeft)
   const sxSound = stylex.props(iconStyles.btn, iconStyles.body, iconStyles.hover)
   const sxMusic = stylex.props(
     iconStyles.btn,
     iconStyles.body,
     iconStyles.hover,
-    music.on && styles.musicOn,
+    music.on && s.musicOn,
     music.unavail && iconStyles.ariaOff,
   )
-  const sxCtl = stylex.props(styles.headCtl)
-  const sxAdd = stylex.props(styles.add)
+  const sxCtl = stylex.props(s.headCtl)
+  const sxAdd = stylex.props(s.add)
   const sxBurger = stylex.props(
     iconStyles.btn,
-    styles.burger,
+    s.burger,
     !rolling && iconStyles.hover,
     rolling && iconStyles.disabled,
-    !rolling && lastResult && styles.burgerSum,
+    !rolling && lastResult && s.burgerSum,
   )
-  const sxSide = stylex.props(styles.headSide)
-  const sxStar = stylex.props(styles.star)
+  const sxSide = stylex.props(s.headSide)
+  const sxStar = stylex.props(s.star)
 
   return (
     <div

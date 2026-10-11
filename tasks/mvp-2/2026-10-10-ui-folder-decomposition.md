@@ -1,6 +1,6 @@
 # Декомпозировать крупные компоненты mobile-table/ui в папки (folder-per-component)
 
-Статус: READY
+Статус: DONE
 
 ## Задача от пользователя
 
@@ -92,3 +92,49 @@ Drawer.tsx рядом выносим стики, хуки, утилиты и п�
   суффикс stylex-модулей: `2026-10-10-stylex-suffix.md`.
 - Нейминг: `2026-10-10-camelcase-filenames.md` (camelCase для модулей, PascalCase для tsx).
 - Протокол ресёрча: `tasks/AGENT.md`.
+
+## Лог: волна Drawer (2026-10-11)
+
+- `ui/Drawer.tsx` (629) → `ui/Drawer/`: `Drawer.stylex.ts` (164), `Drawer.tsx` (113 — шапка,
+  dirty-логика, эффекты, сборка секций), `DrawerHistorySection.tsx` (131), `DrawerSoundSection.tsx`
+  (83), `DrawerSocialSection.tsx` (78), `DrawerPowerSection.tsx` (60), `DrawerScaleSection.tsx`
+  (65), `DrawerAboutSection.tsx` (34), barrel `index.ts` (импортёру `./ui/Drawer` правки не нужны).
+  Все файлы < 250 строк.
+- Секции сами тянут стор через селекторы (без prop-drilling); общий stylex оверлеев не делился
+  (`overlay.stylex.ts` — ≥2 потребителя, по гипотезе задачи остаётся общим).
+- Проверки: tsc 0, eslint 0, vitest 30/254, e2e 30/30 (1 flaky «удержание с паузой» — точечный
+  перезапуск 3/3 passed; первая серия e2e после git mv падала из-за кэша vite на удалённый
+  `ui/Drawer.tsx` — перезапуск dev-сервера, не связано с кодом), computed-diff чисто, чекеры 9/9.
+- Опечатка во время работы: в `DrawerAboutSection` случайно оказалась comma-операция внутри
+  `${sxSection.className ?? '', ''}` (ломала маркер) — поймана при ревью, поправлена.
+
+## Лог: волна Sheet (2026-10-11)
+
+- `ui/Sheet.tsx` (515) → `ui/Sheet/`: `Sheet.stylex.ts` (145), `Sheet.tsx` (176 — шапка, onSave,
+  dirty, формула «Сохранить сет»), `SheetPresetsSection.tsx` (132 — чипы быстрых/моих, тап — выбор,
+  удержание — удаление), `SheetDiceRows.tsx` (92 — степперы DIE_IDS), `sheetPresets.utils.ts` (34 —
+  displaySets/sameCounts/BUILT_IN_NAMES), barrel `index.ts`. Все < 250.
+- Ревизия пресетов: `presetRev` переезжает в Sheet (bump и на onSave, и из секции через `onMutate`)
+  — без этого «Сохранить сет» не обновил бы чипы (поймано при ревью).
+- `SheetDiceRows` НЕ берёт на себя обёртку `.mtableRows` — она осталась в Sheet (порядок DOM 1-в-1,
+  пиксель-контракт); подкомпонент рендерит только внутренний `<div>` степперов.
+
+## Лог: волна Head (2026-10-11)
+
+- `ui/Head.tsx` (330) → `ui/Head/`: `Head.stylex.ts` (123), `Head.tsx` (211), barrel `index.ts`.
+  Подкомпоненты HeadLeft/Ctl/Side не заводились — после выноса стилей файл < 250, разбиение добавило
+  бы только indirection (YAGNI).
+
+## Итог приёмки (проверено после волн Drawer/Sheet/Head)
+
+- Структура: `ui/Drawer/`, `ui/Sheet/`, `ui/Head/` с компонентами и barrel `index.ts`; старых
+  одиночных `Drawer.tsx`/`Sheet.tsx`/`Head.tsx` в `ui/` нет.
+- Размеры: ни один `.tsx` в `ui/` не > 250 (максимум — MusicCard 226, в волну не шёл: ниже порога, в
+  задаче оставлен «по факту» — решено не декомпозировать).
+- Импорты снаружи не менялись (`./ui/Drawer` и др. через barrel): `npx tsc --noEmit` → 0.
+- Поведение: `npm test` 30/254, e2e 30/30 (серии без flaky после перезапуска vite), батарея 9
+  чекеров OK, computed-diff чисто (0/0/0), `npm run build` ok, `npm run lint` 0 issues, `lint:arch`
+  — 1 pre-existing warn (dieId.utils.ts).
+- Хуки: в папки не переносились (useToast/useStars/useFitHeadStar — мульти-потребители, остались в
+  `hooks/`); компонентных хуков с ровно одним потребителем не появилось.
+- overlay.stylex.ts остался общим (потребители Drawer/Sheet — ≥2, по гипотезе ресёрча).

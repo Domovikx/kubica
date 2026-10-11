@@ -21,7 +21,7 @@ kept/dropped, juice. После среза бабушкин тест: «Fireball
 | `2026-10-10-camelcase-filenames`     | DONE    | Нейминг файлов src/: camelCase, стили .styles.ts, утилиты .utils.ts |
 | `2026-10-10-stylex-suffix`           | DONE    | Stylex-модули: `.styles.ts` → канон `.stylex.ts` (mt, overlay)      |
 | `2026-10-10-camelcase-folders`       | DONE    | Папки src/: kebab → camelCase (10 папок: tableSetup, mobileTable…)  |
-| `2026-10-10-ui-folder-decomposition` | READY   | Декомпозиция Drawer/Sheet/Head в папки (folder-per-component)       |
+| `2026-10-10-ui-folder-decomposition` | DONE    | Декомпозиция Drawer/Sheet/Head в папки (folder-per-component)       |
 
 > Выполненные задачи (2.1–2.3, 2.6, 2.9–2.10, 2.12–2.17, 2.19–2.24) перенесены в `archive/` —
 > контекст не жрут, история в git.
