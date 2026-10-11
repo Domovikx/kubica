@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { THROW_POWERS, setThrowPower, throwPower, throwPowerBoost } from './power'
+import { THROW_POWERS, setThrowPower, throwPower, throwPowerBoost } from './throwPower'
 
 // vitest-окружение — node: localStorage нет, стабим свой (in-memory).
 const store = new Map<string, string>()

@@ -11,7 +11,11 @@ import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import { selectMtUi } from '../../selectors'
 import { Chip } from '../Chip'
 import { sheetStyles as s } from './Sheet.stylex'
-import { BUILT_IN_NAMES, displaySets, type PresetEntry } from './sheetPresets.utils'
+import {
+  BUILT_IN_NAMES,
+  displaySets,
+  type PresetEntry,
+} from '@/features/tableSetup/presetDisplay.utils'
 
 const ChipGroup = (props: {
   title: string

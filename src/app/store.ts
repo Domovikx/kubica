@@ -11,13 +11,13 @@ import {
   historyReducer,
   loadHistoryEntries,
 } from '@/entities/rollHistory/historySlice'
-import { loadMusicVolume, musicUiActions, musicUiReducer } from '@/features/dndMusic/musicSlice'
+import { loadMusicVolume, musicUiActions, musicUiReducer } from '@/features/music/musicSlice'
 import {
   loadThrowPower,
   POWER_KEY,
   powerActions,
   powerReducer,
-} from '@/features/rollDice/powerSlice'
+} from '@/features/throwPower/throwPowerSlice'
 import {
   loadSetupCounts,
   SETUP_KEY,
@@ -38,7 +38,7 @@ import {
   MUTE_KEY,
   soundActions,
   soundReducer,
-} from '@/shared/dice/soundSlice'
+} from '@/features/sound/soundSlice'
 import { mtUiActions, mtUiReducer } from '@/features/tableUi/mtUiSlice'
 
 type PersistStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>

@@ -4,6 +4,7 @@
 // RTK-store (getState снаружи React) — единый источник правды для рендера.
 // Бросок/жесты — отдельные модули (throwPack.ts, gestures.ts).
 import { DIE_IDS, faceValue, physMaxDim } from '@/shared/dice/geometry'
+import { MODELS } from '@/entities/dieModels/models'
 import type { DieId } from '@/shared/dice/dieId.utils'
 import type { HistoryEntry } from '@/entities/rollHistory/history'
 import {
@@ -21,7 +22,7 @@ import { createThrowPack, type Instance } from './throwPack'
 import { setupActions } from '@/features/tableSetup/setupSlice'
 import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import type { AppDispatch, RootState } from '@/app/store'
-import { throwPowerBoost } from '@/features/rollDice/power'
+import { throwPowerBoost } from '@/features/throwPower/throwPower'
 import { startRattle, stopRattle } from '@/shared/dice/sound'
 
 /** DEV-хук для тестов/чекеров: точка кости на экране. */
@@ -65,10 +66,7 @@ export const createEngine = (deps: EngineDeps): Engine => {
   const isWindActive = () => getState().mtUi.windActive
 
   const addInstance = (inst: Instance, i: number) => {
-    const model = DIE_IDS.map((id) => ({
-      id,
-      url: `${import.meta.env.BASE_URL}cad/set/${id}.glb`,
-    })).find((m) => m.id === inst.die)
+    const model = MODELS.find((m) => m.id === inst.die)
     if (!model) return
     const base =
       inst.die === 'd4'

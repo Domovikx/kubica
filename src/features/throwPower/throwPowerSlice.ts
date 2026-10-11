@@ -1,7 +1,7 @@
 // RTK-слайс силы броска (меню-бургер, персист dice-power). Boost-формула и
 // чтение для жестов остаются в power.ts (throwPowerBoost читает localStorage).
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { type ThrowPowerMode, throwPower } from './power'
+import { type ThrowPowerMode, throwPower } from './throwPower'
 
 export const POWER_KEY = 'dice-power'
 

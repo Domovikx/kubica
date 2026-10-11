@@ -2,7 +2,7 @@
 // Вынесено из engine.ts по образцу gestures.ts (волна 2 FSD-ревью): замыкания
 // броска живут рядом со своим контекстом, engine собирает и владеет жизненным циклом.
 import type { DieId } from '@/shared/dice/dieId.utils'
-import { formatLabel, formatParts } from '@/entities/rollHistory/history'
+import { formatLabel, formatParts } from './format'
 import { quatForValueDown } from '@/shared/dice/faceOrient.utils'
 import { diceOverlap, type DicePose, type StepCallback } from '@/shared/dice/physics'
 import { resolveD4Below, screenUpWorld } from '@/shared/dice/readout'

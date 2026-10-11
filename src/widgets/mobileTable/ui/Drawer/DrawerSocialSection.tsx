@@ -2,7 +2,7 @@
 // звёзд (ленивый fetch) показываем от 1, сама ссылка — всегда.
 import * as stylex from '@stylexjs/stylex'
 import { githubIcon, likeIcon, telegramIcon } from '@/shared/ui/mdIcon.utils'
-import { useStarCount } from '../../hooks/useStars'
+import { useStarCount } from '@/features/repoStars/useStars'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 

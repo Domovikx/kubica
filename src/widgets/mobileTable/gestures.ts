@@ -9,7 +9,7 @@
 // висящий доброс тапа (pendingFire) и вся логика отпускания.
 import { buzz as vibrate, startRattle, stopRattle } from '@/shared/dice/sound'
 import type { Table } from '@/shared/three/table'
-import { throwPowerBoost } from '@/features/rollDice/power'
+import { throwPowerBoost } from '@/features/throwPower/throwPower'
 
 /** Минимум удержания до броска и время полного заряда (3 с → 5 с). */
 const MIN_HOLD_MS = 3000

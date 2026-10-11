@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { parseStarsCache, STAR_KEY, STAR_TTL_MS } from '../stars'
+import { parseStarsCache, STAR_KEY, STAR_TTL_MS } from './stars'
 
 let asked = false
 let cachedN: number | null = null

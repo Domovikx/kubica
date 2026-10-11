@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatLabel, formatParts, type PoolPart } from './history'
+import type { PoolPart } from '@/entities/rollHistory/history'
+import { formatLabel, formatParts } from './format'
 
 describe('formatLabel: лейбл для показа', () => {
   it('плюс-разделитель костей → пробел', () => {

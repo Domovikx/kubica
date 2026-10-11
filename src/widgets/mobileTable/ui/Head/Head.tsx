@@ -24,7 +24,7 @@ import { shortSet, summarize } from '../../format'
 import { iconStyles } from '../../mt.stylex'
 import { useHeadStarFit, type HeadFitRefs } from './useFitHeadStar'
 import { useMuteToggle } from '../useSoundToggle'
-import { useStarCount } from '../../hooks/useStars'
+import { useStarCount } from '@/features/repoStars/useStars'
 import { headStyles as s } from './Head.stylex'
 
 export interface HeadProps {

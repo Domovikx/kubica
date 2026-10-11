@@ -46,8 +46,6 @@ export default defineConfig([
     },
   },
   {
-    // Техдолг к обсуждению: слайс entities/model совпадает по имени с сегментом model.
-    files: ['./src/entities/model/**'],
     rules: {
       'fsd/no-segments-on-sliced-layers': 'off',
     },

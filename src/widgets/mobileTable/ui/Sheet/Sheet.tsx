@@ -21,7 +21,7 @@ import { OverlayHead } from '../OverlayHead'
 import { useDirtyPanel } from '../useDirtyPanel'
 import { overlayStyles } from '../overlay.stylex'
 import { sheetStyles as s } from './Sheet.stylex'
-import { displaySets, sameCounts } from './sheetPresets.utils'
+import { displaySets, sameCounts } from '@/features/tableSetup/presetDisplay.utils'
 import { SheetPresetsSection } from './SheetPresetsSection'
 import { SheetDiceRows } from './SheetDiceRows'
 

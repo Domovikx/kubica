@@ -5,7 +5,7 @@
 import { useEffect } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { useAppSelector } from '@/app/hooks'
-import { formatParts } from '@/entities/rollHistory/history'
+import { formatParts } from '../format'
 import { selectLastResult, selectRolling } from '../selectors'
 
 const styles = stylex.create({

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createAppStore } from '@/app/store'
-import { THROW_POWERS } from './power'
-import { loadThrowPower, powerActions } from './powerSlice'
+import { THROW_POWERS } from './throwPower'
+import { loadThrowPower, powerActions } from './throwPowerSlice'
 
 const memStorage = (data = new Map<string, string>()) => ({
   getItem: (k: string) => data.get(k) ?? null,
