@@ -2,7 +2,7 @@
 // — use-watermark-fit (rAF + fonts.ready + resize).
 import { useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useWatermarkFit } from '../hooks/useWatermarkFit'
+import { useWatermarkFit } from './useWatermarkFit'
 
 const styles = stylex.create({
   root: {

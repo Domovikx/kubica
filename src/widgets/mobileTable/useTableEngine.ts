@@ -6,8 +6,8 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { store } from '@/app/store'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { selectCounts } from '../selectors'
-import { createEngine, type Engine } from '../engine'
+import { selectCounts } from './selectors'
+import { createEngine, type Engine } from './engine'
 
 export interface TableEngineRefs {
   canvasRef: RefObject<HTMLCanvasElement | null>

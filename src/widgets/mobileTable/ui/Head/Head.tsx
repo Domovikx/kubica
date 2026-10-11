@@ -24,7 +24,7 @@ import {
 } from '../../selectors'
 import { shortSet, summarize } from '../../format'
 import { iconStyles } from '../../mt.stylex'
-import { useHeadStarFit, type HeadFitRefs } from '../../hooks/useFitHeadStar'
+import { useHeadStarFit, type HeadFitRefs } from './useFitHeadStar'
 import { useStarCount } from '../../hooks/useStars'
 import { headStyles as s } from './Head.stylex'
 

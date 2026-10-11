@@ -6,8 +6,8 @@ import * as stylex from '@stylexjs/stylex'
 import { DIE_IDS } from '@/entities/diceGeometry/geometry'
 import { dieGlyph } from '@/shared/ui/dieGlyph.utils'
 import type { TableCounts } from '@/features/tableSetup/tableSetup'
-import { shortSet } from '../format'
-import { useChipHold } from '../hooks/useChipHold'
+import { shortSet } from '../../format'
+import { useChipHold } from './useChipHold'
 
 export interface ChipProps {
   name: string

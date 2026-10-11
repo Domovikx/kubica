@@ -1,4 +1,4 @@
-import { MobileTable } from '@/widgets/mobileTable/MobileTable'
+import { MobileTable } from '@/widgets/mobileTable'
 
 /**
  * Страница-стол: React-рендер виджета mobile-table (волна A2). Хост
