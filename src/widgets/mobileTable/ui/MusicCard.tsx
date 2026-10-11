@@ -7,10 +7,10 @@ import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { musicToggle, setMusicVolume } from '@/features/dndMusic/music'
 import { musicUiActions } from '@/features/dndMusic/musicSlice'
-import { checkIcon, closeIcon, musicIcon } from '@/shared/ui/mdIcon.utils'
-import { mtUiActions } from '@/features/tableUi/mtUiSlice'
+import { musicIcon } from '@/shared/ui/mdIcon.utils'
 import { selectMusic, selectMusicEntry, selectMtUi } from '../selectors'
-import { iconStyles } from '../mt.stylex'
+import { OverlayHead } from './OverlayHead'
+import { useDirtyPanel } from './useDirtyPanel'
 import { overlayStyles } from './overlay.stylex'
 
 export interface MusicCardProps {
@@ -77,21 +77,11 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
   const { dirtyMusic } = useAppSelector(selectMtUi)
   const closeRef = useRef<HTMLButtonElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
+  const { onPanelClick, onPanelInput } = useDirtyPanel('music', closeRef)
 
   useEffect(() => {
     if (open) closeRef.current?.focus()
   }, [open])
-
-  const onPanelClick = (e: React.MouseEvent): void => {
-    const t = e.target
-    if (!(t instanceof Element)) return
-    if (t.closest('a') || t.closest('button') === closeRef.current) return
-    if (t.closest('button') || t.closest('input'))
-      dispatch(mtUiActions.setDirty({ kind: 'music', dirty: true }))
-  }
-  const onPanelInput = (): void => {
-    dispatch(mtUiActions.setDirty({ kind: 'music', dirty: true }))
-  }
 
   const s = music.state
   const on = entry.on
@@ -105,11 +95,7 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
           ? 'Выключить фон'
           : 'Включить фон'
 
-  const sxClose = stylex.props(iconStyles.btn, iconStyles.body, iconStyles.hover)
-
   const sxCard = stylex.props(styles.card)
-  const sxHead = stylex.props(overlayStyles.head)
-  const sxTitle = stylex.props(overlayStyles.headTitle)
   const sxRows = stylex.props(overlayStyles.rows)
   const sxSection = stylex.props(overlayStyles.section, overlayStyles.sectionNoBorder)
   const sxWide = stylex.props(overlayStyles.wide)
@@ -129,30 +115,16 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
       onClick={onPanelClick}
       onInput={onPanelInput}
     >
-      <div
-        {...sxHead}
-        className={`mtableSheetHead ${sxHead.className ?? ''}`}
-        data-testid="mtable-music-card-head"
-      >
-        <span
-          {...sxTitle}
-          className={sxTitle.className ?? undefined}
-          data-testid="mtable-music-card-title"
-        >
-          Фоновая музыка
-        </span>
-        <button
-          ref={closeRef}
-          type="button"
-          {...sxClose}
-          className={`mtableIcon${dirtyMusic ? ' mtableMorph' : ''} ${sxClose.className ?? ''}`}
-          data-testid="mtable-music-close"
-          aria-label={dirtyMusic ? 'Готово' : 'Закрыть фоновую музыку'}
-          title={dirtyMusic ? 'Готово' : 'Закрыть фоновую музыку'}
-          dangerouslySetInnerHTML={{ __html: dirtyMusic ? checkIcon() : closeIcon() }}
-          onClick={onClose}
-        />
-      </div>
+      <OverlayHead
+        title="Фоновая музыка"
+        dirty={dirtyMusic}
+        closeLabel="Закрыть фоновую музыку"
+        onClose={onClose}
+        closeRef={closeRef}
+        headTestId="mtable-music-card-head"
+        closeTestId="mtable-music-close"
+        titleTestId="mtable-music-card-title"
+      />
       <div
         {...sxRows}
         className={`mtableRows ${sxRows.className ?? ''}`}

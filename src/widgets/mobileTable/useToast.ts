@@ -3,14 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export const useToast = (): {
   toast: string | null
   showToast: (msg: string) => void
-  cancelToast: () => void
 } => {
   const [toast, setToast] = useState<string | null>(null)
   const timer = useRef(0)
-
-  const cancelToast = useCallback(() => {
-    window.clearTimeout(timer.current)
-  }, [])
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -22,5 +17,5 @@ export const useToast = (): {
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
-  return { toast, showToast, cancelToast }
+  return { toast, showToast }
 }

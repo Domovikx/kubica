@@ -6,22 +6,67 @@ import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { deleteCustomPreset, hideBuiltIn } from '@/features/tableSetup/presets'
 import { setupActions } from '@/features/tableSetup/setupSlice'
-import type { TableCounts } from '@/features/tableSetup/tableSetup'
 import { buzz as vibrate } from '@/shared/dice/sound'
 import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import { selectMtUi } from '../../selectors'
 import { Chip } from '../Chip'
 import { sheetStyles as s } from './Sheet.stylex'
-import { BUILT_IN_NAMES, displaySets } from './sheetPresets.utils'
+import { BUILT_IN_NAMES, displaySets, type PresetEntry } from './sheetPresets.utils'
+
+const ChipGroup = (props: {
+  title: string
+  titleTestId: string
+  groupTestId: string
+  /** Класс-маркер группы (mtableFast/mtableMine — контракт CSS/e2e). */
+  marker: string
+  sets: PresetEntry[]
+  activeSet: string | null
+  /** Прятать контейнер при пустом наборе («Мои»; «Быстрые» — всегда виден). */
+  hideWhenEmpty?: boolean
+  onTap: (p: PresetEntry) => void
+  onDelete: (name: string) => void
+}): React.JSX.Element => {
+  const { title, titleTestId, groupTestId, marker, sets, activeSet, onTap, onDelete } = props
+  const sxPreCap = stylex.props(s.preCap)
+  const sxSets = stylex.props(s.sets)
+  return (
+    <>
+      <span
+        {...sxPreCap}
+        className={`mtablePreCap ${sxPreCap.className ?? ''}`}
+        data-testid={titleTestId}
+        hidden={sets.length === 0}
+      >
+        {title}
+      </span>
+      <div
+        {...sxSets}
+        className={`mtableSets ${marker} ${sxSets.className ?? ''}`}
+        data-testid={groupTestId}
+        hidden={props.hideWhenEmpty === true && sets.length === 0}
+      >
+        {sets.map((p) => (
+          <Chip
+            key={p.name}
+            name={p.name}
+            counts={p.counts}
+            active={activeSet === p.name}
+            onTap={() => onTap(p)}
+            onDelete={() => onDelete(p.name)}
+          />
+        ))}
+      </div>
+    </>
+  )
+}
 
 export const SheetPresetsSection = (props: {
   showToast: (msg: string) => void
-  holdFiredRef: React.RefObject<boolean>
   /** Локальная ревизия пресетов (мутация → bump в родителе). */
   revision: number
   onMutate: () => void
 }): React.JSX.Element => {
-  const { showToast, holdFiredRef, revision, onMutate } = props
+  const { showToast, revision, onMutate } = props
   const dispatch = useAppDispatch()
   const { activeSet } = useAppSelector(selectMtUi)
 
@@ -30,12 +75,12 @@ export const SheetPresetsSection = (props: {
     return displaySets()
   }, [revision])
 
-  const toggleSelect = (name: string, chipCounts: TableCounts): void => {
-    if (activeSet === name) {
+  const toggleSelect = (p: PresetEntry): void => {
+    if (activeSet === p.name) {
       dispatch(mtUiActions.setActiveSet(null))
     } else {
-      dispatch(mtUiActions.setActiveSet(name))
-      dispatch(setupActions.setAll(chipCounts))
+      dispatch(mtUiActions.setActiveSet(p.name))
+      dispatch(setupActions.setAll(p.counts))
     }
     onMutate()
   }
@@ -50,8 +95,6 @@ export const SheetPresetsSection = (props: {
   }
 
   const sxPreBlock = stylex.props(s.preBlock)
-  const sxPreCap = stylex.props(s.preCap)
-  const sxSets = stylex.props(s.sets)
   const sxPreHint = stylex.props(s.preHint)
   const sxEmpty = stylex.props(s.empty)
 
@@ -61,57 +104,27 @@ export const SheetPresetsSection = (props: {
       className={`mtablePreBlock ${sxPreBlock.className ?? ''}`}
       data-testid="mtable-pre-block"
     >
-      <span
-        {...sxPreCap}
-        className={`mtablePreCap ${sxPreCap.className ?? ''}`}
-        data-testid="mtable-fast-cap"
-        hidden={sets.fast.length === 0}
-      >
-        Быстрые
-      </span>
-      <div
-        {...sxSets}
-        className={`mtableSets mtableFast ${sxSets.className ?? ''}`}
-        data-testid="mtable-fast"
-      >
-        {sets.fast.map((p) => (
-          <Chip
-            key={p.name}
-            name={p.name}
-            counts={p.counts}
-            active={activeSet === p.name}
-            holdFiredRef={holdFiredRef}
-            onTap={() => toggleSelect(p.name, p.counts)}
-            onDelete={() => deleteSet(p.name)}
-          />
-        ))}
-      </div>
-      <span
-        {...sxPreCap}
-        className={`mtablePreCap ${sxPreCap.className ?? ''}`}
-        data-testid="mtable-mine-cap"
-        hidden={sets.mine.length === 0}
-      >
-        Мои
-      </span>
-      <div
-        {...sxSets}
-        className={`mtableSets mtableMine ${sxSets.className ?? ''}`}
-        data-testid="mtable-mine"
-        hidden={sets.mine.length === 0}
-      >
-        {sets.mine.map((p) => (
-          <Chip
-            key={p.name}
-            name={p.name}
-            counts={p.counts}
-            active={activeSet === p.name}
-            holdFiredRef={holdFiredRef}
-            onTap={() => toggleSelect(p.name, p.counts)}
-            onDelete={() => deleteSet(p.name)}
-          />
-        ))}
-      </div>
+      <ChipGroup
+        title="Быстрые"
+        titleTestId="mtable-fast-cap"
+        groupTestId="mtable-fast"
+        marker="mtableFast"
+        sets={sets.fast}
+        activeSet={activeSet}
+        onTap={toggleSelect}
+        onDelete={deleteSet}
+      />
+      <ChipGroup
+        title="Мои"
+        titleTestId="mtable-mine-cap"
+        groupTestId="mtable-mine"
+        marker="mtableMine"
+        sets={sets.mine}
+        activeSet={activeSet}
+        hideWhenEmpty
+        onTap={toggleSelect}
+        onDelete={deleteSet}
+      />
       <p
         {...sxPreHint}
         className={`mtablePreHint ${sxPreHint.className ?? ''}`}

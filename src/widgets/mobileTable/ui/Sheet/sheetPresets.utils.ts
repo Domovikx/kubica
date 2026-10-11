@@ -11,13 +11,18 @@ import type { TableCounts } from '@/features/tableSetup/tableSetup'
 
 export const BUILT_IN_NAMES = new Set(BUILT_IN_PRESETS.map((p) => p.name))
 
+export interface PresetEntry {
+  name: string
+  counts: TableCounts
+}
+
 export const sameCounts = (a: TableCounts, b: TableCounts): boolean =>
   DIE_IDS.every((die: DieId) => (a[die] ?? 0) === (b[die] ?? 0))
 
 /** Отображаемые наборы: встроенные (с учётом своих переопределений) + свои. */
 export const displaySets = (): {
-  fast: Array<{ name: string; counts: TableCounts }>
-  mine: Array<{ name: string; counts: TableCounts }>
+  fast: PresetEntry[]
+  mine: PresetEntry[]
 } => {
   const customs = loadCustomPresets()
   const hidden = new Set(loadHiddenBuiltIns())

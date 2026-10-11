@@ -13,7 +13,6 @@ export interface ChipProps {
   name: string
   counts: TableCounts
   active: boolean
-  holdFiredRef: { current: boolean }
   onTap: () => void
   onDelete: () => void
 }
@@ -61,8 +60,8 @@ const styles = stylex.create({
 })
 
 export const Chip = (props: ChipProps): React.JSX.Element => {
-  const { name, counts, active, holdFiredRef, onTap, onDelete } = props
-  const hold = useChipHold(onDelete, onTap, holdFiredRef)
+  const { name, counts, active, onTap, onDelete } = props
+  const hold = useChipHold(onDelete, onTap)
   const label = shortSet(counts)
 
   const diceHtml = (() => {

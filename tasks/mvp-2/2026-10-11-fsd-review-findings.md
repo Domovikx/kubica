@@ -76,3 +76,10 @@ app/store идёт через barrel; grep `entities/diceGeometry` в shared о�
 
 - 2026-10-11: задача создана; коммиты `ce27c13` (WIP-реформа) и `961afc1` (FSD-инфраструктура) до
   начала волн; волна 1 в работе.
+- 2026-10-11: **волна 1 DONE** (`d376fa1`): геометрия → shared/dice (блокер закрыт), mtUiSlice →
+  features/tableUi (цикл store↔виджет разорван; vitest получил stylex-плагин), ключи звука один
+  источник, testPump → src/testUtils, YAGNI-барrel'ы удалены, dep-cruiser: tsPreCompilationDeps
+  - fsd-shared-no-upward + entities-down-only-corrected, steiger: app-sidestep on,
+    insignificant-slice-off (слепота desegmented pages). Батарея полная: e2e 30/30, diff 0/0/0.
+- 2026-10-11: **волна 2 в работе**
+  (OverlayHead/useDirtyPanel/mute-toggle/ChipGroup/holdFired/fit-refs/engine-декомпозиция).

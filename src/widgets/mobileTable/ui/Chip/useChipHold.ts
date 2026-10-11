@@ -12,7 +12,6 @@ const HOLD_GRACE_MS = 1000
 export const useChipHold = (
   onDelete: () => void,
   onTap: () => void,
-  holdFiredRef: { current: boolean },
 ): {
   holding: boolean
   countdown: string
@@ -26,6 +25,8 @@ export const useChipHold = (
   const [countdown, setCountdown] = useState('3')
   const fillRef = useRef<HTMLSpanElement | null>(null)
   const raf = useRef(0)
+  // «Удержание уже сработало» — владеет хук, не цепочка пропсов родителей.
+  const holdFiredRef = useRef(false)
   const cbRef = useRef({ onDelete, onTap })
   cbRef.current = { onDelete, onTap }
 
@@ -71,7 +72,7 @@ export const useChipHold = (
       }
       raf.current = requestAnimationFrame(tick)
     },
-    [endHold, holdFiredRef],
+    [endHold],
   )
 
   const onClick = useCallback(() => {

@@ -8,11 +8,9 @@
 // через refs (см. fitHeadStar); пилюля счётчика — React-проп hidden
 // (data-driven, fit её не трогает). Состояния (disabled/aria-disabled/on/
 // hasSum) известны React — условные объекты stylex, не CSS-варианты.
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { soundActions } from '@/shared/dice/soundSlice'
-import { isMuted, setMuted } from '@/shared/dice/sound'
+import { useAppSelector } from '@/app/hooks'
 import { addIcon, menuIcon, musicIcon, soundIcon, likeIcon } from '@/shared/ui/mdIcon.utils'
 import {
   selectCounts,
@@ -25,23 +23,25 @@ import {
 import { shortSet, summarize } from '../../format'
 import { iconStyles } from '../../mt.stylex'
 import { useHeadStarFit, type HeadFitRefs } from './useFitHeadStar'
+import { useMuteToggle } from '../useSoundToggle'
 import { useStarCount } from '../../hooks/useStars'
 import { headStyles as s } from './Head.stylex'
 
 export interface HeadProps {
   headRef: React.RefObject<HTMLDivElement | null>
-  headCtlRef: React.RefObject<HTMLDivElement | null>
-  headStarRef: React.RefObject<HTMLAnchorElement | null>
-  soundRef: React.RefObject<HTMLButtonElement | null>
-  musicRef: React.RefObject<HTMLButtonElement | null>
   onOpenSheet: () => void
   onOpenDrawer: () => void
   onOpenMusic: () => void
 }
 
 export const Head = (props: HeadProps): React.JSX.Element => {
-  const { headRef, headCtlRef, headStarRef, soundRef, musicRef } = props
-  const dispatch = useAppDispatch()
+  const { headRef } = props
+  // Fit-рефы шапки — владеет Head (контейнер их не читал, только прокидывал).
+  const headCtlRef = useRef<HTMLDivElement>(null)
+  const headStarRef = useRef<HTMLAnchorElement>(null)
+  const soundRef = useRef<HTMLButtonElement>(null)
+  const musicRef = useRef<HTMLButtonElement>(null)
+  const toggleMute = useMuteToggle()
   const counts = useAppSelector(selectCounts)
   const rolling = useAppSelector(selectRolling)
   const lastResult = useAppSelector(selectLastResult)
@@ -131,11 +131,7 @@ export const Head = (props: HeadProps): React.JSX.Element => {
           aria-label={muted ? 'Включить звук' : 'Выключить звук'}
           aria-pressed={!muted}
           dangerouslySetInnerHTML={{ __html: soundIcon(muted) }}
-          onClick={() => {
-            const next = !isMuted()
-            setMuted(next)
-            dispatch(soundActions.setMuted(next))
-          }}
+          onClick={toggleMute}
         />
         <button
           ref={musicRef}

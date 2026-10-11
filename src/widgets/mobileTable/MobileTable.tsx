@@ -61,10 +61,6 @@ export const MobileTable = (): React.JSX.Element => {
   const sectionRef = useRef<HTMLElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const headRef = useRef<HTMLDivElement>(null)
-  const headCtlRef = useRef<HTMLDivElement>(null)
-  const headStarRef = useRef<HTMLAnchorElement>(null)
-  const soundRef = useRef<HTMLButtonElement>(null)
-  const musicRef = useRef<HTMLButtonElement>(null)
   const footRef = useRef<HTMLDivElement>(null)
   const footPartsRef = useRef<HTMLSpanElement>(null)
   const liveRef = useRef<HTMLDivElement>(null)
@@ -161,10 +157,6 @@ export const MobileTable = (): React.JSX.Element => {
       />
       <Head
         headRef={headRef}
-        headCtlRef={headCtlRef}
-        headStarRef={headStarRef}
-        soundRef={soundRef}
-        musicRef={musicRef}
         onOpenSheet={onOpenSheet}
         onOpenDrawer={onOpenDrawer}
         onOpenMusic={onOpenMusic}

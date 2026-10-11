@@ -12,11 +12,13 @@ import {
   uniquePresetName,
 } from '@/features/tableSetup/presets'
 import { buzz as vibrate } from '@/shared/dice/sound'
-import { checkIcon, clearAllIcon, closeIcon } from '@/shared/ui/mdIcon.utils'
+import { clearAllIcon } from '@/shared/ui/mdIcon.utils'
 import { mtUiActions } from '@/features/tableUi/mtUiSlice'
 import { selectCounts, selectMtUi, selectRolling, selectTotal } from '../../selectors'
 import { shortSet } from '../../format'
 import { iconStyles } from '../../mt.stylex'
+import { OverlayHead } from '../OverlayHead'
+import { useDirtyPanel } from '../useDirtyPanel'
 import { overlayStyles } from '../overlay.stylex'
 import { sheetStyles as s } from './Sheet.stylex'
 import { displaySets, sameCounts } from './sheetPresets.utils'
@@ -38,7 +40,6 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
   const rolling = useAppSelector(selectRolling)
   const { activeSet, dirtySheet } = useAppSelector(selectMtUi)
 
-  const holdFiredRef = useRef(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   // Ревизия пресетов: мутации (сохранение в шапке, тап/удаление чипов)
   // перечитывают localStorage — легаси renderPresets().
@@ -46,6 +47,7 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
   const bumpPresets = (): void => setPresetRev((r) => r + 1)
 
   const short = shortSet(counts)
+  const { onPanelClick, onPanelInput } = useDirtyPanel('sheet', closeRef)
 
   useEffect(() => {
     if (open) closeRef.current?.focus()
@@ -73,20 +75,7 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
     bumpPresets()
   }
 
-  // Грязное = тап по контролу (кнопка/инпут, кроме самого крестика и ссылок)
-  // либо input; React-делегат на панели.
-  const onPanelClick = (e: React.MouseEvent): void => {
-    const t = e.target
-    if (!(t instanceof Element)) return
-    if (t.closest('a') || t.closest('button') === closeRef.current) return
-    if (t.closest('button') || t.closest('input'))
-      dispatch(mtUiActions.setDirty({ kind: 'sheet', dirty: true }))
-  }
-  const onPanelInput = (): void => {
-    dispatch(mtUiActions.setDirty({ kind: 'sheet', dirty: true }))
-  }
-
-  // Кнопки шапки шторки: clear — disabled при пустом наборе (opacity-30,
+  // Кнопка шапки шторки: clear — disabled при пустом наборе (opacity-30,
   // hover снят — как disabled:hover:bg-transparent в легаси-утилитах).
   const sxClear = stylex.props(
     iconStyles.btn,
@@ -94,14 +83,28 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
     total === 0 ? iconStyles.disabled : iconStyles.hover,
     total === 0 && iconStyles.opacity30,
   )
-  const sxClose = stylex.props(iconStyles.btn, iconStyles.body, iconStyles.hover)
 
   const sxSheet = stylex.props(s.sheet)
-  const sxHead = stylex.props(overlayStyles.head)
-  const sxTitle = stylex.props(overlayStyles.headTitle)
   const sxRows = stylex.props(overlayStyles.rows)
   const sxFormula = stylex.props(s.formulaRow)
   const sxOk = stylex.props(s.ok)
+
+  const clearBtn = (
+    <button
+      type="button"
+      {...sxClear}
+      className={`mtableIcon mtableSheetClear ${sxClear.className ?? ''}`}
+      data-testid="mtable-sheet-clear"
+      title="Убрать все"
+      aria-label="Убрать все"
+      disabled={total === 0}
+      dangerouslySetInnerHTML={{ __html: clearAllIcon() }}
+      onClick={() => {
+        dispatch(mtUiActions.setActiveSet(null))
+        dispatch(setupActions.clear())
+      }}
+    />
+  )
 
   return (
     <div
@@ -112,47 +115,18 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
       onClick={onPanelClick}
       onInput={onPanelInput}
     >
-      <div
-        {...sxHead}
-        className={`mtableSheetHead ${sxHead.className ?? ''}`}
-        data-testid="mtable-sheet-head"
-      >
-        <span {...sxTitle} className={sxTitle.className ?? undefined}>
-          {short || 'Выбор костей'}
-        </span>
-        <button
-          type="button"
-          {...sxClear}
-          className={`mtableIcon mtableSheetClear ${sxClear.className ?? ''}`}
-          data-testid="mtable-sheet-clear"
-          title="Убрать все"
-          aria-label="Убрать все"
-          disabled={total === 0}
-          dangerouslySetInnerHTML={{ __html: clearAllIcon() }}
-          onClick={() => {
-            dispatch(mtUiActions.setActiveSet(null))
-            dispatch(setupActions.clear())
-          }}
-        />
-        <button
-          ref={closeRef}
-          type="button"
-          {...sxClose}
-          className={`mtableIcon${dirtySheet ? ' mtableMorph' : ''} ${sxClose.className ?? ''}`}
-          data-testid="mtable-sheet-close"
-          aria-label={dirtySheet ? 'Готово' : 'Закрыть выбор костей'}
-          title={dirtySheet ? 'Готово' : 'Закрыть выбор костей'}
-          dangerouslySetInnerHTML={{ __html: dirtySheet ? checkIcon() : closeIcon() }}
-          onClick={onClose}
-        />
-      </div>
+      <OverlayHead
+        title={short || 'Выбор костей'}
+        dirty={dirtySheet}
+        closeLabel="Закрыть выбор костей"
+        onClose={onClose}
+        closeRef={closeRef}
+        headTestId="mtable-sheet-head"
+        closeTestId="mtable-sheet-close"
+        leading={clearBtn}
+      />
       <div {...sxRows} className={`mtableRows ${sxRows.className ?? ''}`} data-testid="mtable-rows">
-        <SheetPresetsSection
-          showToast={showToast}
-          holdFiredRef={holdFiredRef}
-          revision={presetRev}
-          onMutate={bumpPresets}
-        />
+        <SheetPresetsSection showToast={showToast} revision={presetRev} onMutate={bumpPresets} />
         <SheetDiceRows counts={counts} total={total} rolling={rolling} />
         <div
           {...sxFormula}

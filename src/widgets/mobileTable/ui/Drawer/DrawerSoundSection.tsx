@@ -1,19 +1,19 @@
 // Секция «Звук и вибрация» в бургере: тумблеры persist+стор, кнопка входа
 // в карточку музыки (onOpenMusic — родитель открывает MusicCard).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { hapticsEnabled, isMuted, setHaptics, setMuted } from '@/shared/dice/sound'
-import { soundActions } from '@/shared/dice/soundSlice'
+import { useAppSelector } from '@/app/hooks'
 import { musicIcon, soundIcon, vibrationIcon } from '@/shared/ui/mdIcon.utils'
 import { selectMusicEntry, selectSound } from '../../selectors'
 import { overlayStyles } from '../overlay.stylex'
+import { useHapticsToggle, useMuteToggle } from '../useSoundToggle'
 import { drawerStyles as s } from './Drawer.stylex'
 
 export const DrawerSoundSection = (props: { onOpenMusic: () => void }): React.JSX.Element => {
   const { onOpenMusic } = props
-  const dispatch = useAppDispatch()
   const { muted, haptics } = useAppSelector(selectSound)
   const music = useAppSelector(selectMusicEntry)
+  const toggleMute = useMuteToggle()
+  const toggleHaptics = useHapticsToggle()
 
   const sxSection = stylex.props(overlayStyles.section)
   const sxSectionTitle = stylex.props(s.sectionTitle)
@@ -41,11 +41,7 @@ export const DrawerSoundSection = (props: { onOpenMusic: () => void }): React.JS
         dangerouslySetInnerHTML={{
           __html: `${soundIcon(muted)}<span>${muted ? 'Включить звук' : 'Выключить звук'}</span>`,
         }}
-        onClick={() => {
-          const next = !isMuted()
-          setMuted(next)
-          dispatch(soundActions.setMuted(next))
-        }}
+        onClick={toggleMute}
       />
       <button
         type="button"
@@ -57,11 +53,7 @@ export const DrawerSoundSection = (props: { onOpenMusic: () => void }): React.JS
             haptics ? 'Выключить вибрацию' : 'Включить вибрацию'
           }</span>`,
         }}
-        onClick={() => {
-          const next = !hapticsEnabled()
-          setHaptics(next)
-          dispatch(soundActions.setHaptics(next))
-        }}
+        onClick={toggleHaptics}
       />
       <button
         type="button"
