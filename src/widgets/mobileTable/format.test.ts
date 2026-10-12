@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PoolPart } from '@/entities/rollHistory/history'
+import type { PoolPart } from '@/entities/rollHistory/model/history'
 import { formatLabel, formatParts } from './format'
 
 describe('formatLabel: лейбл для показа', () => {

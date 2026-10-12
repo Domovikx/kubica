@@ -2,9 +2,9 @@ import { Provider } from 'react-redux'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { store } from './store'
-import { musicUiActions } from '@/features/music/musicSlice'
-import { onMusicChange } from '@/features/music/music'
-import { applyUiScale } from '@/features/uiScale/uiScale'
+import { musicUiActions } from '@/features/music/model/musicSlice'
+import { onMusicChange } from '@/features/music/model/music'
+import { applyUiScale } from '@/features/uiScale/model/uiScale'
 import './styles.css'
 
 // Режим стола — синхронно до первого рендера: CSS body[data-mode='mtable']

@@ -1,20 +1,14 @@
 // Секция «Соцсети» в бургере: GitHub/Telegram/оценка репозитория; счётчик
-// звёзд (ленивый fetch) показываем от 1, сама ссылка — всегда.
+// звёзд (ленивый fetch) показываем от 0, когда данные есть; сама ссылка — всегда.
 import * as stylex from '@stylexjs/stylex'
 import { githubIcon, likeIcon, telegramIcon } from '@/shared/ui/mdIcon.utils'
-import { useStarCount } from '@/features/repoStars/useStars'
+import { starReviewLabel, useStarCount } from '@/features/repoStars/lib/useStars'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 
 export const DrawerSocialSection = (): React.JSX.Element => {
   const starCount = useStarCount()
-
-  // Лайкалка в шторке: 0 звёзд — не социальное доказательство, мету прячем
-  // (сама строка-ссылка живёт всегда), показываем от 1.
-  const starMenuLabel =
-    starCount !== null && starCount >= 1
-      ? `Оценить репозиторий Kubica на GitHub, звёзд: ${starCount} (откроется в новой вкладке)`
-      : 'Оценить репозиторий Kubica звездой на GitHub (откроется в новой вкладке)'
+  const starMenuLabel = starReviewLabel(starCount)
 
   const sxSection = stylex.props(overlayStyles.section)
   const sxSectionTitle = stylex.props(s.sectionTitle)

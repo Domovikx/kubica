@@ -24,7 +24,7 @@ import { shortSet, summarize } from '../../format'
 import { iconStyles } from '../../mt.stylex'
 import { useHeadStarFit, type HeadFitRefs } from './useFitHeadStar'
 import { useMuteToggle } from '../useSoundToggle'
-import { useStarCount } from '@/features/repoStars/useStars'
+import { starReviewLabel, useStarCount } from '@/features/repoStars/lib/useStars'
 import { headStyles as s } from './Head.stylex'
 
 export interface HeadProps {
@@ -73,10 +73,7 @@ export const Head = (props: HeadProps): React.JSX.Element => {
 
   // Шапка — ряд как на GitHub: цифра видна всегда, когда она известна
   // (GitHub показывает и 0); без данных/офлайн пилюля скрыта (hidden).
-  const headStarLabel =
-    starCount !== null
-      ? `Оценить репозиторий Kubica на GitHub, звёзд: ${starCount} (откроется в новой вкладке)`
-      : 'Оценить репозиторий на GitHub (откроется в новой вкладке)'
+  const headStarLabel = starReviewLabel(starCount)
 
   // Star: иконка прямым ребёнком + подпись + пилюля-счётчик одной строкой
   // innerHTML — как легаси innerHTML+append. Пилюля всегда в DOM, hidden

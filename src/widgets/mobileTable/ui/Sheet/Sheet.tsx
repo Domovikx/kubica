@@ -4,16 +4,16 @@
 import { useEffect, useRef, useState } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { setupActions } from '@/features/tableSetup/setupSlice'
-import { totalCount } from '@/features/tableSetup/tableSetup'
+import { setupActions } from '@/features/tableSetup/model/setupSlice'
+import { totalCount } from '@/features/tableSetup/model/tableSetup'
 import {
   loadCustomPresets,
   saveCustomPreset,
   uniquePresetName,
-} from '@/features/tableSetup/presets'
+} from '@/features/tableSetup/model/presets'
 import { buzz as vibrate } from '@/shared/dice/sound'
 import { clearAllIcon } from '@/shared/ui/mdIcon.utils'
-import { mtUiActions } from '@/features/tableUi/mtUiSlice'
+import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
 import { selectCounts, selectMtUi, selectRolling, selectTotal } from '../../selectors'
 import { shortSet } from '../../format'
 import { iconStyles } from '../../mt.stylex'
@@ -21,7 +21,7 @@ import { OverlayHead } from '../OverlayHead'
 import { useDirtyPanel } from '../useDirtyPanel'
 import { overlayStyles } from '../overlay.stylex'
 import { sheetStyles as s } from './Sheet.stylex'
-import { displaySets, sameCounts } from '@/features/tableSetup/presetDisplay.utils'
+import { displaySets, sameCounts } from '@/features/tableSetup/model/presetDisplay.utils'
 import { SheetPresetsSection } from './SheetPresetsSection'
 import { SheetDiceRows } from './SheetDiceRows'
 

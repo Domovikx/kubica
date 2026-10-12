@@ -1,7 +1,7 @@
 // Пресеты стола: встроенные быстрые наборы + свои наборы пользователя.
 // Чистая логика (без DOM) — тестируется Vitest. Персист — localStorage.
 import type { DieId } from '@/shared/dice/dieId.utils'
-import { parseNotation } from '@/entities/diceNotation/notation'
+import { parseNotation } from '@/entities/diceNotation/model/notation'
 import { emptyCounts, MAX_PER_DIE, MAX_TOTAL, type TableCounts } from './tableSetup'
 
 export interface TablePreset {

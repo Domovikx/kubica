@@ -2,8 +2,8 @@
 // тост + лёгкая вибрация на подтверждение).
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { UI_SCALES, setUiScale, type UiScale } from '@/features/uiScale/uiScale'
-import { uiScaleActions } from '@/features/uiScale/uiScaleSlice'
+import { UI_SCALES, setUiScale, type UiScale } from '@/features/uiScale/model/uiScale'
+import { uiScaleActions } from '@/features/uiScale/model/uiScaleSlice'
 import { buzz as vibrate } from '@/shared/dice/sound'
 import { selectUiScale } from '../../selectors'
 import { overlayStyles } from '../overlay.stylex'

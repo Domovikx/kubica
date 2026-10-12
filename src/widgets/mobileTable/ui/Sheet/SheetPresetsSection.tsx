@@ -4,10 +4,10 @@
 import { useMemo } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { deleteCustomPreset, hideBuiltIn } from '@/features/tableSetup/presets'
-import { setupActions } from '@/features/tableSetup/setupSlice'
+import { deleteCustomPreset, hideBuiltIn } from '@/features/tableSetup/model/presets'
+import { setupActions } from '@/features/tableSetup/model/setupSlice'
 import { buzz as vibrate } from '@/shared/dice/sound'
-import { mtUiActions } from '@/features/tableUi/mtUiSlice'
+import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
 import { selectMtUi } from '../../selectors'
 import { Chip } from '../Chip'
 import { sheetStyles as s } from './Sheet.stylex'
@@ -15,7 +15,7 @@ import {
   BUILT_IN_NAMES,
   displaySets,
   type PresetEntry,
-} from '@/features/tableSetup/presetDisplay.utils'
+} from '@/features/tableSetup/model/presetDisplay.utils'
 
 const ChipGroup = (props: {
   title: string

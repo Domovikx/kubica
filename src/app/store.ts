@@ -10,27 +10,27 @@ import {
   HISTORY_KEY,
   historyReducer,
   loadHistoryEntries,
-} from '@/entities/rollHistory/historySlice'
-import { loadMusicVolume, musicUiActions, musicUiReducer } from '@/features/music/musicSlice'
+} from '@/entities/rollHistory/model/historySlice'
+import { loadMusicVolume, musicUiActions, musicUiReducer } from '@/features/music/model/musicSlice'
 import {
   loadThrowPower,
   POWER_KEY,
   powerActions,
   powerReducer,
-} from '@/features/throwPower/throwPowerSlice'
+} from '@/features/throwPower/model/throwPowerSlice'
 import {
   loadSetupCounts,
   SETUP_KEY,
   setupActions,
   setupReducer,
-} from '@/features/tableSetup/setupSlice'
-import { applyUiScale } from '@/features/uiScale/uiScale'
+} from '@/features/tableSetup/model/setupSlice'
+import { applyUiScale } from '@/features/uiScale/model/uiScale'
 import {
   loadUiScale,
   UI_SCALE_KEY,
   uiScaleActions,
   uiScaleReducer,
-} from '@/features/uiScale/uiScaleSlice'
+} from '@/features/uiScale/model/uiScaleSlice'
 import {
   HAPTICS_KEY,
   loadHaptics,
@@ -38,8 +38,8 @@ import {
   MUTE_KEY,
   soundActions,
   soundReducer,
-} from '@/features/sound/soundSlice'
-import { mtUiActions, mtUiReducer } from '@/features/tableUi/mtUiSlice'
+} from '@/features/sound/model/soundSlice'
+import { mtUiActions, mtUiReducer } from '@/features/tableUi/model/mtUiSlice'
 
 type PersistStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 

@@ -5,7 +5,7 @@
 import * as stylex from '@stylexjs/stylex'
 import { DIE_IDS } from '@/shared/dice/geometry'
 import { dieGlyph } from '@/shared/ui/dieGlyph.utils'
-import type { TableCounts } from '@/features/tableSetup/tableSetup'
+import type { TableCounts } from '@/features/tableSetup/model/tableSetup'
 import { shortSet } from '../../format'
 import { useChipHold } from './useChipHold'
 

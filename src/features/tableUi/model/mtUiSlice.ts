@@ -4,7 +4,7 @@
 // загрузка GLB (loaded/instances/loadError → фаза loading).
 // Сторы setup/history/music/sound/side/power — отдельные слайсы (см. store).
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { PoolPart } from '@/entities/rollHistory/history'
+import type { PoolPart } from '@/entities/rollHistory/model/history'
 
 export type OverlayKind = 'sheet' | 'drawer' | 'music'
 

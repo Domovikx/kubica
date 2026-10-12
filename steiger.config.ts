@@ -19,9 +19,19 @@ export default defineConfig([
   },
   {
     // Конвенция: entities/features/shared импортируются по прямым файлам, без barrel;
-    // barrel — только ui-папки компонентов и публичный API виджета.
+    // barrel — только ui-папки компонентов и публичный API виджета. Правила
+    // public-api требуют index.ts — против конвенции, оффним по слоям без dверей.
+    files: ['./src/entities/**', './src/features/**', './src/pages/**', './src/shared/**'],
     rules: {
       'fsd/no-public-api-sidestep': 'off',
+      'fsd/public-api': 'off',
+    },
+  },
+  {
+    // Один потребитель — осознанная норма kubica (слайс = владелец предметной
+    // области; на MVP у сущности мало потребителей, «merge» размывает границы).
+    rules: {
+      'fsd/insignificant-slice': 'off',
     },
   },
   {
@@ -40,23 +50,8 @@ export default defineConfig([
     },
   },
   {
-    // Техдолг к обсуждению на FSD-ревью: слайсы с файлами в корне без сегментов.
-    rules: {
-      'fsd/no-segmentless-slices': 'off',
-    },
-  },
-  {
     rules: {
       'fsd/no-segments-on-sliced-layers': 'off',
-    },
-  },
-  {
-    // Техдолг: слайсы без сегментов не индексируются steiger — pages/home
-    // (импорт виджета) невидим, поэтому mobileTable ложно «без ссылок».
-    // Вернуть после сегментизации pages (волна 4 FSD-задачи).
-    files: ['./src/widgets/mobileTable/**'],
-    rules: {
-      'fsd/insignificant-slice': 'off',
     },
   },
   {

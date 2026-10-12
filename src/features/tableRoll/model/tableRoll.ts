@@ -4,7 +4,7 @@
 // с частями в одну запись истории и один поп (паттерн пула 2.3).
 import type { Vec3 } from '@/shared/dice/geometry'
 import type { DieId } from '@/shared/dice/dieId.utils'
-import type { PoolPart } from '@/entities/rollHistory/history'
+import type { PoolPart } from '@/entities/rollHistory/model/history'
 import { createPhysicsWorld, type PhysicsWorld, type StepCallback } from '@/shared/dice/physics'
 import {
   displayValue,

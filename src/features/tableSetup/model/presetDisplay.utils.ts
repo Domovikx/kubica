@@ -6,8 +6,8 @@ import {
   BUILT_IN_PRESETS,
   loadCustomPresets,
   loadHiddenBuiltIns,
-} from '@/features/tableSetup/presets'
-import type { TableCounts } from '@/features/tableSetup/tableSetup'
+} from '@/features/tableSetup/model/presets'
+import type { TableCounts } from '@/features/tableSetup/model/tableSetup'
 
 export const BUILT_IN_NAMES = new Set(BUILT_IN_PRESETS.map((p) => p.name))
 

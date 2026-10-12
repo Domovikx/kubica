@@ -4,7 +4,7 @@
 import { useCallback } from 'react'
 import { useAppDispatch } from '@/app/hooks'
 import { hapticsEnabled, isMuted, setHaptics, setMuted } from '@/shared/dice/sound'
-import { soundActions } from '@/features/sound/soundSlice'
+import { soundActions } from '@/features/sound/model/soundSlice'
 
 export const useMuteToggle = (): (() => void) => {
   const dispatch = useAppDispatch()

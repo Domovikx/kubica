@@ -7,9 +7,13 @@ import { quatForValueDown } from '@/shared/dice/faceOrient.utils'
 import { diceOverlap, type DicePose, type StepCallback } from '@/shared/dice/physics'
 import { resolveD4Below, screenUpWorld } from '@/shared/dice/readout'
 import { buzz as vibrate, playThock, stopRattle } from '@/shared/dice/sound'
-import { labelTableResult, rollTable, type TableDieResult } from '@/features/tableRoll/tableRoll'
-import { historyActions } from '@/entities/rollHistory/historySlice'
-import { mtUiActions } from '@/features/tableUi/mtUiSlice'
+import {
+  labelTableResult,
+  rollTable,
+  type TableDieResult,
+} from '@/features/tableRoll/model/tableRoll'
+import { historyActions } from '@/entities/rollHistory/model/historySlice'
+import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
 import type { AppDispatch } from '@/app/store'
 import type { Table } from '@/shared/three/table'
 import { hideResult } from '@/shared/ui/resultPop.utils'

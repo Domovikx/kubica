@@ -2,7 +2,7 @@
 // тап по кнопке/инпуту (кроме ссылок и самого крестика) взводит dirty-морф.
 // Один владелец правил вместо трёх копий в компонентах (волна 2 ревью).
 import { useAppDispatch } from '@/app/hooks'
-import { mtUiActions, type OverlayKind } from '@/features/tableUi/mtUiSlice'
+import { mtUiActions, type OverlayKind } from '@/features/tableUi/model/mtUiSlice'
 
 export const useDirtyPanel = (
   kind: OverlayKind,

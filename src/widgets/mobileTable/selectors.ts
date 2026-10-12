@@ -2,7 +2,7 @@
 // производные значения шапки/шторки. Логика 1-в-1 из прежнего chrome.ts.
 import { createSelector } from '@reduxjs/toolkit'
 import type { RootState } from '@/app/store'
-import { totalCount } from '@/features/tableSetup/tableSetup'
+import { totalCount } from '@/features/tableSetup/model/tableSetup'
 
 export type TablePhase = 'empty' | 'rolling' | 'charging' | 'loading' | 'ready'
 

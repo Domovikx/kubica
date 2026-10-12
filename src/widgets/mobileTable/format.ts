@@ -1,7 +1,7 @@
 // Форматирование набора и времени для шапки, шторки и истории (без DOM).
 import { DIE_IDS } from '@/shared/dice/geometry'
 import type { DieId } from '@/shared/dice/dieId.utils'
-import type { PoolPart } from '@/entities/rollHistory/history'
+import type { PoolPart } from '@/entities/rollHistory/model/history'
 
 /**
  * Текстовая разбивка пула (pure, без DOM): по строке на часть.
@@ -17,7 +17,7 @@ export const formatParts = (parts: readonly PoolPart[]): string[] =>
  * Хранение и реролл живут с «+» (парсер его требует) — заменяем только при рендере.
  */
 export const formatLabel = (label: string): string => label.replace(/\+(?=\d*d\d)/g, ' ')
-import type { TableCounts } from '@/features/tableSetup/tableSetup'
+import type { TableCounts } from '@/features/tableSetup/model/tableSetup'
 
 export const fmtTime = (at: number): string => {
   const d = new Date(at)

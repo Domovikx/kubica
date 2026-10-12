@@ -4,25 +4,25 @@
 // RTK-store (getState снаружи React) — единый источник правды для рендера.
 // Бросок/жесты — отдельные модули (throwPack.ts, gestures.ts).
 import { DIE_IDS, faceValue, physMaxDim } from '@/shared/dice/geometry'
-import { MODELS } from '@/entities/dieModels/models'
+import { MODELS } from '@/entities/dieModel/model/models'
 import type { DieId } from '@/shared/dice/dieId.utils'
-import type { HistoryEntry } from '@/entities/rollHistory/history'
+import type { HistoryEntry } from '@/entities/rollHistory/model/history'
 import {
   quatForD4VertexUp,
   quatForValueDown,
   quatMul,
   quatYaw,
 } from '@/shared/dice/faceOrient.utils'
-import { tickTableWorld } from '@/features/tableRoll/tableRoll'
-import { expandInstances, type TableCounts } from '@/features/tableSetup/tableSetup'
+import { tickTableWorld } from '@/features/tableRoll/model/tableRoll'
+import { expandInstances, type TableCounts } from '@/features/tableSetup/model/tableSetup'
 import { createTable, type Table } from '@/shared/three/table'
 import { computeLayout } from './layout'
 import { createGestures } from './gestures'
 import { createThrowPack, type Instance } from './throwPack'
-import { setupActions } from '@/features/tableSetup/setupSlice'
-import { mtUiActions } from '@/features/tableUi/mtUiSlice'
+import { setupActions } from '@/features/tableSetup/model/setupSlice'
+import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
 import type { AppDispatch, RootState } from '@/app/store'
-import { throwPowerBoost } from '@/features/throwPower/throwPower'
+import { throwPowerBoost } from '@/features/throwPower/model/throwPower'
 import { startRattle, stopRattle } from '@/shared/dice/sound'
 
 /** DEV-хук для тестов/чекеров: точка кости на экране. */
