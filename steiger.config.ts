@@ -20,7 +20,8 @@ export default defineConfig([
   {
     // Решение 2026-10-12 (владелец): плоские слайсы — файлы в корне слайса
     // (избыточна вложенность dieModel/model/…), публичная дверь — index.ts.
-    // Виджеты: сегменты ui/model/lib, дверь виджета — index.ts.
+    // Стол живёт в странице (src/pages/HomePage, сегменты ui/model/lib);
+    // слой widgets зарезервирован (пока пуст) под будущие блоки — см. docs/FSD.md.
     files: ['./src/entities/**', './src/features/**', './src/pages/**', './src/widgets/**'],
     rules: {
       'fsd/public-api': 'error',
@@ -31,8 +32,8 @@ export default defineConfig([
   {
     // Конвенция: entities/features/shared импортируются через публичный API
     // слайса (index.ts) либо прямым файлом своего слайса; barrel'ов-свалок нет.
-    // app обязан ходить в виджет через публичный API (index.ts): прямые импорты
-    // внутренностей (mtUiSlice и т.п.) дрейфуют контракт виджета.
+    // app обязан ходить в страницу через публичный API (index.ts): прямые импорты
+    // внутренностей дрейфуют контракт.
     files: ['./src/app/**'],
     rules: {
       'fsd/no-public-api-sidestep': 'error',
@@ -62,11 +63,6 @@ export default defineConfig([
     // области; на MVP у сущности мало потребителей, «merge» размывает границы).
     rules: {
       'fsd/insignificant-slice': 'off',
-    },
-  },
-  {
-    rules: {
-      'fsd/no-segments-on-sliced-layers': 'off',
     },
   },
   {

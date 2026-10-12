@@ -13,15 +13,18 @@ export default {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'Модуль никуда не импортируется — возможно мёртвый код.',
-      from: { pathNot: '^(node_modules)', orphan: true },
+      // Дверь зарезервированного (пока пустого) слоя widgets — не мёртвый код:
+      // 6 слоёв FSD объявлены всегда, потребитель появится при первом блоке (2026-10-12).
+      from: { pathNot: ['^(node_modules)', '^src/widgets/index\\.ts$'], orphan: true },
       to: {},
     },
-    // FSD: импорты только вниз по слоям app → pages → widgets → features → entities.
+    // FSD: импорты только вниз по слоям app → pages → widgets → features → entities
+    // (6 слоёв; слой widgets зарезервирован и пока пуст — см. docs/FSD.md).
     // Исключения (не архитектурные зависимости):
     // - *.css — колокализованные стили слайса, а не связь модулей;
     // - *.test.ts — тесты импортируют свой же модуль по определению;
-    // - модули одного слайса (mobile-table → chrome/layout/…, table-setup →
-    //   presets) — колокализация, а не импорт «друг друга» между слайсами
+    // - модули одного слайса (HomePage/ui → model/…) — колокализация,
+    //   а не импорт «друг друга» между слайсами
     //   ($1 в to.pathNot — имя слайса-источника из from.path).
     {
       name: 'fsd-no-upward-imports',
@@ -38,7 +41,7 @@ export default {
       severity: 'error',
       comment: 'Виджеты не импортируют страницы, приложение и друг друга.',
       // Хвостовой / в from: дверь слоя src/widgets/index.ts не считается
-      // слайсом и не регулируется down-only (она только реэкспортит слайсы).
+      // слайсом и не регулируется down-only.
       from: { path: '^src/widgets/([^/]+)/', pathNot: '\\.test\\.tsx?$' },
       to: {
         path: 'src/(app|pages|widgets)',

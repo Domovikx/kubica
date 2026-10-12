@@ -23,16 +23,18 @@ Slices and segments, Public API, issues; LLM-версия <https://fsd.how/docs/
 
 ## Канон (упрощённо)
 
-Слои снизу вверх: `shared → entities → features → widgets → pages → app`. Импорт — только на слой
-строго ниже. `shared` и `app` — слои без слайсов (только сегменты). Слайсы — независимы (zero
-coupling) и когезивны (high cohesion). Стандартные сегменты слайса: `ui`, `api`, `model`, `lib`,
-`config`.
+Слои снизу вверх: `shared → entities → features → widgets → pages → app` (в спеке есть ещё
+deprecated `processes`; в kubica все 6 слоёв объявлены, в `widgets` — самодостаточные оверлеи
+страницы (drawer/sheet/musicCard), разнесение 2026-10-12, см. «Обоснование структуры» ниже). Импорт
+— только на слой строго ниже. `shared` и `app` — слои без слайсов (только сегменты). Слайсы —
+независимы (zero coupling) и когезивны (high cohesion). Стандартные сегменты слайса: `ui`, `api`,
+`model`, `lib`, `config`.
 
 ### Import rule on layers
 
 - Файл слайса импортирует другие слайсы **только со слоёв строго ниже**.
 - Запрещены импорты вверх и между слайсами одного слоя. Легитимные связи сущностей — `@x`-нотация
-  только на `entities` (в kubica не используется; связь виджетов — через `features/`-стор).
+  только на `entities` (в kubica не используется; общение компонентов — через `features/`-стор).
 
 ### Public API (barrel `index.ts`)
 
@@ -56,18 +58,82 @@ coupling) и когезивны (high cohesion). Стандартные сегм
 - **Shared как дамп** — `utils/`/`helpers/` без фокуса; в `shared` каждая библиотека — одна сфера +
   README.
 
+## Обоснование структуры (FSD v2.1: почему так)
+
+Источники — действующая в 2026 спека FSD v2.1 на <https://feature-sliced.design>: Layers
+(<https://feature-sliced.design/docs/reference/layers>), Slices and segments
+(<https://feature-sliced.design/docs/reference/slices-segments>), пример Auth
+(<https://feature-sliced.design/docs/guides/examples/auth>), code smell Desegmentation
+(<https://feature-sliced.design/docs/guides/issues/desegmented>). Ресёрч и решения — 2026-10-12
+(владелец: «обоснование и дока»).
+
+1. **Композиция стола — в `pages/HomePage`, самодостаточные оверлеи — в `widgets` (разнесение
+   2026-10-12).** Спека, Layers → Widgets: «If a block of UI makes up most of the interesting
+   content on a page, and is never reused, it should not be a widget, and instead it should be
+   placed directly inside that page». `HomePage` был 12-строчной обёрткой, `MobileTable` — 100 %
+   содержимого единственной страницы, поэтому композиция экрана (контейнер, шапка/фут/хинт, движок,
+   `selectPhase`) осталась в странице (спека, Layers: «You don't have to use every layer … only add
+   them if it brings value»). Решение владельца 2026-10-12 (метод снизу вверх от `shared`): **панель
+   настроек (`widgets/drawer`), шторка пресетов (`widgets/sheet`), карточка музыки
+   (`widgets/musicCard`)** — между ними zero coupling (прямых импортов нет, связь только через
+   features-стейт и shared-кит), у каждого свой стейт-контракт — это слайсы виджета, а не содержимое
+   страницы; общий кит (`OverlayHead`, `overlay.stylex`, `mt.stylex`) — в `shared/ui` (презентация
+   без бизнеса, общая для трёх слой-единиц). **Критерий новых наполнений `widgets`:** блок
+   переиспользуется на ≥2 страницах ИЛИ это самостоятельный оверлей, не сращённый с композицией
+   экрана (напр. viewer-grid).
+2. **Сегменты `ui/model/lib` внутри `pages/HomePage`.** Спека, Slices and segments: стандартные
+   сегменты `ui/api/model/lib/config` — группировка «по технической природе»; «Inside a slice, the
+   code could be organized in any way that you want» — контракт держит public API слайса
+   (`index.ts`). Пример Auth: `pages/login/{ui/LoginPage.tsx, index.ts}` — ровно наш формат
+   (папка-слайс + сегменты + дверь).
+3. **Папки компонентов внутри сегмента — атомы, не под-слайсы.** Группировка 2026-10-12: компонент +
+   всё, что относится только к нему, — в папку (`pages/HomePage/ui/Head/`, `ui/Watermark/` —
+   компонент + его хуки/stylex; в `widgets/sheet/` — секции, `Chip`, `useChipHold`), без
+   промежуточного `components/`; одиночные компоненты — плоско в корне `ui/`. Это группировка ВНУТРИ
+   сегмента («Inside a slice, the code could be organized in any way that you want»), а не
+   под-слайсы: кросс-импорты папок одного слайса — относительные внутри одного сегмента; между
+   слайсами (в т.ч. `widgets/sheet → widgets/drawer` — не бывает) и к киту — только в двери слоёв.
+   Запрет оставался на доменные под-слайсы с общими сквозными импортами. Кит оверлея (`OverlayHead`,
+   `overlay.stylex`, `mt.stylex`) после разнесения — в `shared/ui`: один на три widgets-слайса,
+   презентация без бизнеса — единственный легальный дом.
+4. **Почему плоские entities/features допустимы.** Внутри слайса организация свободна (цитата выше);
+   плоскость — решение владельца (KISS/YAGNI, 2026-10-12: файлы в корень слайса, без
+   `dieModel/model/…`). Smell Desegmentation бьёт по generic-папкам и именам вроде
+   `components/hooks/utils` («bad segment names») и по смешению доменов в одном файле — не по
+   отсутствию сегментов у слайса из 3–4 файлов; steiger `fsd/no-segmentless-slices` off — осознанная
+   оговорка с комментарием в `steiger.config.ts`.
+5. **История структуры стола:** сегменты + папки компонентов с промежуточным `components/`
+   (`mobileTable/ui/components/…`, 5 уровней) — владелец: «избыточная вложенность»; полный flatten
+   (42 файла в корне слоя, 3 уровня) — владелец: «ужас»; плоские сегменты (3–4 уровня) — компромисс
+   глубины. **Финальное решение 2026-10-12:** папки компонентов БЕЗ `components/` — компонент + его
+   атомы (`widgets/drawer/Drawer.tsx`, `pages/HomePage/ui/Head/Head.tsx`, 4 уровня), одиночные
+   компоненты плоско в корне `ui/`; затем разнесение по слоям (п. 1): оверлеи → `widgets/`, кит →
+   `shared/ui`, хуки/селекторы/форматтеры → владельцам стейта.
+
 ## Конвенции kubica (дополняют канон)
 
-- Слои: `app, pages, widgets, features, entities, shared` (процессов нет). Шпаргалка «куда класть» —
-  `docs/ARCHITECTURE.md` §«Куда класть новый код».
-- **Barrel'ы только в ui-папках компонентов + публичный API виджета**
-  (`widgets/mobileTable/index.ts`, `hooks/index.ts`). В `entities/features/shared` — прямые импорты
-  по файлам, barrel'ов нет (не переворачивать без запроса). Внутри виджета — прямые импорты; снаружи
-  — barrel.
-- Widgets общаются между собой только через `features/`-стор; общий доступ к стору/хукам приложения
-  — `app/store`, `app/hooks` (осознанные исключения dep-cruiser и steiger).
-- Хуки-владельцы: хук живёт у владельца DOM/UI (`useChipHold` → `ui/Chip/`, `useTableEngine` →
-  корень виджета); в `widgets/mobileTable/hooks/` — только то, чем владеет сегмент `hooks`.
+- Слои: `app, pages, widgets, features, entities, shared` — все 6 объявлены всегда; `widgets`
+  содержит слайсы `drawer/sheet/musicCard` (разнесение 2026-10-12; см. «Обоснование структуры»).
+  Шпаргалка «куда класть» — `docs/ARCHITECTURE.md` §«Куда класть новый код».
+- **Двери**: у каждого слоя `index.ts` (`@/features`, `@/entities`, `@/pages`, `@/widgets`,
+  `@/shared`, `@/app`); у слайсов со значимым объёмом — своя (`features/tableRoll/index.ts`,
+  `widgets/sheet/index.ts`, `pages/HomePage/index.ts`); **у каждой папки-компонента — своя**
+  (`ui/Head/index.ts`, `widgets/drawer/index.ts`): потребитель импортирует папку, а не файл
+  (`./Head`, а не `./Head/Head`) — импорты без шума. Двери НЕ плодятся в служебных сегментах
+  (`model/`, `ui/` целиком) и внутренних служебных папках (`api/mocks/`) — там дверь сегмента/слайса
+  выше. Внутри слайса — относительные импорты, без лишних barrel'ов; снаружи — в дверь. Прямые
+  импорты внутренностей чужого слайса — нарушение (см. Часть C.2).
+- Компоненты страницы общаются между собой только через `features/`-стор; общий доступ к стору/хукам
+  приложения — `app/store`, `app/hooks` (осознанные исключения dep-cruiser и steiger); хуки в
+  слайсах `features` диспатчат через `useDispatch` из `react-redux` напрямую — импорт `@/app` из
+  features замыкает цикл `store → features-дверь → хук → store`.
+- Хуки-владельцы: хук живёт рядом с владельцем стейта/домена: `widgets/sheet/useChipHold`,
+  `pages/HomePage/ui/Head/useFitHeadStar`, `ui/Watermark/useWatermarkFit`; `useToast` (мотор
+  контейнера `MobileTable`) — в корне `ui/`; `useDirtyPanel` — `features/tableUi`, `useSoundToggle`
+  — `features/sound` (владельцы диспатча); `useTableEngine`, движок, экранный `selectPhase` —
+  `model/`; селекторы стейта — `features/*/selectors.ts` и `entities/rollHistory/selectors.ts`
+  (рядом с редьюсером, структурная типизация вместо RootState); форматтеры — у владельца типа
+  (`features/tableSetup/format.ts`, `entities/rollHistory/format.ts`). Сегмент `lib/` упразднён.
 - Именование: `.tsx`-компоненты PascalCase, стили `<база>.stylex.ts`, утилиты `<база>.utils.ts`,
   папки camelCase; DOM-маркеры `.mtable*`, `data-testid`, `data-phase` — контракты, не трогать.
 - Механика: `npm run lint:arch` (dep-cruiser: импорты только вниз, no-circular), `npm run lint:fsd`
@@ -146,7 +212,7 @@ coupling) и когезивны (high cohesion). Стандартные сегм
    «Прочее (ниже планки)» + таймлайн). Не более 15 находок. Ничего не редактируй.
 ```
 
-Если контекст саба не влезает — дробить по слоям (`src/widgets+pages+app`, `src/features`,
+Если контекст саба не влезает — дробить по слоям (`src/pages+app`, `src/features`,
 `src/entities+shared`), отчёт тогда `<section>@<slice>.md`.
 
 ### 3. Сборка отчётов
@@ -233,8 +299,8 @@ coupling) и когезивны (high cohesion). Стандартные сегм
 - Импорт вверх по слоям (тесты, `.css` и исключения dep-cruiser — не считать).
 - Импорт между слайсами одного слоя (только `features/`-стор/`app/store|hooks` — осознанные
   исключения kubica).
-- Обход public API слайса: прямой импорт внутрь чужого слайса (`widgets/x/ui/Foo` вместо
-  `widgets/x`) — снаружи слайса через barrel.
+- Обход public API слайса: прямой импорт внутрь чужого слайса (`pages/HomePage/ui/Head` вместо
+  двери) — снаружи слайса через barrel/дверь.
 - «Тихие» связи: импорт чужих типов/констант, side-effect импорты ради единой константы.
 - `shared` тянет бизнес (импорт из `entities+`) или слоёв выше.
 
@@ -256,8 +322,9 @@ coupling) и когезивны (high cohesion). Стандартные сегм
 - Цикл: модуль импортирует `../` (index) собственного слайса.
 - shared-сегмент с одной дверью на всё (если появился) — тянет тяжёлое в бандл.
 
-**Не считать находкой.** Barrel'ы в ui-папках компонентов и публичном API виджета — конвенция
-kubica; отсутствие barrel в `entities/features/shared` — тоже конвенция (прямые импорты).
+**Не считать находкой.** Двери слоёв и слайсов (`index.ts`) как barrel — конвенция kubica (см. часть
+A); отсутствие вложенных barrel'ов внутри сегментов — тоже конвенция (прямые относительные импорты
+внутри слайса).
 
 ## 3. Слайсы: границы и здоровье
 
@@ -312,6 +379,7 @@ excessive entities, god-slice, shared как дамп.
   `<база>.utils.ts`.
 - Тесты мимо сегментов (не рядом с модулем, `src/__tests__`-свалка).
 
-**Не считать находкой.** Согласованные отступления проекта (корень `mobileTable/` под
-useTableEngine/useToast — публичный API виджета; `app/store|hooks`, `mobileTable/{hooks,selectors}`
-— устоявшиеся имена; `ui/Chip`-папки PascalCase — см. конвенцию компонентов).
+**Не считать находкой.** Согласованные отступления проекта (плоские слайсы entities/features без
+сегментов — `no-segmentless-slices` off, задокументировано; сегменты `pages/HomePage/{ui,model}` —
+решение 2026-10-12; `app/store|hooks` — устоявшиеся имена; PascalCase-файлы компонентов — см.
+конвенцию именования).

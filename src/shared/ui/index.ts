@@ -1,3 +1,6 @@
 export * from './dieGlyph.utils'
 export * from './mdIcon.utils'
 export * from './resultPop.utils'
+export { iconStyles } from './mt.stylex'
+export { OverlayHead } from './OverlayHead'
+export { overlayStyles } from './overlay.stylex'

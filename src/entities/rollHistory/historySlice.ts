@@ -1,6 +1,6 @@
 // RTK-слайс истории бросков (персист dice-rolls-v1, лимит 50, валидация
 // при чтении) — замена удалённого в A3 ванильного стора history.ts. Чистые
-// форматтеры пула живут в widgets/mobileTable/format.ts (там их и читают).
+// форматтеры пула живут в entities/rollHistory/format.ts (рядом с PoolPart).
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { HistoryEntry, RollInput } from './history'
 

@@ -133,3 +133,51 @@ app/store идёт через barrel; grep `entities/diceGeometry` в shared о�
   `tools/` (rewrite_layer_doors.py, merge_layer_imports.py, wrap_long_imports.py); ARCHITECTURE.md —
   раздел дверей переписан. Батарея полная: tsc 0, eslint 0, vitest 28/236, lint 0 (md), lint:arch 0
   (149 модулей), lint:fsd clean, build 0, e2e 30/30, чекеры 9/9, diff 0/0/0.
+- 2026-10-12: **продолжение цикла (KISS)** — в рабочем дереве: `src/testUtils/` убран — `testPump`
+  переехал в `src/shared/lib/` (дверь `@/shared/lib`, намеренно мимо двери слоя — тест-код и
+  антицикл), `src/` теперь содержит только FSD-слои; widgets уплощён по KISS/YAGNI (решение
+  владельца): папка-слайс `mobileTable/`, сегменты `ui/model/lib` и папки компонентов удалены — 42
+  файла прямо в `src/widgets/`, дверь `index.ts` реэкспортит `./MobileTable`;
+  `tools/flatten_slice.py` (уплощение слайсов), dep-cruiser: `fsd-widgets-down-only` переписан под
+  плоский слой (сиблинги = колокализация); ARCHITECTURE обновлён. CSS-аудит: прямых css в проекте
+  один — `src/app/styles.css` (канонический вход по ресёрчу stylex: токены :root, base-глобалы,
+  svg/innerHTML-остаток, анимации; единственный legacy-блок внутри — `.result`-поп до его миграции).
+  Батарея полная: tsc/eslint 0, vitest 28/236, lint 0, lint:arch 0 (143 модуля), lint:fsd clean,
+  build 0, e2e 30/30, чекеры 9/9, diff 0/0/0.
+- 2026-10-12: **ресёрч FSD v2.1 + стол → страница (вариант A)** — по просьбе владельца («по 2026
+  ищем, обоснование и дока») пройден официальный справочник спеки: Layers → Widgets, Slices and
+  segments, пример Auth, code smell Desegmentation (feature-sliced.design, v2.1). Ключевая цитата:
+  блок, «составляющий большую часть содержимого страницы и нигде не переиспользуемый, — не виджет, а
+  содержимое страницы»; плюс «You don't have to use every layer». Реализация: 42 файла
+  `src/widgets/` → `src/pages/HomePage/{ui,model,lib}` (ui 32, model 8, lib 2), `HomePage.tsx` →
+  `pages/HomePage/ui/HomePage.tsx`, дверь слайса `pages/HomePage/index.ts`; слой `widgets` удалён
+  (дверь `@/widgets`, dep-cruiser `fsd-widgets-down-only` и упоминания в fsd-features/fsd-shared —
+  сняты; steiger: widgets убран из files-глобов, комментарии переписаны);
+  `fsd/no-segments-on-sliced-layers` off удалён — правило включено (проверено прогоном);
+  `no-segmentless-slices` off подтверждён нужным (11 ошибок на плоских entities/features, новый
+  слайс HomePage — с сегментами — проходит); 15 файлов переписаны на `../model|lib/...`
+  (`tmp/rewrite_page_imports.py`); комментарии `app/hooks.ts`, `rollHistory/historySlice.ts`,
+  STACK.md обновлены. Доки: ARCHITECTURE (метод, шпаргалка «куда класть», двери без `@/widgets`,
+  структура с цитатой и критерием возврата слоя widgets); скилл `.opencode/skills/fsd-review`
+  актуализирован — добавлен §«Обоснование структуры (FSD v2.1: почему так)» с цитатами спеки и
+  историей решений. Dev-батарея зелёная: tsc 0, eslint 0, vitest 19/19 (переехавшие тесты), lint 0,
+  lint:arch 0 (143 модуля), lint:fsd clean. Полная батарея — перед коммитом.
+- 2026-10-12: **разнесение `pages/HomePage` по слоям FSD (widgets + владельцы)** — по просьбе
+  владельца («надо разнести компоненты согласно доке», метод снизу вверх от `shared` по каждому
+  юниту). Реализация: слайсы `widgets/{drawer,sheet,musicCard}/` (8+7+1 файлов, двери `index.ts`,
+  `src/widgets/index.ts` — реэкспорты); кит оверлея (`OverlayHead`, `overlay.stylex`, `mt.stylex`) →
+  `shared/ui`; хуки к владельцам стейта: `useDirtyPanel` → `features/tableUi`, `useSoundToggle` →
+  `features/sound` (там же `useDispatch` из react-redux вместо `useAppDispatch` — иначе цикл
+  `store → features-дверь → хук → store`); селекторы →
+  `features/{tableUi, tableSetup,sound,music,uiScale,throwPower}/selectors.ts` +
+  `entities/rollHistory/selectors.ts` (структурная типизация вместо RootState — без цикла через
+  `app`), селектор стейта `useTableEngine` импортирует из `@/features`; форматтеры →
+  `features/tableSetup/format.ts` (formatLabel/summarize/ shortSet) и
+  `entities/rollHistory/format.ts` (formatParts/fmtTime/partClass), тесты разделены соответственно,
+  `lib/` упразднён; `model/selectors.ts` оставил только экранный `selectPhase` (DOM-контракт
+  `data-phase`); `OverlayHead` больше не импортирует дверь `@/shared` (цикл → `./mdIcon.utils`).
+  Доки: ARCHITECTURE (шпаргалка «самодостаточный блок UI → widgets», структура страницы/слоя, кит в
+  shared/ui), скиллы fsd-review (обоснование п.1 «оверлеи vs композиция», хуки-владельцы, Часть C: 6
+  слоёв) и code-review. Dev-батарея зелёная: tsc 0, eslint+markdownlint 0, vitest 236/236 (29
+  файлов), lint:arch 0 (156 модулей, 404 связи), lint:fsd clean. Полная батарея (build + e2e 30 +
+  чекеры + diff) — перед коммитом.
