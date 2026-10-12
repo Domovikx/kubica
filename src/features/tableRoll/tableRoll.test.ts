@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DieId, Quat } from '@/shared'
 import { createPhysicsWorld, type PhysicsWorld } from '@/shared'
-import { pumpUntilSettled } from '@/testUtils'
+import { pumpUntilSettled } from '@/shared/lib'
 import { labelTableResult, rollTableDice, type TableDieResult } from './tableRoll'
 
 const IDENTITY: Quat = [0, 0, 0, 1]
