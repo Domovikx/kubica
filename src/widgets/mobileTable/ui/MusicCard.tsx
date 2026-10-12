@@ -4,11 +4,11 @@
 // music-slice (зеркало движка music.ts).
 import { useEffect, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { musicToggle, setMusicVolume } from '@/features/music/model/music'
-import { musicUiActions } from '@/features/music/model/musicSlice'
-import { musicIcon } from '@/shared/ui/mdIcon.utils'
-import { selectMusic, selectMusicEntry, selectMtUi } from '../selectors'
+import { useAppDispatch, useAppSelector } from '@/app'
+import { musicToggle, setMusicVolume, musicUiActions } from '@/features'
+
+import { musicIcon } from '@/shared'
+import { selectMusic, selectMusicEntry, selectMtUi } from '../model/selectors'
 import { OverlayHead } from './OverlayHead'
 import { useDirtyPanel } from './useDirtyPanel'
 import { overlayStyles } from './overlay.stylex'

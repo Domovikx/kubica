@@ -4,9 +4,9 @@
 // замера — с React-текстом узлы бы отцеплялись.
 import { useEffect } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppSelector } from '@/app/hooks'
-import { formatParts } from '../format'
-import { selectLastResult, selectRolling } from '../selectors'
+import { useAppSelector } from '@/app'
+import { formatParts } from '../lib/format'
+import { selectLastResult, selectRolling } from '../model/selectors'
 
 const styles = stylex.create({
   foot: {

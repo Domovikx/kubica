@@ -2,12 +2,11 @@
 // каждому типу кости (лимиты — MAX_PER_DIE/MAX_TOTAL, блок при броске).
 // Живёт внутри общей обёртки .mtableRows (порядок DOM 1-в-1 с легаси).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch } from '@/app/hooks'
-import { DIE_IDS } from '@/shared/dice/geometry'
-import type { DieId } from '@/shared/dice/dieId.utils'
-import { setupActions } from '@/features/tableSetup/model/setupSlice'
-import { MAX_PER_DIE, MAX_TOTAL, type TableCounts } from '@/features/tableSetup/model/tableSetup'
-import { DIE_HINTS, dieGlyph } from '@/shared/ui/dieGlyph.utils'
+import { useAppDispatch } from '@/app'
+import { DIE_IDS, DIE_HINTS, dieGlyph } from '@/shared'
+import type { DieId } from '@/shared'
+import { setupActions, MAX_PER_DIE, MAX_TOTAL, type TableCounts } from '@/features'
+
 import { sheetStyles as s } from './Sheet.stylex'
 
 export const SheetDiceRows = (props: {

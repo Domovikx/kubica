@@ -116,3 +116,20 @@ app/store идёт через barrel; grep `entities/diceGeometry` в shared о�
 осознанно: 3.8 (presetRev → useSyncExternalStore — проп ещё дублирует состояние, вернуться при
 раскатке tableSetup) и ресёрч-блок задачи (RTK/FSD/React-бест-практисы — частично учтено правилами).
 Пуш не выполнялся (не запрашивался).
+
+- 2026-10-12: **фидбек-цикл после ревью (структура)** — в рабочем дереве, ожидает review/коммита:
+  плоские слайсы (файлы из model/lib/ui переехали в корень слайса, `pages/home/` →
+  `src/pages/HomePage.tsx` — уточнение владельца: лишняя вложенность при 1 файле); двери: `index.ts`
+  у каждого слоя (`@/features`, `@/entities`, `@/widgets`, `@/pages`, `@/shared`, `@/testUtils`,
+  `@/app`) — 125 импортов переведены на короткие двери слоёв, 43 дубля import-ов слиты в один
+  statement, 8 длинных строк развёрнуты; shared: дверь слоя реэкспортирует всё, кроме `api` (msw —
+  только динамический импорт из main.tsx), кросс-сегментные импорты ВНУТРИ shared — только в
+  сегментную дверь (`@/shared/dice`), иначе цикл через слой-баррель; mobileTable реструктуризован по
+  FSD-канону сегментов: `ui/` (компоненты+стили), `model/` (engine, gestures, layout, selectors,
+  throwPack, useTableEngine, useToast), `lib/` (format), корень — только `index.ts`; steiger:
+  `fsd/no-layer-public-api` off (двери слоёв — решение владельца, границы держит dep-cruiser);
+  dep-cruiser: down-only правила не захватывают двери слоёв (хвостовой `/` в from.path),
+  `fsd-no-upward-imports` — исключение для `src/pages/index.ts`; FSD-скрипты перенесены из tmp/ в
+  `tools/` (rewrite_layer_doors.py, merge_layer_imports.py, wrap_long_imports.py); ARCHITECTURE.md —
+  раздел дверей переписан. Батарея полная: tsc 0, eslint 0, vitest 28/236, lint 0 (md), lint:arch 0
+  (149 модулей), lint:fsd clean, build 0, e2e 30/30, чекеры 9/9, diff 0/0/0.

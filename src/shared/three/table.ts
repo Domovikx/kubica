@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
-import { GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
+import { GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena'
 
 const CREASE_ANGLE = Math.PI / 5
 

@@ -14,7 +14,7 @@ import {
   toModelFrame,
 } from './geometry'
 import type { DieId } from './dieId.utils'
-import { ARENA_APOTHEM, GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena/arena'
+import { ARENA_APOTHEM, GLASS_HALF_X, GLASS_HALF_Z } from '@/shared/arena'
 // quat-математика — один источник в face-orient (DRY: дубли в этом файле удалены).
 import { applyQuatToVec, quatFromUnitVectors, quatMul } from './faceOrient.utils'
 import type { Quat } from './readout'

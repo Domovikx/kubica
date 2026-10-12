@@ -10,8 +10,8 @@
 // hasSum) известны React — условные объекты stylex, не CSS-варианты.
 import { useMemo, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppSelector } from '@/app/hooks'
-import { addIcon, menuIcon, musicIcon, soundIcon, likeIcon } from '@/shared/ui/mdIcon.utils'
+import { useAppSelector } from '@/app'
+import { addIcon, menuIcon, musicIcon, soundIcon, likeIcon } from '@/shared'
 import {
   selectCounts,
   selectLastResult,
@@ -19,12 +19,12 @@ import {
   selectRolling,
   selectSound,
   selectUiScale,
-} from '../../selectors'
-import { shortSet, summarize } from '../../format'
-import { iconStyles } from '../../mt.stylex'
+} from '../../model/selectors'
+import { shortSet, summarize } from '../../lib/format'
+import { iconStyles } from '../mt.stylex'
 import { useHeadStarFit, type HeadFitRefs } from './useFitHeadStar'
 import { useMuteToggle } from '../useSoundToggle'
-import { starReviewLabel, useStarCount } from '@/features/repoStars/lib/useStars'
+import { starReviewLabel, useStarCount } from '@/features'
 import { headStyles as s } from './Head.stylex'
 
 export interface HeadProps {

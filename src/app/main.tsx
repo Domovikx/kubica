@@ -2,9 +2,8 @@ import { Provider } from 'react-redux'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { store } from './store'
-import { musicUiActions } from '@/features/music/model/musicSlice'
-import { onMusicChange } from '@/features/music/model/music'
-import { applyUiScale } from '@/features/uiScale/model/uiScale'
+import { musicUiActions, onMusicChange, applyUiScale } from '@/features'
+
 import './styles.css'
 
 // Режим стола — синхронно до первого рендера: CSS body[data-mode='mtable']
@@ -26,7 +25,7 @@ const boot = async (): Promise<void> => {
   // не должен кирдить приложение — рендерим в любом случае.
   if (import.meta.env.VITE_MOCKS === '1') {
     try {
-      const { enableMsw } = await import('@/shared/api/mocks/browser')
+      const { enableMsw } = await import('@/shared/api')
       await enableMsw()
     } catch (error) {
       console.error('[msw] не запустился, работаем без моков:', error)

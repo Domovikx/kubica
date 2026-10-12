@@ -4,11 +4,11 @@
 // Секции — подкомпоненты в этой же папке (волна декомпозиции ui/).
 import { useEffect, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import type { HistoryEntry } from '@/entities/rollHistory/model/history'
-import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
-import { selectMtUi } from '../../selectors'
-import { loadStars } from '@/features/repoStars/lib/useStars'
+import { useAppDispatch, useAppSelector } from '@/app'
+import type { HistoryEntry } from '@/entities'
+import { mtUiActions, loadStars } from '@/features'
+import { selectMtUi } from '../../model/selectors'
+
 import { OverlayHead } from '../OverlayHead'
 import { useDirtyPanel } from '../useDirtyPanel'
 import { drawerStyles as s } from './Drawer.stylex'

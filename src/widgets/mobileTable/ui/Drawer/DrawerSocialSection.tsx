@@ -1,8 +1,8 @@
 // Секция «Соцсети» в бургере: GitHub/Telegram/оценка репозитория; счётчик
 // звёзд (ленивый fetch) показываем от 0, когда данные есть; сама ссылка — всегда.
 import * as stylex from '@stylexjs/stylex'
-import { githubIcon, likeIcon, telegramIcon } from '@/shared/ui/mdIcon.utils'
-import { starReviewLabel, useStarCount } from '@/features/repoStars/lib/useStars'
+import { githubIcon, likeIcon, telegramIcon } from '@/shared'
+import { starReviewLabel, useStarCount } from '@/features'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 

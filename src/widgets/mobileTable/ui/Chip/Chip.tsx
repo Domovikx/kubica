@@ -3,10 +3,10 @@
 // Состояния 'on'/'holding' — токен в маркере + глобальные правила в styles.css
 // (чекеры добавляют .on программно, e2e ждёт токены в className).
 import * as stylex from '@stylexjs/stylex'
-import { DIE_IDS } from '@/shared/dice/geometry'
-import { dieGlyph } from '@/shared/ui/dieGlyph.utils'
-import type { TableCounts } from '@/features/tableSetup/model/tableSetup'
-import { shortSet } from '../../format'
+import { DIE_IDS, dieGlyph } from '@/shared'
+
+import type { TableCounts } from '@/features'
+import { shortSet } from '../../lib/format'
 import { useChipHold } from './useChipHold'
 
 export interface ChipProps {

@@ -2,11 +2,11 @@
 // (грузится disabled, ошибка загрузки). Разметка 1-в-1 из mobile-table.ts;
 // состояния — из chrome.refresh. Всегда в DOM, скрытие — hidden.
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { addIcon } from '@/shared/ui/mdIcon.utils'
-import { dieGlyph } from '@/shared/ui/dieGlyph.utils'
-import { selectMtUi, selectPhase, selectTotal } from '../selectors'
-import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
+import { useAppDispatch, useAppSelector } from '@/app'
+import { addIcon, dieGlyph } from '@/shared'
+
+import { selectMtUi, selectPhase, selectTotal } from '../model/selectors'
+import { mtUiActions } from '@/features'
 
 const styles = stylex.create({
   hint: {

@@ -2,9 +2,9 @@
 // localStorage, слайс зеркалит в Redux). Владелец-хук вместо копий в Head
 // и DrawerSoundSection (волна 2 ревью).
 import { useCallback } from 'react'
-import { useAppDispatch } from '@/app/hooks'
-import { hapticsEnabled, isMuted, setHaptics, setMuted } from '@/shared/dice/sound'
-import { soundActions } from '@/features/sound/model/soundSlice'
+import { useAppDispatch } from '@/app'
+import { hapticsEnabled, isMuted, setHaptics, setMuted } from '@/shared'
+import { soundActions } from '@/features'
 
 export const useMuteToggle = (): (() => void) => {
   const dispatch = useAppDispatch()

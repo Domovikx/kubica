@@ -1,8 +1,8 @@
 // Делегат «панель изменена» для оверлеев (шит/дроуэр/карточка музыки):
 // тап по кнопке/инпуту (кроме ссылок и самого крестика) взводит dirty-морф.
 // Один владелец правил вместо трёх копий в компонентах (волна 2 ревью).
-import { useAppDispatch } from '@/app/hooks'
-import { mtUiActions, type OverlayKind } from '@/features/tableUi/model/mtUiSlice'
+import { useAppDispatch } from '@/app'
+import { mtUiActions, type OverlayKind } from '@/features'
 
 export const useDirtyPanel = (
   kind: OverlayKind,

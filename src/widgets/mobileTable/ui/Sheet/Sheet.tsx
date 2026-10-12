@@ -3,25 +3,27 @@
 // Разметка/логика 1-в-1 из mobile-table.ts (блок шторки); состояние — RTK.
 import { useEffect, useRef, useState } from 'react'
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { setupActions } from '@/features/tableSetup/model/setupSlice'
-import { totalCount } from '@/features/tableSetup/model/tableSetup'
+import { useAppDispatch, useAppSelector } from '@/app'
 import {
+  setupActions,
+  totalCount,
   loadCustomPresets,
   saveCustomPreset,
   uniquePresetName,
-} from '@/features/tableSetup/model/presets'
-import { buzz as vibrate } from '@/shared/dice/sound'
-import { clearAllIcon } from '@/shared/ui/mdIcon.utils'
-import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
-import { selectCounts, selectMtUi, selectRolling, selectTotal } from '../../selectors'
-import { shortSet } from '../../format'
-import { iconStyles } from '../../mt.stylex'
+  mtUiActions,
+  displaySets,
+  sameCounts,
+} from '@/features'
+import { buzz as vibrate, clearAllIcon } from '@/shared'
+
+import { selectCounts, selectMtUi, selectRolling, selectTotal } from '../../model/selectors'
+import { shortSet } from '../../lib/format'
+import { iconStyles } from '../mt.stylex'
 import { OverlayHead } from '../OverlayHead'
 import { useDirtyPanel } from '../useDirtyPanel'
 import { overlayStyles } from '../overlay.stylex'
 import { sheetStyles as s } from './Sheet.stylex'
-import { displaySets, sameCounts } from '@/features/tableSetup/model/presetDisplay.utils'
+
 import { SheetPresetsSection } from './SheetPresetsSection'
 import { SheetDiceRows } from './SheetDiceRows'
 

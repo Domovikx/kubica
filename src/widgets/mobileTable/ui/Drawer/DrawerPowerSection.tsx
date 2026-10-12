@@ -1,9 +1,9 @@
 // Секция «Сила броска» в бургере: выбор мощности импульса (persist + стор).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { THROW_POWERS, setThrowPower } from '@/features/throwPower/model/throwPower'
-import { powerActions } from '@/features/throwPower/model/throwPowerSlice'
-import { selectPower } from '../../selectors'
+import { useAppDispatch, useAppSelector } from '@/app'
+import { THROW_POWERS, setThrowPower, powerActions } from '@/features'
+
+import { selectPower } from '../../model/selectors'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 

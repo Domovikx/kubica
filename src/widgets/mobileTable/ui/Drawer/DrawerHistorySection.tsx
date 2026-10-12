@@ -1,13 +1,13 @@
 // Секция «История» в бургере: список последних бросков (реролл по строке),
 // очистка — двухтап («Очистить» → «Точно?», 3 с — сброс в родителе).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import type { HistoryEntry } from '@/entities/rollHistory/model/history'
-import { formatLabel, formatParts } from '../../format'
-import { historyActions } from '@/entities/rollHistory/model/historySlice'
-import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
-import { selectEntries, selectMtUi } from '../../selectors'
-import { fmtTime, partClass } from '../../format'
+import { useAppDispatch, useAppSelector } from '@/app'
+import type { HistoryEntry } from '@/entities'
+import { formatLabel, formatParts } from '../../lib/format'
+import { historyActions } from '@/entities'
+import { mtUiActions } from '@/features'
+import { selectEntries, selectMtUi } from '../../model/selectors'
+import { fmtTime, partClass } from '../../lib/format'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 

@@ -2,7 +2,7 @@
 // Фиксируем контракт: результат дожидается возврата по ходу прокачки,
 // невыполнимая задача падает по бюджету шагов, а не виснет вечно.
 import { describe, expect, it } from 'vitest'
-import type { PhysicsWorld } from '@/shared/dice/physics'
+import type { PhysicsWorld } from '@/shared'
 import { pumpUntilSettled } from './testPump'
 
 const stubWorld = (onTick?: () => void): PhysicsWorld => ({

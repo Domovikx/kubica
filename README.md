@@ -93,5 +93,5 @@ npm run build      # сборка dist/
   Javier.Herrera (CC BY), Twenty-sided dice © Mike Shepherd (Sketchfab Store).
 - Иконка «лайк» в шапке/шторке — octicon-star из набора
   [Primer Octicons](https://github.com/primer/octicons) (MIT) — тот же знак, что в счётчике Stars на
-  самом GitHub; path инлайн в `src/shared/ui/md-icon.ts`. Остальные иконки: Material Symbols (Apache
-  2.0), simple-icons GitHub/Telegram (CC0) — также инлайн, внешних зависимостей нет.
+  самом GitHub; path инлайн в `src/shared/ui/mdIcon.utils.ts`. Остальные иконки: Material Symbols
+  (Apache 2.0), simple-icons GitHub/Telegram (CC0) — также инлайн, внешних зависимостей нет.

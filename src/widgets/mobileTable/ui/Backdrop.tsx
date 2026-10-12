@@ -1,7 +1,7 @@
 // Подложка под оверлеями: тап — закрыть (как backdrop в легаси).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch } from '@/app/hooks'
-import { mtUiActions } from '@/features/tableUi/model/mtUiSlice'
+import { useAppDispatch } from '@/app'
+import { mtUiActions } from '@/features'
 
 export interface BackdropProps {
   visible: boolean

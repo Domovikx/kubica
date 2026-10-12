@@ -27,27 +27,33 @@ export default {
       name: 'fsd-no-upward-imports',
       severity: 'error',
       comment: 'Запрещены импорты вверх по слоям FSD (см. docs/ARCHITECTURE.md).',
-      from: { path: 'src/pages', pathNot: '\\.test\\.tsx?$' },
-      to: { path: 'src/(app|pages)', pathNot: ['\\.css$', '^src/app/(store|hooks)(\\.ts)?$'] },
+      from: { path: '^src/pages/([^/]+)', pathNot: ['\\.test\\.tsx?$', '^src/pages/index\\.ts$'] },
+      to: {
+        path: 'src/(app|pages)',
+        pathNot: ['\\.css$', '^src/pages/$1/', '^src/app/(store|hooks|index)(\\.ts)?$'],
+      },
     },
     {
       name: 'fsd-widgets-down-only',
       severity: 'error',
       comment: 'Виджеты не импортируют страницы, приложение и друг друга.',
-      from: { path: '^src/widgets/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      // Хвостовой / в from: дверь слоя src/widgets/index.ts не считается
+      // слайсом и не регулируется down-only (она только реэкспортит слайсы).
+      from: { path: '^src/widgets/([^/]+)/', pathNot: '\\.test\\.tsx?$' },
       to: {
         path: 'src/(app|pages|widgets)',
-        pathNot: ['\\.css$', '^src/widgets/$1/', '^src/app/(store|hooks)(\\.ts)?$'],
+        pathNot: ['\\.css$', '^src/widgets/$1/', '^src/app/(store|hooks|index)(\\.ts)?$'],
       },
     },
     {
       name: 'fsd-features-down-only',
       severity: 'error',
       comment: 'Фичи не импортируют виджеты, страницы и приложение.',
-      from: { path: '^src/features/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      // Хвостовой / в from: дверь слоя src/features/index.ts не регулируется.
+      from: { path: '^src/features/([^/]+)/', pathNot: '\\.test\\.tsx?$' },
       to: {
         path: 'src/(app|pages|widgets|features)',
-        pathNot: ['\\.css$', '^src/features/$1/', '^src/app/(store|hooks)(\\.ts)?$'],
+        pathNot: ['\\.css$', '^src/features/$1/', '^src/app/(store|hooks|index)(\\.ts)?$'],
       },
     },
     {
@@ -55,7 +61,8 @@ export default {
       severity: 'error',
       comment:
         'Сущности не импортируют выше shared и чужие слайсы своего слоя (свой слайс/ shared/ пакеты — можно).',
-      from: { path: '^src/entities/([^/]+)', pathNot: '\\.test\\.tsx?$' },
+      // Хвостовой / в from: дверь слоя src/entities/index.ts не регулируется.
+      from: { path: '^src/entities/([^/]+)/', pathNot: '\\.test\\.tsx?$' },
       to: { pathNot: ['\\.css$', '^src/entities/$1/', '^src/shared', '^node_modules'] },
     },
     {

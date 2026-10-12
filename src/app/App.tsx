@@ -1,4 +1,4 @@
-import { HomePage } from '@/pages/home/ui/HomePage'
+import { HomePage } from '@/pages'
 
 /**
  * React-оболочка приложения (новый стек, этап 1): рендерит страницу-стол.

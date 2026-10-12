@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DieId } from '@/shared/dice/dieId.utils'
+import type { DieId } from '@/shared/dice'
 import { DIE_HINTS, dieGlyph } from './dieGlyph.utils'
 
 describe('dieGlyph.utils', () => {

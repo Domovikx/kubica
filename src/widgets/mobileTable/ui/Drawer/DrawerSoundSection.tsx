@@ -1,9 +1,9 @@
 // Секция «Звук и вибрация» в бургере: тумблеры persist+стор, кнопка входа
 // в карточку музыки (onOpenMusic — родитель открывает MusicCard).
 import * as stylex from '@stylexjs/stylex'
-import { useAppSelector } from '@/app/hooks'
-import { musicIcon, soundIcon, vibrationIcon } from '@/shared/ui/mdIcon.utils'
-import { selectMusicEntry, selectSound } from '../../selectors'
+import { useAppSelector } from '@/app'
+import { musicIcon, soundIcon, vibrationIcon } from '@/shared'
+import { selectMusicEntry, selectSound } from '../../model/selectors'
 import { overlayStyles } from '../overlay.stylex'
 import { useHapticsToggle, useMuteToggle } from '../useSoundToggle'
 import { drawerStyles as s } from './Drawer.stylex'

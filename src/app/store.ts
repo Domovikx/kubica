@@ -5,41 +5,33 @@
 // только изменившиеся слайсы (ключи 1:1 к прежним: kubica-table-v1,
 // dice-rolls-v1, dice-uiscale, dice-power, dice-muted, dice-haptics).
 import { configureStore } from '@reduxjs/toolkit'
+import { historyActions, HISTORY_KEY, historyReducer, loadHistoryEntries } from '@/entities'
 import {
-  historyActions,
-  HISTORY_KEY,
-  historyReducer,
-  loadHistoryEntries,
-} from '@/entities/rollHistory/model/historySlice'
-import { loadMusicVolume, musicUiActions, musicUiReducer } from '@/features/music/model/musicSlice'
-import {
+  loadMusicVolume,
+  musicUiActions,
+  musicUiReducer,
   loadThrowPower,
   POWER_KEY,
   powerActions,
   powerReducer,
-} from '@/features/throwPower/model/throwPowerSlice'
-import {
   loadSetupCounts,
   SETUP_KEY,
   setupActions,
   setupReducer,
-} from '@/features/tableSetup/model/setupSlice'
-import { applyUiScale } from '@/features/uiScale/model/uiScale'
-import {
+  applyUiScale,
   loadUiScale,
   UI_SCALE_KEY,
   uiScaleActions,
   uiScaleReducer,
-} from '@/features/uiScale/model/uiScaleSlice'
-import {
   HAPTICS_KEY,
   loadHaptics,
   loadMuted,
   MUTE_KEY,
   soundActions,
   soundReducer,
-} from '@/features/sound/model/soundSlice'
-import { mtUiActions, mtUiReducer } from '@/features/tableUi/model/mtUiSlice'
+  mtUiActions,
+  mtUiReducer,
+} from '@/features'
 
 type PersistStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 

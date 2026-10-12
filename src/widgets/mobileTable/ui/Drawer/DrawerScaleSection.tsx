@@ -1,11 +1,11 @@
 // Секция «Масштаб интерфейса» в бургере: пилюли 80–140 % (persist + стор,
 // тост + лёгкая вибрация на подтверждение).
 import * as stylex from '@stylexjs/stylex'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { UI_SCALES, setUiScale, type UiScale } from '@/features/uiScale/model/uiScale'
-import { uiScaleActions } from '@/features/uiScale/model/uiScaleSlice'
-import { buzz as vibrate } from '@/shared/dice/sound'
-import { selectUiScale } from '../../selectors'
+import { useAppDispatch, useAppSelector } from '@/app'
+import { UI_SCALES, setUiScale, type UiScale, uiScaleActions } from '@/features'
+
+import { buzz as vibrate } from '@/shared'
+import { selectUiScale } from '../../model/selectors'
 import { overlayStyles } from '../overlay.stylex'
 import { drawerStyles as s } from './Drawer.stylex'
 

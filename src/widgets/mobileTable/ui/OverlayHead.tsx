@@ -2,8 +2,8 @@
 // (dirty → check, «Готово»). Доп. ведущая кнопка слева (например, «Убрать
 // все» в шторке) — через leading. Один подкомпонент вместо трёх копий.
 import * as stylex from '@stylexjs/stylex'
-import { checkIcon, closeIcon } from '@/shared/ui/mdIcon.utils'
-import { iconStyles } from '../mt.stylex'
+import { checkIcon, closeIcon } from '@/shared'
+import { iconStyles } from './mt.stylex'
 import { overlayStyles } from './overlay.stylex'
 
 export interface OverlayHeadProps {
