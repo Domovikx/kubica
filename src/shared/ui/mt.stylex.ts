@@ -3,13 +3,17 @@
 // (спред раньше className, иначе маркер теряется). Строки 1-в-1 из прежних
 // билдеров (core/head/foot/overlays/watermark) — пиксельная идентичность.
 // W1 (stylex): секция/канва/водяной знак/футер/тост/подложка переехали в
-// свои tsx; иконки-кнопки (shared) — ниже на stylex; морф/спиннер/label/count
-// и svg-дети — глобальные правила в styles.css (innerHTML-дети, stylex их
-// не достигает); шапка (head/add/burger/star) — свой stylex в ui/Head.tsx.
+// свои tsx; иконки-кнопки (shared) — ниже на stylex; шапка (head/add/burger/
+// star) — свой stylex в ui/Head.tsx.
 // W2 (stylex): mobile-table.css удалён — оверлеи (Sheet/Drawer/MusicCard/
 // Hint/Backdrop/Chip) на своём stylex, общее — ui/overlay-styles.ts;
 // state-комбо (.on/.holding/partMin…) — глобал в styles.css (специфика
 // stylex в @layer useCSSLayers:true).
+// Whtml (React-дети): innerHTML-сайты (иконки, морф/спиннер/Star, глифы
+// чипов, подписи соцсетей) стали React-узлами — их стили переехали в stylex
+// (svgHead/morph ниже, контекстные — в компонентах); в styles.css остались
+// только .on-визуал (чекеры ставят .on программно), impure-хост музыки,
+// -webkit-скроллбары, @keyframes и база/токены.
 
 import * as stylex from '@stylexjs/stylex'
 
@@ -61,8 +65,20 @@ export const iconStyles = stylex.create({
   opacity30: {
     opacity: 0.3,
   },
+  /** Svg-ребёнок .mtableIcon (кнопки шапки/шторки/оверлея): шкала --icon-head. */
+  svgHead: {
+    display: 'block',
+    width: 'var(--icon-head)',
+    height: 'var(--icon-head)',
+  },
+  /** Морф крестика в ✓ «Готово»: анимация svg-ребёнка (кадры — глобальные
+   * @keyframes в app/styles.css, reduced-motion снимает). */
+  morph: {
+    animationName: 'mtableMorphIn',
+    animationDuration: '160ms',
+    animationTimingFunction: 'ease',
+    '@media (prefers-reduced-motion: reduce)': {
+      animationName: 'none',
+    },
+  },
 })
-
-/** Морф/спиннер/label/count и svg-дети кнопок — глобальные правила
- * `.mtableMorph > svg` / `.mtableSpin` / `.mtableHeadStarLabel` /
- * `.mtableHeadStarCount` / `.mtableIcon > svg` в styles.css. */

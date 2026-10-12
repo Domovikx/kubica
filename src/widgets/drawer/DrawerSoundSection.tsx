@@ -19,6 +19,12 @@ export const DrawerSoundSection = (props: { onOpenMusic: () => void }): React.JS
   const sxSectionTitle = stylex.props(s.sectionTitle)
   const sxWide = stylex.props(overlayStyles.wide)
   const sxWideGap = stylex.props(overlayStyles.wide, s.wideGap)
+  const sxMusic = stylex.props(
+    overlayStyles.wide,
+    s.wideGap,
+    music.unavail && overlayStyles.wideOff,
+  )
+  const sxWideSvg = stylex.props(overlayStyles.wideSvg)
 
   return (
     <div
@@ -38,38 +44,36 @@ export const DrawerSoundSection = (props: { onOpenMusic: () => void }): React.JS
         {...sxWide}
         className={`mtableWide ${sxWide.className ?? ''}`}
         data-testid="mtable-sound-toggle"
-        dangerouslySetInnerHTML={{
-          __html: `${soundIcon(muted)}<span>${muted ? 'Включить звук' : 'Выключить звук'}</span>`,
-        }}
         onClick={toggleMute}
-      />
+      >
+        {soundIcon(muted, sxWideSvg.className)}
+        <span>{muted ? 'Включить звук' : 'Выключить звук'}</span>
+      </button>
       <button
         type="button"
         {...sxWideGap}
         className={`mtableWide ${sxWideGap.className ?? ''}`}
         data-testid="mtable-haptic-toggle"
-        dangerouslySetInnerHTML={{
-          __html: `${vibrationIcon()}<span>${
-            haptics ? 'Выключить вибрацию' : 'Включить вибрацию'
-          }</span>`,
-        }}
         onClick={toggleHaptics}
-      />
+      >
+        {vibrationIcon(sxWideSvg.className)}
+        <span>{haptics ? 'Выключить вибрацию' : 'Включить вибрацию'}</span>
+      </button>
       <button
         type="button"
-        {...sxWideGap}
-        className={`mtableWide${music.on ? ' on' : ''} ${sxWideGap.className ?? ''}`}
+        {...sxMusic}
+        className={`mtableWide${music.on ? ' on' : ''} ${sxMusic.className ?? ''}`}
         data-testid="mtable-drawer-music"
         aria-haspopup="dialog"
         aria-disabled={music.unavail ? 'true' : undefined}
         aria-label={
           music.unavail ? 'Фоновая музыка недоступна: нет доступа к YouTube' : 'Фоновая музыка'
         }
-        dangerouslySetInnerHTML={{
-          __html: `${musicIcon(music.on)}<span>Фоновая музыка</span>`,
-        }}
         onClick={onOpenMusic}
-      />
+      >
+        {musicIcon(music.on, sxWideSvg.className)}
+        <span>Фоновая музыка</span>
+      </button>
     </div>
   )
 }

@@ -23,6 +23,7 @@ export const OverlayHead = (props: OverlayHeadProps): React.JSX.Element => {
   const { title, dirty, closeLabel, onClose, closeRef, headTestId, closeTestId } = props
 
   const sxClose = stylex.props(iconStyles.btn, iconStyles.body, iconStyles.hover)
+  const sxSvg = stylex.props(iconStyles.svgHead, dirty && iconStyles.morph)
   const sxHead = stylex.props(overlayStyles.head)
   const sxTitle = stylex.props(overlayStyles.headTitle)
 
@@ -44,9 +45,10 @@ export const OverlayHead = (props: OverlayHeadProps): React.JSX.Element => {
         data-testid={closeTestId}
         aria-label={dirty ? 'Готово' : closeLabel}
         title={dirty ? 'Готово' : closeLabel}
-        dangerouslySetInnerHTML={{ __html: dirty ? checkIcon() : closeIcon() }}
         onClick={onClose}
-      />
+      >
+        {dirty ? checkIcon(sxSvg.className) : closeIcon(sxSvg.className)}
+      </button>
     </div>
   )
 }

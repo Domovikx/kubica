@@ -18,7 +18,7 @@ export const SheetDiceRows = (props: {
   const dispatch = useAppDispatch()
 
   const sxRow = stylex.props(s.row)
-  const sxGlyph = stylex.props(s.glyph)
+  const sxGlyphSvg = stylex.props(s.glyphSvg)
   const sxName = stylex.props(s.name)
   const sxDesc = stylex.props(s.desc)
   const sxStep = stylex.props(s.step)
@@ -28,6 +28,9 @@ export const SheetDiceRows = (props: {
     <div>
       {DIE_IDS.map((die: DieId) => {
         const n = counts[die] ?? 0
+        // Строка набрана → глиф красный (row.on ставит React; раньше глобал
+        // .mtableRow.on .mtableGlyph).
+        const sxRowGlyph = stylex.props(s.glyph, n > 0 && s.glyphOn)
         return (
           <div
             key={die}
@@ -36,11 +39,12 @@ export const SheetDiceRows = (props: {
             data-testid="mtable-row"
           >
             <span
-              {...sxGlyph}
-              className={`mtableGlyph ${sxGlyph.className ?? ''}`}
+              {...sxRowGlyph}
+              className={`mtableGlyph ${sxRowGlyph.className ?? ''}`}
               data-testid="mtable-glyph"
-              dangerouslySetInnerHTML={{ __html: dieGlyph(die) }}
-            />
+            >
+              {dieGlyph(die, sxGlyphSvg.className)}
+            </span>
             <span
               {...sxName}
               className={`mtableName ${sxName.className ?? ''}`}

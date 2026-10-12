@@ -4,31 +4,34 @@
  * иначе маркер .mtable* теряется); здесь — только:
  *   - слои (@layer base, stylex) и токены (:root) — плоские, без Tailwind;
  *   - @layer base — глобалы режима стола/база/фокус/[hidden]!important;
- *   - глобальный остаток stylex — цели, которых stylex не достигает:
- *     innerHTML/svg-дети, анимации (shorthand `animation` не компилируется),
- *     скроллбары, state-комбо (.on/.holding/partMin — токены в className для
- *     e2e/чекеров; специфика stylex поднята :not(#\#), поэтому state-визуал
- *     живёт вне слоёв через useCSSLayers:true);
- *   - legacy-правила результат-попа (.result, .part...) — до их миграции.
+ *   - @keyframes — глобальные ассеты анимаций: stylex.keyframes() дал бы
+ *     другие имена (дельта в computed-diff), поэтому кадры объявлены здесь,
+ *     а элементы ссылаются stylex.animationName: 'имя' (проверено пробой —
+ *     компилируется в stylex 0.19.1);
+ *   - глобальный остаток — цели, которых stylex не достигает:
+ *     impure-хост музыки (:empty и iframe), скроллбары -webkit-специфики,
+ *     state-визуал .on (чекеры ставят .on программно; токены — в className
+ *     для e2e/чекеров; stylex живёт в @layer при useCSSLayers:true,
+ *     поэтому .on-правила вне слоёв его перебивают);
+ *   - React-дети (волна Whtml): бывшие innerHTML-сайты (иконки, морф/спиннер,
+ *     Star, глифы чипов, подписи соцсетей) переехали в stylex у компонентов;
+ *   - результат-поп (.result, .resultLabel/Value/Parts, .partKept) удалён:
+ *     showResult нигде не вызывается — поп выключен продуктом (итог читает
+ *     SR через .mtableLive, история — в меню).
  * Preflight НЕ подключаем: вёрстка не сдвигается ни на пиксель. */
 /* base — глобалы (hidden!important в первом слое = сильнейший среди важных),
  * stylex — last (бьёт base обычные правила при коллизии); правила вне слоёв
- * (state-комбо .X.on, анимации, svg-дети) бьют оба слоя. */
+ * (state-визуал .on, svg-дети, -webkit-скроллбары) бьют оба слоя. */
 @layer base, stylex;
 
 /* Плоские токены (:root — бывший @theme static; --color-* удалены как
- * мёртвые — var(--color-*) нигде не используется без Tailwind). */
+ * мёртвые — var(--color-*) нигде не используется без Tailwind; мёртвые
+ * легаси-алиасы (--alfa-red/--panel/--muted/--transition-fast) ушли вместе
+ * с результат-попом). */
 :root {
   --font-sans: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
-
-  /* Легаси-алиасы цветов: используются ванильными правилами ниже
-   * (результат-поп и база). */
-  --alfa-red: #ef3124;
   --bg: #14161a;
-  --panel: rgba(20, 22, 26, 0.72);
   --text: #f0f1f3;
-  --muted: #9a9da4;
-  --transition-fast: 0.2s ease;
 
   /* Токены стола (перенос из :root/mobile-table.css: --ui-scale пишет js на
    * <html> через ui-scale.ts, остальное наследуется и пересчитывается). */
@@ -74,8 +77,6 @@
 
   /* ---- Глобалы режима стола (утверждённые base-глобалы): main.tsx ставит
    * data-mode='mtable' синхронно до первого рендера — стол всегда активен.
-   * Лежат в том же слое, что и legacy-правила app ниже, и добивают их по
-   * специфичности (0,1,1) > (0,1,0) — как в исходном незалойеренном виде.
    * Селекторы .sidebar/.topbar/.bottombar были мёртвыми (в DOM их нет) —
    * удалены без переноса. */
 
@@ -104,11 +105,6 @@
     background: #0a0b0e;
   }
 
-  /* Поп не нужен: итог визуально нигде (SR — .mtableLive), история — в меню. */
-  body[data-mode='mtable'] .result {
-    display: none;
-  }
-
   /* Глобальный фокус-обводка (волне 0 соответствует плану focus-visible). */
   button:focus-visible,
   input:focus-visible {
@@ -117,77 +113,9 @@
   }
 }
 
-/* ---- Legacy-правила app: только результат-поп (жив — result-pop.ts);
- * мёртвые .topbar/.title/.hint/.switchBtn/.bottombar/.attribution удалены —
- * в DOM их нет). ---- */
-@layer base {
-  /* Поп результата броска (UX_ROLL.md): */
-  .result {
-    position: fixed;
-    top: 18%;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px 12px;
-    padding: 14px 24px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 24px;
-    background: var(--panel);
-    backdrop-filter: blur(8px);
-    animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .resultLabel {
-    font-size: 14px;
-    color: var(--muted);
-  }
-
-  .resultValue {
-    min-width: 44px;
-    font-size: 32px;
-    font-weight: 800;
-    text-align: center;
-    color: var(--alfa-red);
-  }
-
-  /* Разбивка пула 2.3: удержана — ярко, сброшена — приглушена и зачёркнута.
- * partKept/partDrop используют и истории прокатов (mobile-table.ts). */
-  .resultParts {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    font-size: 13px;
-    text-align: center;
-  }
-
-  .partKept {
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .partDrop {
-    opacity: 0.4;
-    color: var(--muted);
-    text-decoration: line-through;
-  }
-} /* @layer base: legacy-правила app */
-
-@keyframes pop {
-  from {
-    transform: translateX(-50%) scale(0.7);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) scale(1);
-    opacity: 1;
-  }
-}
-/* Волна 2: ключевые кадры стола (морф закрытия, спиннер) переехали из mobile-table.css. */
+/* ---- Ключевые кадры стола: глобальные ассеты анимаций. ---- Ссылки на них —
+ * stylex.animationName в объектах элементов (Hint/Sheet/Drawer/MusicCard/
+ * Backdrop, морф крестика — iconStyles.morph, спиннер — headStyles.spin). */
 @keyframes mtableMorphIn {
   from {
     opacity: 0;
@@ -203,73 +131,6 @@
     transform: rotate(360deg);
   }
 }
-
-/* ---- Волна W1 (stylex): глобальный остаток — innerHTML-дети стола. ----
-   Спаны/svg внутри кнопок создаются через dangerouslySetInnerHTML (не React-
-   дети) — stylex-классов на них не бывает; стили живут здесь по маркерам. */
-
-/* Морф крестика в ✓ «Готово»: анимация прямого svg-ребёнка кнопки. */
-.mtableMorph > svg {
-  animation: mtableMorphIn 160ms ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  .mtableMorph > svg {
-    animation: none;
-  }
-}
-
-/* Спиннер загрузки (бургер/музыка): span с маркером mtableSpin. */
-.mtableSpin {
-  width: var(--icon-wide);
-  height: var(--icon-wide);
-  border: 3px solid rgba(240, 242, 245, 0.25);
-  border-top-color: #ef3124;
-  border-radius: 50%;
-  animation: mtableSpin 0.7s linear infinite;
-}
-
-/* Подпись и пилюля счётчика Star — span-ы innerHTML шапки. */
-.mtableHeadStarLabel {
-  font-size: var(--fs-sec);
-  font-weight: 700;
-  line-height: 1;
-}
-@media (max-width: 360px) {
-  .mtableHeadStarLabel {
-    display: none;
-  }
-}
-.mtableHeadStarCount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: calc(var(--fs-cap) + 10px);
-  height: calc(var(--fs-cap) + 8px);
-  padding: 0 5px;
-  border: 1px solid rgba(240, 242, 245, 0.28);
-  border-radius: 6px;
-  font-size: var(--fs-cap);
-  font-weight: 700;
-  line-height: 1;
-}
-
-/* Svg-дети кнопок (innerHTML): база иконки-head, у Star своя шкала
-   (--icon-like важнее — правило идёт после). */
-.mtableIcon > svg {
-  display: block;
-  width: var(--icon-head);
-  height: var(--icon-head);
-}
-.mtableHeadStar > svg {
-  width: var(--icon-like);
-  height: var(--icon-like);
-}
-
-/* ---- Волна W2 (stylex): анимации оверлеев/хинта — глобальный остаток.
-   stylex молча не компилирует shorthand `animation` → оставляем по маркерам. ---- */
-.mtableHint {
-  animation: mtableHintIn 0.18s ease-out;
-}
 @keyframes mtableHintIn {
   from {
     opacity: 0;
@@ -279,17 +140,6 @@
     opacity: 1;
     transform: translate(-50%, -50%);
   }
-}
-/* Движение — по желанию пользователя: хинт появляется без анимации. */
-@media (prefers-reduced-motion: reduce) {
-  .mtableHint {
-    animation: none;
-  }
-}
-.mtableSheet,
-.mtableDrawer,
-.mtableMusicCard {
-  animation: mtablePop 0.16s ease-out;
 }
 @keyframes mtablePop {
   from {
@@ -301,51 +151,18 @@
     transform: translate(-50%, -50%) scale(1);
   }
 }
-.mtableBackdrop:not([hidden]) {
-  animation: mtableFade 0.16s ease-out;
-}
 @keyframes mtableFade {
   from {
     opacity: 0;
   }
 }
 
-/* ---- Волна W2 (stylex): svg-дети (innerHTML), хост музыки, скроллбары —
-   глобальный остаток (stylex не достаёт внутрь impure-детей). ---- */
-.mtableHintGlyph svg {
-  display: block;
-  width: var(--icon-glyph);
-  height: var(--icon-glyph);
-}
-.mtableHintCta svg {
-  display: block;
-  width: var(--icon-head);
-  height: var(--icon-head);
-  color: #ef3124;
-}
-.mtableChipDie svg {
-  display: block;
-  width: var(--icon-chip);
-  height: var(--icon-chip);
-}
-.mtableGlyph svg {
-  width: var(--icon-row);
-  height: var(--icon-row);
-}
-.mtableWide svg {
-  display: block;
-  width: var(--icon-wide);
-  height: var(--icon-wide);
-}
-.mtableSocial svg {
-  display: block;
-  width: var(--icon-wide);
-  height: var(--icon-wide);
-  flex: none;
-}
-.mtableStar svg {
-  color: #ef3124;
-}
+/* ---- Волна W2 (stylex): хост музыки, -webkit-скроллбары — глобальный
+   остаток (stylex не достаёт в impure-хост и в псевдоэлементы скроллбара;
+   нативные scrollbar-свойства живут в stylex — overlayStyles.rows и
+   drawerStyles.body). Svg-дети кнопок/спаны ушли в stylex (волна Whtml:
+   iconStyles.svgHead/morph, headStyles.spin/star*, overlayStyles.wideSvg,
+   sheetStyles.glyphSvg, drawerStyles.social*, локальные — Hint/Chip). */
 /* Пока игра не запущена — хоста нет геометрии, секция не «дырявится». */
 .mtableMusicHost:empty {
   display: none;
@@ -358,12 +175,6 @@
   border: 0;
   border-radius: 12px;
   background: #000;
-}
-/* Тонкий кастомный скролл в меню и шторке (нативный ползунок широкий и яркий). */
-.mtableDrawerBody,
-.mtableRows {
-  scrollbar-width: thin;
-  scrollbar-color: #3a3f49 transparent;
 }
 .mtableDrawerBody::-webkit-scrollbar,
 .mtableRows::-webkit-scrollbar {
@@ -378,97 +189,53 @@
 .mtableRows::-webkit-scrollbar-track {
   background: transparent;
 }
-
-/* ---- Волна W2 (stylex): state-токены и descendant-правила — глобальный
-   остаток. Токены ('on'/'holding'/partMin…) остаются в строке className
-   (e2e toHaveClass, селекторы чекеров), визуал — класс-комбо (специфика
-   бьёт базовый stylex-класс независимо от порядка). ---- */
-/* Порядок важен: hover до .on (как в легаси) — активный чип
-   остаётся с акцентным фоном, даже под курсором. */
-.mtableChip:hover {
-  background: #242832;
+/* Бегунок «Масштаб интерфейса»: трек/боббин — только вендор-псевдо
+   (плюс appearance:none — как -webkit-scrollbar; base — stylex
+   drawerStyles.scaleRange, --fill ставит React инлайном). */
+.mtableScaleRange::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #d92b1c var(--fill, 0%), #363b45 var(--fill, 0%));
 }
+.mtableScaleRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
+  border: 3px solid #d92b1c;
+  border-radius: 50%;
+  background: #f0f2f5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.mtableScaleRange:focus-visible {
+  outline: 2px solid #ef3124;
+  outline-offset: -4px;
+}
+
+/* ---- State-визуал — глобальный остаток. ----
+   Токены 'on'/'holding'/partMin… остаются в строке className (e2e toHaveClass,
+   селекторы чекеров); .on-визуал — глобально: чекеры ставят .on программно
+   (audit-contrast), а не через React. Stylex в @layer проигрывает правилам
+   вне слоёв — активная кнопка бьёт stylex-hover и остаётся с акцентным фоном
+   под курсором, как в легаси. Hover/holding/partMin/partDrop/aria-disabled —
+   условные и псевдоклассные stylex в компонентах. Row-on-глиф ушёл в stylex
+   (sheetStyles.glyphOn): .on строки ставит только React. */
 .mtableChip.on {
   /* Фон CTA под белым: #d92b1c (ratio 4.87 ≥ AA 4.5), не бренд #ef3124. */
   background: #d92b1c;
   color: #fff;
 }
+/* Счётчик ×n внутри React-глифов чипа: перебивка stylex chipN — только
+   глобалом (чекеры ставят чипу .on программно). */
 .mtableChip.on .mtableChipN {
   color: rgba(255, 255, 255, 0.85);
-}
-.mtableChipCount {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--fs-body);
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-}
-.mtableChip.holding .mtableChipCount {
-  display: flex;
-}
-.mtableRow.on .mtableGlyph {
-  color: #ef3124;
-}
-.mtablePreBlock .mtableEmpty {
-  margin: 8px 0 0;
-}
-.mtableHrow .partMin {
-  color: #ff8a7a;
-  font-weight: 800;
-}
-.mtableHrow .partMax {
-  color: #ffd166;
-  font-weight: 800;
-}
-/* Порядок важен: hover до .on (как в легаси) — выбранная
-   кнопка остаётся с акцентным фоном, даже под курсором. */
-.mtableWide:hover {
-  background: #242832;
 }
 .mtableWide.on {
   background: #d92b1c;
   color: #fff;
 }
-.mtableScale:hover {
-  background: #242832;
-}
 .mtableScale.on {
   /* Фон CTA: #d92b1c вместо бренда — см. .mtableChip.on. */
   background: #d92b1c;
   color: #fff;
-}
-.mtableWide[aria-disabled='true'] {
-  cursor: default;
-  opacity: 0.4;
-}
-/* Глифы/счётчики внутри innerHTML-контейнера чипа — глобал (stylex не
-   достаёт внутрь impure-детей). */
-.mtableChipDie {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-}
-.mtableChipN {
-  font-size: var(--fs-cap);
-  font-weight: 800;
-  color: #9aa0aa;
-}
-/* Подписи внутри <a> соцсетей (innerHTML) — глобал. */
-.mtableSocialName {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.mtableSocialMeta {
-  margin-left: auto;
-  color: #9aa0aa;
-  font-size: var(--fs-sec);
-  font-weight: 600;
-  white-space: nowrap;
 }

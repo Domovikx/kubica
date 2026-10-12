@@ -1,6 +1,7 @@
 // Стили бургер-меню (дроуэра): панель, тело-скролл, секции, строки истории,
-// масштаб-пилюли, ссылки. Ховер/.on — глобальные правила в styles.css; общая
-// шапка/секции оверлеев — в ../overlay.stylex.
+// масштаб-пилюли, ссылки. .on-визуал и -webkit-скроллбары — глобальные правила
+// в styles.css (чекеры ставят .on программно); общая шапка/секции оверлеев —
+// в ../overlay.stylex.
 import * as stylex from '@stylexjs/stylex'
 
 export const drawerStyles = stylex.create({
@@ -20,6 +21,10 @@ export const drawerStyles = stylex.create({
     borderColor: '#2a2e36',
     borderRadius: 14,
     overflow: 'hidden',
+    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
+    animationName: 'mtablePop',
+    animationDuration: '0.16s',
+    animationTimingFunction: 'ease-out',
     '@media (max-width: 600px)': {
       width: 'calc(100% - 24px)',
       maxHeight: 'calc(100% - 32px)',
@@ -29,6 +34,11 @@ export const drawerStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
+    // Тонкий скролл (нативный ползунок широкий и яркий); -webkit-* части
+    // остаются глобалом в styles.css — stylex не знает псевдоэлементов
+    // скроллбара.
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#3a3f49 transparent',
     paddingBottom: 'env(safe-area-inset-bottom)',
   },
   sectionHead: {
@@ -109,27 +119,65 @@ export const drawerStyles = stylex.create({
     fontSize: 'var(--fs-body)',
     marginLeft: 2,
   },
+  // Разбивка истории: min/макс/сброс — условные stylex-классы; маркеры
+  // partMin/partMax/partDrop остаются в className (контракт partClass()).
+  pMin: {
+    color: '#ff8a7a',
+    fontWeight: 800,
+  },
+  pMax: {
+    color: '#ffd166',
+    fontWeight: 800,
+  },
+  pDrop: {
+    opacity: 0.4,
+    color: '#9a9da4',
+    textDecoration: 'line-through',
+  },
   wideGap: {
     marginTop: 8,
   },
   scaleRow: {
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    gap: 10,
   },
-  scale: {
-    minHeight: 'var(--tap)',
-    padding: '0 12px',
-    borderWidth: 'medium',
-    borderStyle: 'none',
-    borderColor: 'currentColor',
-    borderRadius: 999,
-    backgroundColor: '#1d2026',
-    color: '#f0f2f5',
-    fontFamily: 'inherit',
+  scaleTrackCol: {
+    flex: '1 1 auto',
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  },
+  // Бегунок масштаба: тап-бокс = --tap (44 базовых), трек/thumb — только
+  // вендор-псевдо в styles.css (как -webkit-scrollbar).
+  scaleRange: {
+    flex: '1 1 auto',
+    minWidth: 0,
+    width: '100%',
+    height: 'var(--tap)',
+    margin: 0,
+    appearance: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+  },
+  scaleTicks: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    // Фикс-px, не токен: подписи шагов — дублирующая декорация (aria-hidden,
+    // значение объявляет сам бегунок), иначе ×200% они рвут 1.4.10 по ширине.
+    fontSize: 12,
+    lineHeight: 1.2,
+    color: '#9aa0aa',
+    userSelect: 'none',
+  },
+  scaleValue: {
+    minWidth: 44,
+    textAlign: 'right',
     fontSize: 'var(--fs-sec)',
     fontWeight: 700,
-    cursor: 'pointer',
+    color: '#f0f2f5',
+    fontVariantNumeric: 'tabular-nums',
   },
   about: {
     fontSize: 'var(--fs-sec)',
@@ -160,5 +208,30 @@ export const drawerStyles = stylex.create({
   },
   socialGap: {
     marginTop: 8,
+  },
+  /** Svg-ребёнок .mtableSocial: шкала --icon-wide, не сжимается. */
+  socialSvg: {
+    display: 'block',
+    width: 'var(--icon-wide)',
+    height: 'var(--icon-wide)',
+    flex: 'none',
+  },
+  /** Звезда оценки репо (ссылка с маркером mtableStar): svg красный. */
+  socialStar: {
+    color: '#ef3124',
+  },
+  /** Название внутри ссылки соцсети (маркер mtableSocialName — чекеры). */
+  socialName: {
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  },
+  /** Хендл/счётчик внутри ссылки (маркер mtableSocialMeta — чекеры). */
+  socialMeta: {
+    marginLeft: 'auto',
+    color: '#9aa0aa',
+    fontSize: 'var(--fs-sec)',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
   },
 })

@@ -23,6 +23,8 @@ kept/dropped, juice. После среза бабушкин тест: «Fireball
 | `2026-10-10-camelcase-folders`       | DONE    | Папки src/: kebab → camelCase (10 папок: tableSetup, mobileTable…)    |
 | `2026-10-10-ui-folder-decomposition` | DONE    | Декомпозиция Drawer/Sheet/Head в папки (folder-per-component)         |
 | `2026-10-11-i18n-10-languages`       | READY   | i18n на 10 языках (de,es,fr,it,ja,ko,pl,pt,ru,zh — список из po игры) |
+| `2026-10-12-throw-power`             | READY   | Сила броска: всегда максимум + убрать из меню, ресёрч механик         |
+| `2026-10-12-260px-adaptive`          | READY   | Пересмотр адаптивки на 260px: чекер-диагноз + точечные фиксы          |
 
 > Выполненные задачи (2.1–2.3, 2.6, 2.9–2.10, 2.12–2.17, 2.19–2.24) перенесены в `archive/` —
 > контекст не жрут, история в git.

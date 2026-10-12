@@ -120,4 +120,49 @@ export const headStyles = stylex.create({
   musicOn: {
     color: '#ef3124',
   },
+  /** Спиннер загрузки (бургер/музыка): span с маркером mtableSpin (e2e). */
+  spin: {
+    width: 'var(--icon-wide)',
+    height: 'var(--icon-wide)',
+    borderWidth: '3px',
+    borderStyle: 'solid',
+    borderColor: 'rgba(240, 242, 245, 0.25)',
+    borderTopColor: '#ef3124',
+    borderRadius: '50%',
+    animationName: 'mtableSpin',
+    animationDuration: '0.7s',
+    animationTimingFunction: 'linear',
+    animationIterationCount: 'infinite',
+  },
+  /** Svg звёздочки: своя шкала --icon-like (доп. к iconStyles.svgHead). */
+  starSvg: {
+    width: 'var(--icon-like)',
+    height: 'var(--icon-like)',
+  },
+  /** Подпись Star (span-маркер mtableHeadStarLabel — чекеры audit-fonts). */
+  starLabel: {
+    fontSize: 'var(--fs-sec)',
+    fontWeight: 700,
+    lineHeight: 1,
+    // Узкие экраны (≤360): подпись сжимается — как в легаси.
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
+  },
+  /** Пилюля счётчика Star (span-маркер mtableHeadStarCount — чекеры). */
+  starCount: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 'calc(var(--fs-cap) + 10px)',
+    height: 'calc(var(--fs-cap) + 8px)',
+    padding: '0 5px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'rgba(240, 242, 245, 0.28)',
+    borderRadius: 6,
+    fontSize: 'var(--fs-cap)',
+    fontWeight: 700,
+    lineHeight: 1,
+  },
 })

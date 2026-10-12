@@ -1,13 +1,12 @@
 // Шапка стола (React): три колонки — звук/музыка, пара «+»/бургер, Star.
 // Разметка 1-в-1 из head.ts; fit (укорачивание колонок) — use-fit-head-star.
-// Иконки — dangerouslySetInnerHTML на самой кнопке (svg прямым ребёнком;
-// размеры svg-детей — глобальные правила `.mtableIcon > svg` в styles.css,
-// они же достают span-ы innerHTML — mtableSpin/label/count); бургер/состав
-// переключают ветку innerHTML → переключение между __html и children по
-// рендерам допустимо. hidden у sound/music/star управляется императивно
-// через refs (см. fitHeadStar); пилюля счётчика — React-проп hidden
-// (data-driven, fit её не трогает). Состояния (disabled/aria-disabled/on/
-// hasSum) известны React — условные объекты stylex, не CSS-варианты.
+// Иконки/спаны — React-дети кнопок (волна Whtml): размеры svg — stylex
+// (iconStyles.svgHead + headStyles.starSvg), спиннер/подпись/пилюля —
+// headStyles; бургер/состав переключают ветку по рендерам как раньше.
+// hidden у sound/music/star управляется императивно через refs (см.
+// fitHeadStar); пилюля счётчика — React-проп hidden (data-driven, fit её
+// не трогает). Состояния (disabled/aria-disabled/on/hasSum) известны
+// React — условные объекты stylex, не CSS-варианты.
 import { useMemo, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { useAppSelector } from '@/app'
@@ -62,30 +61,6 @@ export const Head = (props: HeadProps): React.JSX.Element => {
   )
   useHeadStarFit(fitRefs)
 
-  // Burger: rolling → спиннер; итог → сумма; покой → иконка меню. Ветка
-  // одна строка innerHTML — span/svg прямой ребёнок (стили по маркерам).
-  const burgerHtml = rolling
-    ? '<span class="mtableSpin" data-testid="mtable-spin"></span>'
-    : lastResult
-      ? String(lastResult.total)
-      : menuIcon()
-  const diceHtml = totalN > 0 ? short : addIcon()
-  const diceLabel = totalN > 0 ? `Выбор костей: ${short}` : 'Выбор костей'
-
-  // Шапка — ряд как на GitHub: цифра видна всегда, когда она известна
-  // (GitHub показывает и 0); без данных/офлайн пилюля скрыта (hidden).
-  const headStarLabel = starReviewLabel(starCount)
-
-  // Star: иконка прямым ребёнком + подпись + пилюля-счётчик одной строкой
-  // innerHTML — как легаси innerHTML+append. Пилюля всегда в DOM, hidden
-  // пока данных нет (легаси: span создан сразу, hidden=true).
-  const starHtml =
-    likeIcon() +
-    '<span class="mtableHeadStarLabel">Star</span>' +
-    `<span class="mtableHeadStarCount" data-testid="mtable-head-star-count"${
-      starCount === null ? ' hidden' : ''
-    }>${starCount === null ? '' : starCount}</span>`
-
   const sxHead = stylex.props(s.head)
   const sxLeft = stylex.props(s.headLeft)
   const sxSound = stylex.props(iconStyles.btn, iconStyles.body, iconStyles.hover)
@@ -107,6 +82,31 @@ export const Head = (props: HeadProps): React.JSX.Element => {
   )
   const sxSide = stylex.props(s.headSide)
   const sxStar = stylex.props(s.star)
+  const sxSvg = stylex.props(iconStyles.svgHead)
+  const sxSpin = stylex.props(s.spin)
+  const sxStarSvg = stylex.props(iconStyles.svgHead, s.starSvg)
+  const sxStarLabel = stylex.props(s.starLabel)
+  const sxStarCount = stylex.props(s.starCount)
+
+  // Burger: rolling → спиннер; итог → сумма; покой → иконка меню. Ветка —
+  // span/svg/text прямым ребёнком (стили stylex, маркеры в className).
+  const burgerChild: React.ReactNode = rolling ? (
+    <span
+      {...sxSpin}
+      className={`mtableSpin ${sxSpin.className ?? ''}`}
+      data-testid="mtable-spin"
+    />
+  ) : lastResult ? (
+    String(lastResult.total)
+  ) : (
+    menuIcon(sxSvg.className)
+  )
+  const addChild: React.ReactNode = totalN > 0 ? short : addIcon(sxSvg.className)
+  const diceLabel = totalN > 0 ? `Выбор костей: ${short}` : 'Выбор костей'
+
+  // Шапка — ряд как на GitHub: цифра видна всегда, когда она известна
+  // (GitHub показывает и 0); без данных/офлайн пилюля скрыта (hidden).
+  const headStarLabel = starReviewLabel(starCount)
 
   return (
     <div
@@ -128,9 +128,10 @@ export const Head = (props: HeadProps): React.JSX.Element => {
           data-testid="mtable-sound"
           aria-label={muted ? 'Включить звук' : 'Выключить звук'}
           aria-pressed={!muted}
-          dangerouslySetInnerHTML={{ __html: soundIcon(muted) }}
           onClick={toggleMute}
-        />
+        >
+          {soundIcon(muted, sxSvg.className)}
+        </button>
         <button
           ref={musicRef}
           type="button"
@@ -147,13 +148,18 @@ export const Head = (props: HeadProps): React.JSX.Element => {
                 : 'Фоновая музыка'
           }
           aria-busy={music.loading ? 'true' : undefined}
-          dangerouslySetInnerHTML={{
-            __html: music.loading
-              ? '<span class="mtableSpin" data-testid="mtable-music-spin"></span>'
-              : musicIcon(music.on),
-          }}
           onClick={props.onOpenMusic}
-        />
+        >
+          {music.loading ? (
+            <span
+              {...sxSpin}
+              className={`mtableSpin ${sxSpin.className ?? ''}`}
+              data-testid="mtable-music-spin"
+            />
+          ) : (
+            musicIcon(music.on, sxSvg.className)
+          )}
+        </button>
       </div>
       <div
         ref={headCtlRef}
@@ -168,9 +174,10 @@ export const Head = (props: HeadProps): React.JSX.Element => {
           data-testid="mtable-add"
           aria-label={diceLabel}
           title={totalN > 0 ? summarize(counts) : diceLabel}
-          dangerouslySetInnerHTML={{ __html: diceHtml }}
           onClick={props.onOpenSheet}
-        />
+        >
+          {addChild}
+        </button>
         <button
           type="button"
           {...sxBurger}
@@ -179,9 +186,10 @@ export const Head = (props: HeadProps): React.JSX.Element => {
           aria-label="Меню"
           aria-busy={rolling ? 'true' : undefined}
           disabled={rolling}
-          dangerouslySetInnerHTML={{ __html: burgerHtml }}
           onClick={props.onOpenDrawer}
-        />
+        >
+          {burgerChild}
+        </button>
       </div>
       <div
         {...sxSide}
@@ -197,8 +205,20 @@ export const Head = (props: HeadProps): React.JSX.Element => {
           className={`mtableIcon mtableHeadStar ${sxStar.className ?? ''}`}
           data-testid="mtable-head-star"
           aria-label={headStarLabel}
-          dangerouslySetInnerHTML={{ __html: starHtml }}
-        />
+        >
+          {likeIcon(sxStarSvg.className)}
+          <span {...sxStarLabel} className={`mtableHeadStarLabel ${sxStarLabel.className ?? ''}`}>
+            Star
+          </span>
+          <span
+            {...sxStarCount}
+            className={`mtableHeadStarCount ${sxStarCount.className ?? ''}`}
+            data-testid="mtable-head-star-count"
+            hidden={starCount === null}
+          >
+            {starCount === null ? '' : starCount}
+          </span>
+        </a>
       </div>
     </div>
   )

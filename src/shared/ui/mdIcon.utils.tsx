@@ -1,15 +1,37 @@
 // Material Symbols Rounded (Google, Apache 2.0) — инлайн-SVG иконки.
 // Источник: github.com/google/material-design-icons, symbols/web/*/materialsymbolsrounded/*_24px.svg
 // Своих ассетов не тянем (PWA-бюджет), шрифт не подключаем — только path.
-const wrap = (path: string): string =>
-  `<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`
+// React-узлы (волна Whtml): className — stylex-класс контекста (размер svg
+// задаёт вызывающая сторона).
+const wrap = (path: string, className?: string): React.JSX.Element => (
+  <svg
+    viewBox="0 -960 960 960"
+    width="24"
+    height="24"
+    fill="currentColor"
+    aria-hidden="true"
+    className={className}
+  >
+    <path d={path} />
+  </svg>
+)
 
 // Брендовые path из simple-icons (CC0, cdn.jsdelivr.net/npm/simple-icons/icons/*.svg):
 // у них viewBox 0 0 24 24 — своя сетка, поэтому свой wrap: в material-сетку
 // 0 -960 960 960 такие path не вставлять, глифы поедут. Заливка та же
 // currentColor — цвет задаёт строка, не SVG.
-const wrapBox = (path: string): string =>
-  `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`
+const wrapBox = (path: string, className?: string): React.JSX.Element => (
+  <svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+    fill="currentColor"
+    aria-hidden="true"
+    className={className}
+  >
+    <path d={path} />
+  </svg>
+)
 
 const VOLUME_UP =
   'M760-481q0-83-44-151.5T598-735q-15-7-22-21.5t-2-29.5q6-16 21.5-23t31.5 0q97 43 155 131.5T840-481q0 108-58 196.5T627-153q-16 7-31.5 0T574-176q-5-15 2-29.5t22-21.5q74-34 118-102.5T760-481ZM280-360H160q-17 0-28.5-11.5T120-400v-160q0-17 11.5-28.5T160-600h120l132-132q19-19 43.5-8.5T480-703v446q0 27-24.5 37.5T412-228L280-360Zm380-120q0 42-19 79.5T591-339q-10 6-20.5.5T560-356v-250q0-12 10.5-17.5t20.5.5q31 25 50 63t19 80ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z'
@@ -62,35 +84,47 @@ const TELEGRAM =
   'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z'
 
 /** Иконка звука: вкл — динамик с волнами, выкл — перечёркнутый. */
-export const soundIcon = (muted: boolean): string => wrap(muted ? VOLUME_OFF : VOLUME_UP)
+export const soundIcon = (muted: boolean, className?: string): React.JSX.Element =>
+  wrap(muted ? VOLUME_OFF : VOLUME_UP, className)
 
 /** Иконка вибрации для тумблера haptics. */
-export const vibrationIcon = (): string => wrap(VIBRATION)
+export const vibrationIcon = (className?: string): React.JSX.Element => wrap(VIBRATION, className)
 
 /** Иконка фоновой музыки: playing — нота, иначе — перечёркнутая (2.22). */
-export const musicIcon = (playing: boolean): string => wrap(playing ? MUSIC_NOTE : MUSIC_OFF)
+export const musicIcon = (playing: boolean, className?: string): React.JSX.Element =>
+  wrap(playing ? MUSIC_NOTE : MUSIC_OFF, className)
 
 /** Иконка меню-бургера (три линии). */
-export const menuIcon = (): string => wrap(MENU)
+export const menuIcon = (className?: string): React.JSX.Element => wrap(MENU, className)
 
 /** Иконка «добавить» — кнопка набора костей в шапке стола (пара бургеру). */
-export const addIcon = (): string => wrap(ADD)
+export const addIcon = (className?: string): React.JSX.Element => wrap(ADD, className)
 
 /** Иконка закрытия (крестик) для шторки/меню. */
-export const closeIcon = (): string => wrap(CLOSE)
+export const closeIcon = (className?: string): React.JSX.Element => wrap(CLOSE, className)
 
 /** Иконка ✓ «Готово» — крестик закрытия после изменения в меню (2.24). */
-export const checkIcon = (): string => wrap(CHECK)
+export const checkIcon = (className?: string): React.JSX.Element => wrap(CHECK, className)
 
 /** Иконка «убрать всё» (корзина со sweep) для очистки стола в шторке. */
-export const clearAllIcon = (): string => wrap(DELETE_SWEEP)
+export const clearAllIcon = (className?: string): React.JSX.Element => wrap(DELETE_SWEEP, className)
 
 /** Иконка GitHub (бренд, simple-icons) — ссылка на профиль в шторке. */
-export const githubIcon = (): string => wrapBox(GITHUB)
+export const githubIcon = (className?: string): React.JSX.Element => wrapBox(GITHUB, className)
 
 /** Иконка Telegram (бренд, simple-icons) — ссылка на канал в шторке. */
-export const telegramIcon = (): string => wrapBox(TELEGRAM)
+export const telegramIcon = (className?: string): React.JSX.Element => wrapBox(TELEGRAM, className)
 
 /** Иконка лайка (octicon-star) — оценка репозитория в шторке и в шапке. */
-export const likeIcon = (): string =>
-  `<svg viewBox="0 0 16 16" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="${STAR_OCTICON}"/></svg>`
+export const likeIcon = (className?: string): React.JSX.Element => (
+  <svg
+    viewBox="0 0 16 16"
+    width="24"
+    height="24"
+    fill="currentColor"
+    aria-hidden="true"
+    className={className}
+  >
+    <path d={STAR_OCTICON} />
+  </svg>
+)

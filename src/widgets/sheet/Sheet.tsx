@@ -85,6 +85,7 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
     total === 0 ? iconStyles.disabled : iconStyles.hover,
     total === 0 && iconStyles.opacity30,
   )
+  const sxSvg = stylex.props(iconStyles.svgHead)
 
   const sxSheet = stylex.props(s.sheet)
   const sxRows = stylex.props(overlayStyles.rows)
@@ -100,12 +101,13 @@ export const Sheet = ({ showToast, onClose, open }: SheetProps): React.JSX.Eleme
       title="Убрать все"
       aria-label="Убрать все"
       disabled={total === 0}
-      dangerouslySetInnerHTML={{ __html: clearAllIcon() }}
       onClick={() => {
         dispatch(mtUiActions.setActiveSet(null))
         dispatch(setupActions.clear())
       }}
-    />
+    >
+      {clearAllIcon(sxSvg.className)}
+    </button>
   )
 
   return (

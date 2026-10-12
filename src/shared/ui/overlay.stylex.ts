@@ -1,7 +1,8 @@
 // Общие стили трёх центрированных оверлеев (шторка «+ Кости», меню-бургер,
 // карточка музыки): шапка, тело-скролл, секции, wide-кнопки. Перенос из
-// mobile-table.css (волна W2); hover/.on — глобальные правила в styles.css
-// (порядок при равной специфике: hover до .on, как в легаси).
+// mobile-table.css (волна W2); hover — здесь же, .on-визуал — глобальные
+// правила в styles.css (порядок: .on вне слоёв бьёт stylex-hover — выбранная
+// кнопка остаётся с акцентным фоном даже под курсором, как в легаси).
 import * as stylex from '@stylexjs/stylex'
 
 export const overlayStyles = stylex.create({
@@ -25,6 +26,10 @@ export const overlayStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
+    // Тонкий скролл (нативный ползунок широкий и яркий); -webkit-* части
+    // остаются глобалом в styles.css.
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#3a3f49 transparent',
   },
   section: {
     padding: '6px 14px 14px',
@@ -61,5 +66,19 @@ export const overlayStyles = stylex.create({
     fontSize: 'var(--fs-body)',
     fontWeight: 700,
     cursor: 'pointer',
+    ':hover': {
+      backgroundColor: '#242832',
+    },
+  },
+  // aria-disabled → визуал (раньше глобал .mtableWide[aria-disabled='true']).
+  wideOff: {
+    cursor: 'default',
+    opacity: 0.4,
+  },
+  /** Svg-ребёнок .mtableWide: шкала --icon-wide (иконка + подпись рядом). */
+  wideSvg: {
+    display: 'block',
+    width: 'var(--icon-wide)',
+    height: 'var(--icon-wide)',
   },
 })

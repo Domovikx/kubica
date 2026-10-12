@@ -31,6 +31,15 @@ const styles = stylex.create({
     fontFamily: 'inherit',
     textAlign: 'center',
     cursor: 'pointer',
+    // Вход хинта: кадры mtableHintIn объявлены глобально в app/styles.css
+    // (stylex.keyframes переименовал бы имя — дельта computed-diff).
+    animationName: 'mtableHintIn',
+    animationDuration: '0.18s',
+    animationTimingFunction: 'ease-out',
+    // Движение — по желанию пользователя: хинт появляется без анимации.
+    '@media (prefers-reduced-motion: reduce)': {
+      animationName: 'none',
+    },
   },
   hintDisabled: {
     cursor: 'default',
@@ -40,6 +49,19 @@ const styles = stylex.create({
     display: 'flex',
     gap: 10,
     color: '#c9cdd4',
+  },
+  // Svg-глифы внутри glyph-span: шкала --icon-glyph (раньше глобалы
+  // .mtableHintGlyph svg / .mtableHintCta svg).
+  glyphSvg: {
+    display: 'block',
+    width: 'var(--icon-glyph)',
+    height: 'var(--icon-glyph)',
+  },
+  ctaSvg: {
+    display: 'block',
+    width: 'var(--icon-head)',
+    height: 'var(--icon-head)',
+    color: '#ef3124',
   },
   title: {
     marginTop: 12,
@@ -102,9 +124,11 @@ export const Hint = (): React.JSX.Element => {
 
   const sxHint = stylex.props(styles.hint, phase === 'loading' && styles.hintDisabled)
   const sxGlyph = stylex.props(styles.glyph)
+  const sxGlyphSvg = stylex.props(styles.glyphSvg)
   const sxTitle = stylex.props(styles.title)
   const sxSub = stylex.props(styles.sub)
   const sxCta = stylex.props(styles.cta)
+  const sxCtaSvg = stylex.props(styles.ctaSvg)
   const sxInfo = stylex.props(styles.info)
 
   return (
@@ -122,10 +146,11 @@ export const Hint = (): React.JSX.Element => {
         className={`mtableHintGlyph ${sxGlyph.className ?? ''}`}
         data-testid="mtable-hint-glyph"
         aria-hidden="true"
-        dangerouslySetInnerHTML={{
-          __html: dieGlyph('d4') + dieGlyph('d6') + dieGlyph('d20'),
-        }}
-      />
+      >
+        {dieGlyph('d4', sxGlyphSvg.className)}
+        {dieGlyph('d6', sxGlyphSvg.className)}
+        {dieGlyph('d20', sxGlyphSvg.className)}
+      </span>
       <span
         {...sxTitle}
         className={`mtableHintTitle ${sxTitle.className ?? ''}`}
@@ -146,8 +171,9 @@ export const Hint = (): React.JSX.Element => {
         className={`mtableHintCta ${sxCta.className ?? ''}`}
         data-testid="mtable-hint-cta"
         hidden={subHidden}
-        dangerouslySetInnerHTML={{ __html: addIcon() }}
-      />
+      >
+        {addIcon(sxCtaSvg.className)}
+      </span>
       <span
         {...sxInfo}
         className={`mtableHintInfo ${sxInfo.className ?? ''}`}

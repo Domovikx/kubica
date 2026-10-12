@@ -1,4 +1,5 @@
-// Секция «О проекте» в бургере: короткое описание стека и геометрии.
+// Секция «О проекте» в бургере: короткое SEO-описание (что это и зачем) с
+// продуктовыми выгодами; тех-детали пайплайна здесь не нужны.
 import * as stylex from '@stylexjs/stylex'
 import { overlayStyles } from '@/shared'
 import { drawerStyles as s } from './Drawer.stylex'
@@ -26,8 +27,10 @@ export const DrawerAboutSection = (): React.JSX.Element => {
         className={`mtableAbout ${sxAbout.className ?? ''}`}
         data-testid="mtable-about"
       >
-        Kubica — точные кости D&D: d6 16 мм, набор d4–d20, грани N+1, честная физика. FreeCAD ·
-        OpenSCAD · CadQuery → Blender → three.js.
+        Kubica — бесплатный онлайн-стол для бросков костей: d20, d6 и набор d4–d20 для D&D,
+        Pathfinder и настольных игр. Реалистичная 3D-физика, звук броска и честный рандом, история и
+        готовые наборы — играйте в браузере, без установки и регистрации. Точные модели костей: d6
+        16 мм, грани N+1.
       </p>
     </div>
   )

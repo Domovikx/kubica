@@ -1,6 +1,7 @@
 // Секция «История» в бургере: список последних бросков (реролл по строке),
 // очистка — двухтап («Очистить» → «Точно?», 3 с — сброс в родителе).
 import * as stylex from '@stylexjs/stylex'
+import { Fragment } from 'react'
 import { useAppDispatch, useAppSelector } from '@/app'
 import type { HistoryEntry } from '@/entities'
 import { formatLabel } from '@/features'
@@ -105,10 +106,18 @@ export const DrawerHistorySection = (props: {
                 >
                   {entry.parts?.map((p, j) => {
                     const cls = partClass(p) || (!p.kept ? 'partDrop' : '')
+                    const sxPart = stylex.props(
+                      cls === 'partMin' && s.pMin,
+                      cls === 'partMax' && s.pMax,
+                      cls === 'partDrop' && s.pDrop,
+                    )
                     return (
-                      <span key={j} className={cls || undefined}>
-                        {texts[j]}
-                      </span>
+                      <Fragment key={j}>
+                        <span {...sxPart} className={`${cls || ''} ${sxPart.className ?? ''}`}>
+                          {texts[j]}
+                        </span>
+                        {/* Пробел после каждой части — как в легаси (append(s, ' ')). */}{' '}
+                      </Fragment>
                     )
                   })}
                 </span>

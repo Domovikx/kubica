@@ -35,6 +35,10 @@ const styles = stylex.create({
     borderColor: '#2a2e36',
     borderRadius: 14,
     overflow: 'hidden',
+    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
+    animationName: 'mtablePop',
+    animationDuration: '0.16s',
+    animationTimingFunction: 'ease-out',
     // Узкие экраны (≤600): карточка шире — поля 12px (тот же блок на троих).
     '@media (max-width: 600px)': {
       width: 'calc(100% - 24px)',
@@ -98,7 +102,8 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
   const sxCard = stylex.props(styles.card)
   const sxRows = stylex.props(overlayStyles.rows)
   const sxSection = stylex.props(overlayStyles.section, overlayStyles.sectionNoBorder)
-  const sxWide = stylex.props(overlayStyles.wide)
+  const sxWide = stylex.props(overlayStyles.wide, entry.unavail && overlayStyles.wideOff)
+  const sxWideSvg = stylex.props(overlayStyles.wideSvg)
   const sxVolRow = stylex.props(styles.volRow)
   const sxVol = stylex.props(styles.vol)
   const sxVolVal = stylex.props(styles.volVal)
@@ -143,13 +148,13 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
             aria-pressed={on}
             aria-busy={!entry.unavail && s === 'loading' ? 'true' : undefined}
             aria-disabled={entry.unavail ? 'true' : undefined}
-            dangerouslySetInnerHTML={{
-              __html: `${musicIcon(on)}<span>${text}</span>`,
-            }}
             onClick={() => {
               if (hostRef.current) musicToggle(hostRef.current)
             }}
-          />
+          >
+            {musicIcon(on, sxWideSvg.className)}
+            <span>{text}</span>
+          </button>
           <div
             {...sxVolRow}
             className={`mtableMusicVolRow ${sxVolRow.className ?? ''}`}

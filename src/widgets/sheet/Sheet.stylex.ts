@@ -1,5 +1,6 @@
 // Стили шторки «+ Кости»: панель, блок пресетов, строки-степперы, CTA
-// «Сохранить сет». Ховер/.on — глобальные правила в styles.css.
+// «Сохранить сет». .on-визуал — глобальные правила в styles.css (чекеры
+// ставят .on программно); кадры анимаций — в app/styles.css.
 import * as stylex from '@stylexjs/stylex'
 
 export const sheetStyles = stylex.create({
@@ -20,6 +21,10 @@ export const sheetStyles = stylex.create({
     borderRadius: 14,
     overflow: 'hidden',
     paddingBottom: 'env(safe-area-inset-bottom)',
+    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
+    animationName: 'mtablePop',
+    animationDuration: '0.16s',
+    animationTimingFunction: 'ease-out',
     // Узкие экраны (≤600): карточка шире — поля 12px (тот же блок на троих
     // в легаси; специфика stylex-медиа бьёт базу того же объекта).
     '@media (max-width: 600px)': {
@@ -58,7 +63,9 @@ export const sheetStyles = stylex.create({
     color: '#9aa0aa',
     fontSize: 'var(--fs-sec)',
     lineHeight: 1.4,
-    margin: '4px 0',
+    // В блоке пресетов пустота — прижата к подсказке (раньше глобал
+    // .mtablePreBlock .mtableEmpty).
+    margin: '8px 0 0',
   },
   row: {
     display: 'flex',
@@ -77,6 +84,15 @@ export const sheetStyles = stylex.create({
     justifyContent: 'center',
     color: '#c9cdd4',
     flexShrink: 0,
+  },
+  /** Svg глифа строки: шкала --icon-row (раньше глобал .mtableGlyph svg). */
+  glyphSvg: {
+    width: 'var(--icon-row)',
+    height: 'var(--icon-row)',
+  },
+  /** Строка набрана (row.on — React; чекеры .on строкам не ставят): глиф красный. */
+  glyphOn: {
+    color: '#ef3124',
   },
   name: {
     fontWeight: 800,

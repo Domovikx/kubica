@@ -1,7 +1,8 @@
 // Чип пресета в шторке: тап — выбор, удержание 3 с (с паузой-грейсом 1 с) —
-// удаление. Состав костей глифами (innerHTML); отсчёт/заливка — use-chip-hold.
-// Состояния 'on'/'holding' — токен в маркере + глобальные правила в styles.css
-// (чекеры добавляют .on программно, e2e ждёт токены в className).
+// удаление. Состав костей — React-глифы (волна Whtml, стили — stylex ниже);
+// отсчёт/заливка — use-chip-hold. Состояния on/holding — токены в маркере
+// (e2e ждёт toHaveClass); .on-визуал — глобальные правила в styles.css
+// (чекеры добавляют .on программно), счётчик — условный stylex по hold.holding.
 import * as stylex from '@stylexjs/stylex'
 import { DIE_IDS, dieGlyph } from '@/shared'
 
@@ -36,6 +37,9 @@ const styles = stylex.create({
     fontSize: 'var(--fs-sec)',
     fontWeight: 700,
     cursor: 'pointer',
+    ':hover': {
+      backgroundColor: '#242832',
+    },
     whiteSpace: 'nowrap',
     touchAction: 'manipulation',
     userSelect: 'none',
@@ -57,6 +61,42 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: 6,
   },
+  // Отсчёт удержания: виден только в состоянии holding (раньше глобалы
+  // .mtableChipCount + .mtableChip.holding .mtableChipCount).
+  count: {
+    display: 'none',
+    position: 'absolute',
+    inset: 0,
+    zIndex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 'var(--fs-body)',
+    fontWeight: 800,
+    color: '#fff',
+    textShadow: '0 1px 2px rgba(0, 0, 0, 0.6)',
+    pointerEvents: 'none',
+  },
+  countShow: {
+    display: 'flex',
+  },
+  // Состав костей глифами (раньше глобалы .mtableChipDie/.mtableChipDie svg/
+  // .mtableChipN); .on-перебивка счётчика остаётся глобалом — чекеры ставят
+  // чипу .on программно.
+  die: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 1,
+  },
+  dieSvg: {
+    display: 'block',
+    width: 'var(--icon-chip)',
+    height: 'var(--icon-chip)',
+  },
+  chipN: {
+    fontSize: 'var(--fs-cap)',
+    fontWeight: 800,
+    color: '#9aa0aa',
+  },
 })
 
 export const Chip = (props: ChipProps): React.JSX.Element => {
@@ -64,21 +104,13 @@ export const Chip = (props: ChipProps): React.JSX.Element => {
   const hold = useChipHold(onDelete, onTap)
   const label = shortSet(counts)
 
-  const diceHtml = (() => {
-    let html = ''
-    for (const die of DIE_IDS) {
-      const n = counts[die] ?? 0
-      if (n <= 0) continue
-      html += `<span class="mtableChipDie" data-testid="mtable-chip-die">${dieGlyph(die)}`
-      if (n > 1) html += `<span class="mtableChipN" data-testid="mtable-chip-n">×${n}</span>`
-      html += '</span>'
-    }
-    return html
-  })()
-
   const sxChip = stylex.props(styles.chip)
   const sxFill = stylex.props(styles.fill)
   const sxDice = stylex.props(styles.dice)
+  const sxCount = stylex.props(styles.count, hold.holding && styles.countShow)
+  const sxDie = stylex.props(styles.die)
+  const sxDieSvg = stylex.props(styles.dieSvg)
+  const sxChipN = stylex.props(styles.chipN)
 
   return (
     <button
@@ -106,9 +138,37 @@ export const Chip = (props: ChipProps): React.JSX.Element => {
         {...sxDice}
         className={`mtableChipDice ${sxDice.className ?? ''}`}
         data-testid="mtable-chip-dice"
-        dangerouslySetInnerHTML={{ __html: diceHtml }}
-      />
-      <span className="mtableChipCount" data-testid="mtable-chip-count" aria-hidden="true">
+      >
+        {DIE_IDS.map((die) => {
+          const n = counts[die] ?? 0
+          if (n <= 0) return null
+          return (
+            <span
+              key={die}
+              {...sxDie}
+              className={`mtableChipDie ${sxDie.className ?? ''}`}
+              data-testid="mtable-chip-die"
+            >
+              {dieGlyph(die, sxDieSvg.className)}
+              {n > 1 && (
+                <span
+                  {...sxChipN}
+                  className={`mtableChipN ${sxChipN.className ?? ''}`}
+                  data-testid="mtable-chip-n"
+                >
+                  {`×${n}`}
+                </span>
+              )}
+            </span>
+          )
+        })}
+      </span>
+      <span
+        {...sxCount}
+        className={`mtableChipCount ${sxCount.className ?? ''}`}
+        data-testid="mtable-chip-count"
+        aria-hidden="true"
+      >
         {hold.countdown}
       </span>
     </button>

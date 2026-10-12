@@ -11,15 +11,23 @@ const styles = stylex.create({
   backdrop: {
     position: 'absolute',
     inset: 0,
-    // Выше глобального .result-попа (z-index 10), иначе поп висит над меню.
+    // 20 — выше хинта (5), ниже оверлеев (21): меню/шторка кликабельны
+    // поверх подложки.
     zIndex: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  // Вход только видимой подложки (раньше .mtableBackdrop:not([hidden]));
+  // кадры mtableFade — глобальные в app/styles.css.
+  fade: {
+    animationName: 'mtableFade',
+    animationDuration: '0.16s',
+    animationTimingFunction: 'ease-out',
   },
 })
 
 export const Backdrop = ({ visible }: BackdropProps): React.JSX.Element => {
   const dispatch = useAppDispatch()
-  const sx = stylex.props(styles.backdrop)
+  const sx = stylex.props(styles.backdrop, visible && styles.fade)
   return (
     <div
       {...sx}

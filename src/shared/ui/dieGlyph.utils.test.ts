@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
 import type { DieId } from '@/shared/dice'
 import { DIE_HINTS, dieGlyph } from './dieGlyph.utils'
 
@@ -6,7 +7,7 @@ describe('dieGlyph.utils', () => {
   it('все 6 костей дают валидный svg с currentColor, формы разные', () => {
     const seen = new Set<string>()
     for (const die of Object.keys(DIE_HINTS) as DieId[]) {
-      const svg = dieGlyph(die)
+      const svg = renderToStaticMarkup(dieGlyph(die))
       expect(svg).toContain('<svg')
       expect(svg).toContain('stroke="currentColor"')
       seen.add(svg)

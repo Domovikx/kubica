@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
 import {
   addIcon,
   checkIcon,
@@ -13,22 +14,25 @@ import {
   vibrationIcon,
 } from './mdIcon.utils'
 
+// Иконки — React-узлы (волна Whtml); ассерты — по статической разметке.
+const markup = (el: React.JSX.Element): string => renderToStaticMarkup(el)
+
 describe('mdIcon.utils', () => {
   it('звук вкл/выкл — разные path, currentColor', () => {
-    const on = soundIcon(false)
-    const off = soundIcon(true)
+    const on = markup(soundIcon(false))
+    const off = markup(soundIcon(true))
     expect(on).toContain('fill="currentColor"')
     expect(off).toContain('fill="currentColor"')
     expect(on).not.toBe(off)
   })
 
   it('вибрация — валидный svg', () => {
-    expect(vibrationIcon()).toContain('<svg')
+    expect(markup(vibrationIcon())).toContain('<svg')
   })
 
   it('меню и крестик — валидные svg, разные path', () => {
-    const menu = menuIcon()
-    const close = closeIcon()
+    const menu = markup(menuIcon())
+    const close = markup(closeIcon())
     expect(menu).toContain('<svg')
     expect(close).toContain('<svg')
     expect(menu).toContain('fill="currentColor"')
@@ -36,28 +40,28 @@ describe('mdIcon.utils', () => {
   })
 
   it('добавить — валидный svg, своя path у кнопки набора', () => {
-    const add = addIcon()
+    const add = markup(addIcon())
     expect(add).toContain('<svg')
     expect(add).toContain('fill="currentColor"')
-    expect(add).not.toBe(menuIcon())
-    expect(add).not.toBe(closeIcon())
+    expect(add).not.toBe(markup(menuIcon()))
+    expect(add).not.toBe(markup(closeIcon()))
   })
 
   it('все экспортируемые иконки — svg с aria-hidden и без дублей path', () => {
     const all = [
-      soundIcon(false),
-      soundIcon(true),
-      vibrationIcon(),
-      musicIcon(true),
-      musicIcon(false),
-      menuIcon(),
-      addIcon(),
-      closeIcon(),
-      checkIcon(),
-      clearAllIcon(),
-      githubIcon(),
-      telegramIcon(),
-      likeIcon(),
+      markup(soundIcon(false)),
+      markup(soundIcon(true)),
+      markup(vibrationIcon()),
+      markup(musicIcon(true)),
+      markup(musicIcon(false)),
+      markup(menuIcon()),
+      markup(addIcon()),
+      markup(closeIcon()),
+      markup(checkIcon()),
+      markup(clearAllIcon()),
+      markup(githubIcon()),
+      markup(telegramIcon()),
+      markup(likeIcon()),
     ]
     for (const svg of all) {
       expect(svg).toContain('<svg')
@@ -67,47 +71,52 @@ describe('mdIcon.utils', () => {
   })
 
   it('убрать всё — валидный svg, не крестик', () => {
-    expect(clearAllIcon()).toContain('<svg')
-    expect(clearAllIcon()).not.toBe(closeIcon())
+    expect(markup(clearAllIcon())).toContain('<svg')
+    expect(markup(clearAllIcon())).not.toBe(markup(closeIcon()))
   })
 
   // 2.24: ✓ «Готово» — морф-состояние крестика закрытия после изменения в меню.
   it('галочка — валидный svg, currentColor, не совпадает с крестиком', () => {
-    const check = checkIcon()
+    const check = markup(checkIcon())
     expect(check).toContain('<svg')
     expect(check).toContain('fill="currentColor"')
     expect(check).toContain('aria-hidden="true"')
-    expect(check).not.toBe(closeIcon())
+    expect(check).not.toBe(markup(closeIcon()))
   })
 
   // 2.17: бренды (simple-icons) — 24×24; лайк — octicon-star GitHub (сетка 16,
   // как и счётчик Stars на самом GitHub).
   it('соцсети — github/telegram в viewBox 0 0 24 24, лайк в 0 0 16 16', () => {
-    expect(githubIcon()).toContain('viewBox="0 0 24 24"')
-    expect(telegramIcon()).toContain('viewBox="0 0 24 24"')
-    expect(likeIcon()).toContain('viewBox="0 0 16 16"')
-    expect(githubIcon()).not.toBe(telegramIcon())
-    for (const svg of [githubIcon(), telegramIcon(), likeIcon()]) {
+    expect(markup(githubIcon())).toContain('viewBox="0 0 24 24"')
+    expect(markup(telegramIcon())).toContain('viewBox="0 0 24 24"')
+    expect(markup(likeIcon())).toContain('viewBox="0 0 16 16"')
+    expect(markup(githubIcon())).not.toBe(markup(telegramIcon()))
+    for (const svg of [markup(githubIcon()), markup(telegramIcon()), markup(likeIcon())]) {
       expect(svg).toContain('fill="currentColor"')
       expect(svg).toContain('aria-hidden="true"')
     }
   })
 
   it('лайк — свой path, не совпадает ни с одной шапочной иконкой', () => {
-    expect(likeIcon()).toContain('<svg')
-    for (const svg of [menuIcon(), addIcon(), soundIcon(false), closeIcon()]) {
-      expect(likeIcon()).not.toBe(svg)
+    expect(markup(likeIcon())).toContain('<svg')
+    for (const svg of [
+      markup(menuIcon()),
+      markup(addIcon()),
+      markup(soundIcon(false)),
+      markup(closeIcon()),
+    ]) {
+      expect(markup(likeIcon())).not.toBe(svg)
     }
   })
 
   // 2.22: фоновая музыка — нота вкл/выкл, разные path, своя от звука.
   it('музыка playing/off — разные path, currentColor, не совпадает со звуком', () => {
-    const on = musicIcon(true)
-    const off = musicIcon(false)
+    const on = markup(musicIcon(true))
+    const off = markup(musicIcon(false))
     expect(on).toContain('fill="currentColor"')
     expect(off).toContain('fill="currentColor"')
     expect(on).not.toBe(off)
-    expect(on).not.toBe(soundIcon(false))
-    expect(off).not.toBe(soundIcon(true))
+    expect(on).not.toBe(markup(soundIcon(false)))
+    expect(off).not.toBe(markup(soundIcon(true)))
   })
 })

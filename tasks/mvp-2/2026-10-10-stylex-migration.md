@@ -345,3 +345,70 @@ const sx = stylex.props(styles.root)
     **чисто ✓** 0/0/0 (3408 элементов, 16 снимков) — после фикса `*/` и после prettier; prettier
     --check OK; `npm run build` — **CSS 15.5KB** (обещанные ~20KB атомарного CSS — в пределах), JS
     не изменился.
+- **Wextra — миграция остатка `styles.css` на stylex (просьба человека: «плиз»), 2026-10-12
+  ГОТОВО:**
+  - **Проба (tmp, удалена):** в stylex 0.19.1 компилируются (а) `animationName: 'mtableHintIn'` —
+    ссылка на глобальные `@keyframes` по имени, (б) длинные руки анимации
+    (`animationDuration/Time/Function`), (в) `'@media (prefers-reduced-motion: reduce)'`, (г)
+    нативные `scrollbarWidth/scrollbarColor`. `stylex.keyframes()` НЕ использован — переименование
+    кадров дало бы дельту computed-diff.
+  - **Переехало в stylex:** анимации Hint/Sheet/Drawer/MusicCard/Backdrop (кадры остались
+    глобальными ассетами в `styles.css`); отсчёт чипа `count/countShow` по `hold.holding` (токен
+    `holding` в className — e2e:236); hover `.mtableChip/.mtableWide/.mtableScale` (`':hover'`
+    внутри stylex; `.on`-глобал вне слоёв по-прежнему бьёт ховер — активная кнопка остаётся
+    акцентной под курсором); `wideOff` по `aria-disabled` (MusicCard + DrawerSound); нативная пара
+    scrollbar-свойств в `overlayStyles.rows` и `drawerStyles.body` (`-webkit-*` остались глобалом);
+    partMin/partMax/partDrop истории — условные классы в DrawerHistorySection (маркеры `partClass()`
+    в className сохранены); margin пресет-пустоты → `sheetStyles.empty` (`8px 0 0` — бывший
+    descendant-правило `.mtablePreBlock .mtableEmpty`).
+  - **Удалено как мёртвое:** весь результат-поп (`.result`, `.resultLabel/Value/Parts`, `.partKept`,
+    `body[data-mode] .result`, `@keyframes pop`) — **`showResult` не вызывается нигде (grep
+    src/e2e/tmp: 0), поп выключен продуктом** (итог — SR `.mtableLive`, история в меню);
+    `hideResult()` в throwPack/MobileTable оставлен (защитные вызовы — правка кода вне рамок «только
+    стили»). Удалены мёртвые токены `--alfa-red/--panel/--muted/--transition-fast`. Исправлены
+    устаревшие комментарии: `resultPop.utils`, Backdrop (z-20 без упоминания попа), шапки
+    Sheet/Drawer/overlay/Chip stylex-файлов. `.partDrop` (жив в истории) переехал в stylex-условие
+    вместе с partMin/partMax.
+  - **Остаток (хедер `styles.css`, точный инвентарь):** innerHTML/svg-дети (mtableSpin, Star-спаны,
+    глифы кнопок, ChipDie/ChipN, SocialName/Meta, `.mtableRow.on .mtableGlyph`), impure-хост музыки
+    (`:empty`/`iframe`), `-webkit-` скроллбары, state-визуал `.on` (чекеры ставят `.on` программно —
+    audit-contrast), `@keyframes` как глобальные ассеты, слои/база/токены.
+  - **`styles.css`: 474 → 337 строк.**
+  - **Проверки:** tsc 0; `eslint src/` 0; prettier --check 0; build 0; computed-diff **0/0/0** (16
+    снимков, 3408 элементов; по пути поймана и починена пропущенная анимация MusicCard); e2e — 29
+    passed + **1 flaky** (`m-table.spec.ts:210` tablet, тост «Набор удалён», окно 2200 мс:
+    **воспроизведён на базовой ветке со stash'ем моей работы — pre-existing, не регрессия**, ретрай
+    зелёный, exit 0); 9 чекеров **ALL OK** (hint-v2 подтверждает
+    `animName: mtableHintIn, animDur: 0.18` в рантайме). vitest в волне не гонялся (правки только
+    стилей/JSX-разметки, не логики) — **перед коммитом обязателен полный прогон**.
+- **Whtml — impure-разметка (innerHTML/иконки-строки) → React-узлы, 2026-10-12 ГОТОВО:**
+  - **Утилиты → JSX:** `mdIcon.utils.ts`/`dieGlyph.utils.ts` → `.tsx` (mv), сигнатура
+    `func(args…, className?)` → `React.JSX.Element` (className от `stylex.props().className`); 9
+    impure-компонентов конвертированы (Head, OverlayHead, Sheet, SheetDiceRows, Chip, Hint,
+    DrawerSoundSection, MusicCard, DrawerSocialSection) — `dangerouslySetInnerHTML` в `src/` → 0;
+    маркеры `.mtable*`/`data-testid`/`data-phase` сохранены в className.
+  - **Новые stylex-базы:** `iconStyles.svgHead/morph` (в `mt.stylex`),
+    `Head.spin/starSvg/ starLabel/starCount`, `overlay.wideSvg`, `Sheet.glyphSvg/glyphOn`,
+    `Drawer.social*`, локальные Hint (`glyphSvg/ctaSvg`) и Chip (`die/dieSvg/chipN`). Совмещение
+    классов через `stylex.props(a, b)` — конфликт резолвится на компиляции (см. пробу ниже).
+  - **`styles.css`: 337 → 219 строк** — удалены Whtml-секции svg-детей (`.mtableMorph>svg`,
+    `.mtableSpin`, Star-спаны, `ChipDie/ChipN`, `Glyph svg`, `Wide/Social/Star svg` и др.);
+    **остаток навсегда:** `.on`-визуал (чекеры ставят `.on` программно), impure-хост музыки,
+    `-webkit-` скроллбары, `@keyframes` как глобальные ассеты, слои/база/токены.
+  - **Проба stylex (tmp, удалена):** при конфликте одного свойства в `stylex.props(A, B)` побеждает
+    поздний аргумент на компиляции — проигравший класс не эмитится (в т.ч. кросс-файловый и условный
+    `cond && B`); `border-top-color` (слой priority4) перебивает `border-color` (priority2) порядком
+    слоёв; conditional-стили получают удвоенный класс `.x.x` под @media.
+  - **Грабли волны:** (1) JSX `×{n}` → ДВА text-node, кернинг по границе +0.01px = 54 дельты
+    computed-diff — фикс: один шаблонный литерал ``{`×${n}`}`` → 0/0/0; (2) при ручной перезаписи
+    `mdIcon.utils.tsx` потерян 20-символьный сегмент TELEGRAM-path — битый `<path> d` в консоли
+    чекеров (ui-scale/add-icon FAIL); сверка всех 13 констант + SHAPES с `git show HEAD` — чекер
+    `tmp/check/_paths_vs_head.mjs` (сравнение атрибутов, формат `/>` не важен; следствие:
+    **константы/данные при рефакторинге — только машинной сверкой с эталоном, не перепечаткой**);
+    (3) чекер `hint-cta2-shots` брал строку из `import('/src/…/mdIcon.utils.ts')` — после `.tsx`/JSX
+    404 → svg берётся из живого DOM (clone без stylex-класса).
+  - **Тесты:** утилит-тесты переписаны на `renderToStaticMarkup` из `react-dom/server` (vitest
+    environment = node, stylex-плагин в vitest.config.ts) — ожидаемые строки ассертов сохранены.
+  - **Проверки:** tsc 0; `eslint src/` 0; prettier --check 0; build 0; vitest **29 files / 236
+    tests**; computed-diff **0/0/0** (16 снимков, 3408 элементов); 9 чекеров **ALL OK**; e2e
+    **30/30** (flaky :210 не проявился).

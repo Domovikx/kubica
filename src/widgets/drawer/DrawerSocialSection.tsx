@@ -14,6 +14,10 @@ export const DrawerSocialSection = (): React.JSX.Element => {
   const sxSectionTitle = stylex.props(s.sectionTitle)
   const sxSocial = stylex.props(s.social)
   const sxSocialGap = stylex.props(s.social, s.socialGap)
+  const sxSocialSvg = stylex.props(s.socialSvg)
+  const sxStarSvg = stylex.props(s.socialSvg, s.socialStar)
+  const sxSocialName = stylex.props(s.socialName)
+  const sxSocialMeta = stylex.props(s.socialMeta)
 
   return (
     <div
@@ -28,7 +32,7 @@ export const DrawerSocialSection = (): React.JSX.Element => {
       >
         Соцсети
       </span>
-      {/* Иконка — прямой ребёнок <a> (svg), как legacy innerHTML. */}
+      {/* Иконка — прямой ребёнок <a> (svg), как в легаси innerHTML. */}
       <a
         {...sxSocial}
         className={`mtableSocial ${sxSocial.className ?? ''}`}
@@ -37,10 +41,15 @@ export const DrawerSocialSection = (): React.JSX.Element => {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Профиль GitHub DomovikX (откроется в новой вкладке)"
-        dangerouslySetInnerHTML={{
-          __html: `${githubIcon()}<span class="mtableSocialName">GitHub</span><span class="mtableSocialMeta">@DomovikX</span>`,
-        }}
-      />
+      >
+        {githubIcon(sxSocialSvg.className)}
+        <span {...sxSocialName} className={`mtableSocialName ${sxSocialName.className ?? ''}`}>
+          GitHub
+        </span>
+        <span {...sxSocialMeta} className={`mtableSocialMeta ${sxSocialMeta.className ?? ''}`}>
+          @DomovikX
+        </span>
+      </a>
       <a
         {...sxSocialGap}
         className={`mtableSocial ${sxSocialGap.className ?? ''}`}
@@ -49,10 +58,15 @@ export const DrawerSocialSection = (): React.JSX.Element => {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Канал Domovikx в Telegram (откроется в новой вкладке)"
-        dangerouslySetInnerHTML={{
-          __html: `${telegramIcon()}<span class="mtableSocialName">Telegram</span><span class="mtableSocialMeta">@Domovikx</span>`,
-        }}
-      />
+      >
+        {telegramIcon(sxSocialSvg.className)}
+        <span {...sxSocialName} className={`mtableSocialName ${sxSocialName.className ?? ''}`}>
+          Telegram
+        </span>
+        <span {...sxSocialMeta} className={`mtableSocialMeta ${sxSocialMeta.className ?? ''}`}>
+          @Domovikx
+        </span>
+      </a>
       <a
         {...sxSocialGap}
         className={`mtableSocial mtableStar ${sxSocialGap.className ?? ''}`}
@@ -61,12 +75,20 @@ export const DrawerSocialSection = (): React.JSX.Element => {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={starMenuLabel}
-        dangerouslySetInnerHTML={{
-          __html: `${likeIcon()}<span class="mtableSocialName">Оценить репозиторий</span><span class="mtableSocialMeta" data-testid="star-count"${
-            starCount === null || starCount < 1 ? ' hidden' : ''
-          }>${starCount !== null && starCount >= 1 ? starCount : ''}</span>`,
-        }}
-      />
+      >
+        {likeIcon(sxStarSvg.className)}
+        <span {...sxSocialName} className={`mtableSocialName ${sxSocialName.className ?? ''}`}>
+          Оценить репозиторий
+        </span>
+        <span
+          {...sxSocialMeta}
+          className={`mtableSocialMeta ${sxSocialMeta.className ?? ''}`}
+          data-testid="star-count"
+          hidden={starCount === null || starCount < 1}
+        >
+          {starCount !== null && starCount >= 1 ? starCount : ''}
+        </span>
+      </a>
     </div>
   )
 }
