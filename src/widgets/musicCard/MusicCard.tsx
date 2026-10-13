@@ -13,6 +13,14 @@ import { OverlayHead } from '@/shared'
 import { useDirtyPanel } from '@/features'
 import { overlayStyles } from '@/shared'
 
+/** Поп оверлея: кадры локально (stylex не умеет keyframes через импорт —
+ * плагин требует локальный вызов stylex.keyframes; бывший глобальный
+ * @keyframes mtablePop). */
+const popFrames = stylex.keyframes({
+  from: { opacity: 0, transform: 'translate(-50%, -50%) scale(0.96)' },
+  to: { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' },
+})
+
 export interface MusicCardProps {
   open: boolean
   onClose: () => void
@@ -35,8 +43,8 @@ const styles = stylex.create({
     borderColor: '#2a2e36',
     borderRadius: 14,
     overflow: 'hidden',
-    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
-    animationName: 'mtablePop',
+    // Поп оверлея: кадры popFrames — локальный stylex.keyframes (см. выше).
+    animationName: popFrames,
     animationDuration: '0.16s',
     animationTimingFunction: 'ease-out',
     // Узкие экраны (≤600): карточка шире — поля 12px (тот же блок на троих).
@@ -71,6 +79,11 @@ const styles = stylex.create({
     fontSize: 'var(--fs-meta)',
     fontWeight: 700,
     color: '#9aa0aa',
+  },
+  /** Хост YT: без детей геометрии нет — пустой хост не дырявит секцию
+   * (бывшее правило :empty в styles.css, распил 2026-10-12). */
+  host: {
+    ':empty': { display: 'none' },
   },
 })
 
@@ -108,6 +121,7 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
   const sxVol = stylex.props(styles.vol)
   const sxVolVal = stylex.props(styles.volVal)
   const sxSectionHint = stylex.props(overlayStyles.sectionHint)
+  const sxHost = stylex.props(styles.host)
 
   return (
     <div
@@ -184,9 +198,14 @@ export const MusicCard = ({ open, onClose }: MusicCardProps): React.JSX.Element 
               {music.volume}
             </span>
           </div>
-          {/* Хост iframe: React-детей нет, YT вставляет его императивно;
-              CSS :empty → display:none при закрытой карточке. */}
-          <div ref={hostRef} className="mtableMusicHost" data-testid="mtable-music-player" />
+          {/* Хост iframe: React-детей нет, YT вставляет императивно;
+              :empty → display:none (stylex host), вёрстка iframe — global.css. */}
+          <div
+            {...sxHost}
+            ref={hostRef}
+            className={`mtableMusicHost ${sxHost.className ?? ''}`}
+            data-testid="mtable-music-player"
+          />
           <p
             {...sxSectionHint}
             className={`mtableSectionHint ${sxSectionHint.className ?? ''}`}

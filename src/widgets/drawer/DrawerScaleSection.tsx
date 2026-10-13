@@ -1,6 +1,6 @@
 // Секция «Масштаб интерфейса» в бургере: бегунок 100–200 % со снапом к
 // пресетам 100/125/150/175/200 (persist + стор, тост — при смене шага,
-// вибрация — на отпускание). Трек/боббин — вендор-псевдо в styles.css.
+// вибрация — на отпускание). Трек/боббин — вендор-псевдо stylex (Drawer.stylex).
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app'
 import { setUiScale, UI_SCALES, type UiScale, uiScaleActions } from '@/features'
@@ -24,7 +24,6 @@ export const DrawerScaleSection = (props: {
   const sxScaleTrackCol = stylex.props(s.scaleTrackCol)
   const sxScaleRange = stylex.props(s.scaleRange)
   const sxScaleTicks = stylex.props(s.scaleTicks)
-  const sxScaleValue = stylex.props(s.scaleValue)
 
   return (
     <div
@@ -72,13 +71,6 @@ export const DrawerScaleSection = (props: {
             ))}
           </div>
         </div>
-        <span
-          {...sxScaleValue}
-          className={`mtableScale ${sxScaleValue.className ?? ''}`}
-          data-testid="mtable-scale-value"
-        >
-          {`${pct}%`}
-        </span>
       </div>
     </div>
   )

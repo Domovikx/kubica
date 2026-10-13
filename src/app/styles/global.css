@@ -1,0 +1,109 @@
+/* Единственный css-файл проекта (распил styles.css → мини-глобал, 2026-10-12;
+ * задача tasks/mvp-2/2026-10-10-stylex-migration.md). UI-стили — только
+ * stylex (канон: stylex.create в tsx/ts), здесь — только то, что stylex
+ * физически не выражает: документ/body, атрибуты, impure-дети и
+ * state-контракт чекеров (официальная позиция StyleX: «Use a CSS file for
+ * global styles», github.com/facebook/stylex/discussions/324).
+ *
+ * Файл также — хост инъекции @stylexjs/unplugin: unplugin дописывает
+ * собранный stylex в первый css-ассет билда, а vite линкует его в
+ * index.html (без css-ассета в проде появляется нессылочный
+ * assets/stylex.css — «silent Vite trap», проверено) — поэтому импорт в
+ * main.tsx обязателен.
+ *
+ * Канон слоёв: @layer … ЗДЕСЬ, раньше любого css: правила stylex — в
+ * слоях priorityN (useCSSLayers в vite.config), база ниже (в @layer base)
+ * всегда проигрывает stylex, а state-визуал вне слоёв бьёт оба слоя. */
+@layer base, stylex;
+
+/* ---- Токены стола (бывший :root/mobile-table.css; --ui-scale пишет js на
+ * <html> через ui-scale.ts, остальное наследуется и пересчитывается; дефолт
+ * --ui-scale:1 нужен до выполнения main.tsx, иначе --tap/--fs-* невалидны).
+ * TODO(волна): перенос в stylex.defineVars — потребует переименования всех
+ * var(--…)-ссылок в компонентах, поэтому оставлено здесь. */
+:root {
+  --ui-scale: 1;
+  --tap: calc(44px * var(--ui-scale));
+  --fs-cap: calc(clamp(13px, 16.28px - 0.32vw, 15px) * var(--ui-scale));
+  --fs-meta: calc(clamp(14px, 17.28px - 0.32vw, 16px) * var(--ui-scale));
+  --fs-sec: calc(clamp(15px, 18.28px - 0.32vw, 17px) * var(--ui-scale));
+  --fs-body: calc(clamp(16px, 19.28px - 0.32vw, 18px) * var(--ui-scale));
+  --fs-title: calc(clamp(17px, 20.28px - 0.32vw, 19px) * var(--ui-scale));
+  --fs-headline: calc(clamp(19px, 22.28px - 0.32vw, 21px) * var(--ui-scale));
+  --icon-head: calc(clamp(24px, 27.28px - 0.32vw, 26px) * var(--ui-scale));
+  --icon-like: calc(clamp(16px, 19.28px - 0.32vw, 18px) * var(--ui-scale));
+  --icon-chip: calc(clamp(18px, 21.28px - 0.32vw, 20px) * var(--ui-scale));
+  --icon-glyph: calc(clamp(28px, 31.28px - 0.32vw, 30px) * var(--ui-scale));
+  --icon-wide: calc(clamp(22px, 25.28px - 0.32vw, 24px) * var(--ui-scale));
+  --icon-row: calc(clamp(26px, 29.28px - 0.32vw, 28px) * var(--ui-scale));
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Документ. Стол — всегда всё приложение (mode-селектор не нужен, js
+   * data-mode выпилен 2026-10-13): fixed+inset — фон страницы и холст в
+   * одинаковом стекле, margin:0 — сброс 8px UA, overflow — без страницного
+   * скролла (тянут контент сами списки). Высоты не задаём: viewers в stylex
+   * даёт 100vh/100dvh явно (HomePage.stylex.ts), section растёт от него. */
+  body {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    overflow: hidden;
+    /* Бесшовный фон: колонка растворяется в странице (никакого letterbox). */
+    background: #0a0b0e;
+    color: #f0f1f3;
+    font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  /* Атрибут hidden сильнее любых display-утилит (в духе preflight). */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Глобальный фокус-обводка: свои :focus-visible в stylex есть не у всех
+   * кнопок (hint/overlay/чипы/листы/секции шторки полагаются на эту). */
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}
+
+/* ---- State-визуал ВНЕ слоёв — контракт чекеров (бывший styles.css):
+ * токены 'on'/'holding'/partMin… остаются в строке className (e2e toHaveClass);
+ * .on ставят чекеры программно (audit-contrast), а не React. Вне слоёв
+ * бьёт слои priorityN — активная кнопка бьёт stylex-hover и остаётся с
+ * акцентным фоном под курсором, как в легаси (в слое :hover перебил бы .on
+ * по приоритету псевдокласса). Row-on-глиф ушёл в stylex (sheetStyles.glyphOn):
+ * .on строки ставит только React. */
+.mtableChip.on {
+  /* Фон CTA под белым: #d92b1c (ratio 4.87 ≥ AA 4.5), не бренд #ef3124. */
+  background: #d92b1c;
+  color: #fff;
+}
+/* Счётчик ×n внутри React-глифов чипа: перебивка stylex chipN — только
+   глобалом (чекеры ставят чипу .on программно). */
+.mtableChip.on .mtableChipN {
+  color: rgba(255, 255, 255, 0.85);
+}
+.mtableWide.on {
+  background: #d92b1c;
+  color: #fff;
+}
+
+/* ---- Impure-хост музыки: YT.Player заменяет целевой элемент своим
+ * iframe'ом — React-ребёнка нет, stylex-селектор на ребёнка не строит
+ * (хост: :empty — stylex в MusicCard). */
+.mtableMusicHost iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: #000;
+}

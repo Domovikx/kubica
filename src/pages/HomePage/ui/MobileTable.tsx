@@ -4,7 +4,7 @@
 // физика/жесты) — use-table-engine; оверлеи/прочее UI — RTK (mt-ui-slice).
 // Секция/канва — stylex; классы-состояния (sheetOpen) — маркеры в className
 // (правил под них нет — мёртвые токены, оставлены как есть). Стили стола —
-// stylex в ui/*.tsx + глобальный остаток в app/styles.css (волна W2).
+// stylex в ui/*.tsx; глобальный хвост — единственный css: app/styles/global.css.
 import { useCallback, useEffect, useRef } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app'

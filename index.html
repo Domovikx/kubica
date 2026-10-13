@@ -1,6 +1,13 @@
 <!doctype html>
 <html lang="ru">
   <head>
+    <!-- Канон порядка слоёв — самым первым стилем документа: в dev stylex
+         инжектит /virtual:stylex.css ссылкой раньше vite-стилей, без явного
+         объявления здесь base объявлялся после priorityN и перебивал stylex
+         (dev ≠ прод). Дубль дубля в global.css безвреден (порядок идемпотентен). -->
+    <style>
+      @layer base, stylex;
+    </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta

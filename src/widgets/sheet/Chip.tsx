@@ -1,8 +1,8 @@
 // Чип пресета в шторке: тап — выбор, удержание 3 с (с паузой-грейсом 1 с) —
 // удаление. Состав костей — React-глифы (волна Whtml, стили — stylex ниже);
 // отсчёт/заливка — use-chip-hold. Состояния on/holding — токены в маркере
-// (e2e ждёт toHaveClass); .on-визуал — глобальные правила в styles.css
-// (чекеры добавляют .on программно), счётчик — условный stylex по hold.holding.
+// (e2e ждёт toHaveClass); .on-визуал — app/styles/global.css (чекеры добавляют
+// .on программно), счётчик — условный stylex по hold.holding.
 import * as stylex from '@stylexjs/stylex'
 import { DIE_IDS, dieGlyph } from '@/shared'
 

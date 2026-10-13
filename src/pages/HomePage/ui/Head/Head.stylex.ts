@@ -2,6 +2,11 @@
 // add/burger/star. База иконок — ../../mt.stylex (iconStyles.btn/body/hover).
 import * as stylex from '@stylexjs/stylex'
 
+/** Спиннер загрузки: кадры (бывший глобальный @keyframes mtableSpin). */
+const spinFrames = stylex.keyframes({
+  to: { transform: 'rotate(360deg)' },
+})
+
 export const headStyles = stylex.create({
   head: {
     position: 'absolute',
@@ -129,7 +134,7 @@ export const headStyles = stylex.create({
     borderColor: 'rgba(240, 242, 245, 0.25)',
     borderTopColor: '#ef3124',
     borderRadius: '50%',
-    animationName: 'mtableSpin',
+    animationName: spinFrames,
     animationDuration: '0.7s',
     animationTimingFunction: 'linear',
     animationIterationCount: 'infinite',

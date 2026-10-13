@@ -4,11 +4,11 @@ import { App } from './App'
 import { store } from './store'
 import { musicUiActions, onMusicChange, applyUiScale } from '@/features'
 
-import './styles.css'
-
-// Режим стола — синхронно до первого рендера: CSS body[data-mode='mtable']
-// должен включиться в тот же тик, что и раньше (до появления React-разметки).
-document.body.dataset.mode = 'mtable'
+// Распил styles.css (2026-10-12): единственный css — app/styles/global.css
+// (документ/токены/.on-контракт + хост инъекции stylex: unplugin дописывает
+// собранный stylex в первый css-ассет и vite линкует его в index.html);
+// UI-стили — stylex.
+import './styles/global.css'
 
 // Масштаб интерфейса: персист из localStorage уже в сторе (preloadedState) —
 // применяем CSS-переменную --ui-scale до первого рендера (как раньше делал

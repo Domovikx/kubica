@@ -1,8 +1,15 @@
 // Стили бургер-меню (дроуэра): панель, тело-скролл, секции, строки истории,
-// масштаб-пилюли, ссылки. .on-визуал и -webkit-скроллбары — глобальные правила
-// в styles.css (чекеры ставят .on программно); общая шапка/секции оверлеев —
-// в ../overlay.stylex.
+// масштаб-бегунок, ссылки. .on-визуал — global.css (чекеры ставят .on
+// программно, вне слоёв); общая шапка/секции оверлеев — в ../overlay.stylex.
 import * as stylex from '@stylexjs/stylex'
+
+/** Поп оверлея: кадры локально (stylex не умеет keyframes через импорт —
+ * плагин требует локальный вызов stylex.keyframes; бывший глобальный
+ * @keyframes mtablePop). */
+const popFrames = stylex.keyframes({
+  from: { opacity: 0, transform: 'translate(-50%, -50%) scale(0.96)' },
+  to: { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' },
+})
 
 export const drawerStyles = stylex.create({
   drawer: {
@@ -21,8 +28,8 @@ export const drawerStyles = stylex.create({
     borderColor: '#2a2e36',
     borderRadius: 14,
     overflow: 'hidden',
-    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
-    animationName: 'mtablePop',
+    // Поп оверлея: кадры popFrames — локальный stylex.keyframes (см. выше).
+    animationName: popFrames,
     animationDuration: '0.16s',
     animationTimingFunction: 'ease-out',
     '@media (max-width: 600px)': {
@@ -34,11 +41,12 @@ export const drawerStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
-    // Тонкий скролл (нативный ползунок широкий и яркий); -webkit-* части
-    // остаются глобалом в styles.css — stylex не знает псевдоэлементов
-    // скроллбара.
+    // Тонкий скролл: нативный ползунок + -webkit-псевдо (см. overlayStyles.rows).
     scrollbarWidth: 'thin',
     scrollbarColor: '#3a3f49 transparent',
+    '::-webkit-scrollbar': { width: 6 },
+    '::-webkit-scrollbar-thumb': { background: '#3a3f49', borderRadius: 999 },
+    '::-webkit-scrollbar-track': { background: 'transparent' },
     paddingBottom: 'env(safe-area-inset-bottom)',
   },
   sectionHead: {
@@ -149,8 +157,9 @@ export const drawerStyles = stylex.create({
     flexDirection: 'column',
     gap: 2,
   },
-  // Бегунок масштаба: тап-бокс = --tap (44 базовых), трек/thumb — только
-  // вендор-псевдо в styles.css (как -webkit-scrollbar).
+  // Бегунок масштаба: тап-бокс = --tap (44 базовых); трек/боббин — официальные
+  // вендор-псевдо stylex (бывшие глобалы в styles.css), --fill ставит React
+  // инлайном.
   scaleRange: {
     flex: '1 1 auto',
     minWidth: 0,
@@ -160,6 +169,25 @@ export const drawerStyles = stylex.create({
     appearance: 'none',
     backgroundColor: 'transparent',
     cursor: 'pointer',
+    ':focus-visible': {
+      outline: '2px solid #ef3124',
+      outlineOffset: '-4px',
+    },
+    '::-webkit-slider-runnable-track': {
+      height: 8,
+      borderRadius: 999,
+      background: 'linear-gradient(to right, #d92b1c var(--fill, 0%), #363b45 var(--fill, 0%))',
+    },
+    '::-webkit-slider-thumb': {
+      WebkitAppearance: 'none',
+      width: 20,
+      height: 20,
+      marginTop: -6,
+      border: '3px solid #d92b1c',
+      borderRadius: '50%',
+      background: '#f0f2f5',
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.45)',
+    },
   },
   scaleTicks: {
     display: 'flex',
@@ -170,14 +198,6 @@ export const drawerStyles = stylex.create({
     lineHeight: 1.2,
     color: '#9aa0aa',
     userSelect: 'none',
-  },
-  scaleValue: {
-    minWidth: 44,
-    textAlign: 'right',
-    fontSize: 'var(--fs-sec)',
-    fontWeight: 700,
-    color: '#f0f2f5',
-    fontVariantNumeric: 'tabular-nums',
   },
   about: {
     fontSize: 'var(--fs-sec)',

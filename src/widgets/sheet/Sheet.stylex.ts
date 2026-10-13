@@ -1,7 +1,15 @@
 // Стили шторки «+ Кости»: панель, блок пресетов, строки-степперы, CTA
-// «Сохранить сет». .on-визуал — глобальные правила в styles.css (чекеры
-// ставят .on программно); кадры анимаций — в app/styles.css.
+// «Сохранить сет». .on-визуал — global.css (чекеры ставят .on программно);
+// кадры анимаций — stylex.keyframes.
 import * as stylex from '@stylexjs/stylex'
+
+/** Поп оверлея: кадры локально (stylex не умеет keyframes через импорт —
+ * плагин требует локальный вызов stylex.keyframes; бывший глобальный
+ * @keyframes mtablePop). */
+const popFrames = stylex.keyframes({
+  from: { opacity: 0, transform: 'translate(-50%, -50%) scale(0.96)' },
+  to: { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' },
+})
 
 export const sheetStyles = stylex.create({
   sheet: {
@@ -21,8 +29,8 @@ export const sheetStyles = stylex.create({
     borderRadius: 14,
     overflow: 'hidden',
     paddingBottom: 'env(safe-area-inset-bottom)',
-    // Поп оверлея: кадры mtablePop — глобальные в app/styles.css.
-    animationName: 'mtablePop',
+    // Поп оверлея: кадры popFrames — локальный stylex.keyframes (см. выше).
+    animationName: popFrames,
     animationDuration: '0.16s',
     animationTimingFunction: 'ease-out',
     // Узкие экраны (≤600): карточка шире — поля 12px (тот же блок на троих

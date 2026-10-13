@@ -3,6 +3,11 @@ import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch } from '@/app'
 import { mtUiActions } from '@/features'
 
+/** Вход подложки: кадры (бывший глобальный @keyframes mtableFade). */
+const fade = stylex.keyframes({
+  from: { opacity: 0 },
+})
+
 export interface BackdropProps {
   visible: boolean
 }
@@ -16,10 +21,9 @@ const styles = stylex.create({
     zIndex: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  // Вход только видимой подложки (раньше .mtableBackdrop:not([hidden]));
-  // кадры mtableFade — глобальные в app/styles.css.
+  // Вход только видимой подложки (раньше .mtableBackdrop:not([hidden])).
   fade: {
-    animationName: 'mtableFade',
+    animationName: fade,
     animationDuration: '0.16s',
     animationTimingFunction: 'ease-out',
   },

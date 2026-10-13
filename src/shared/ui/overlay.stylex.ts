@@ -1,8 +1,8 @@
 // Общие стили трёх центрированных оверлеев (шторка «+ Кости», меню-бургер,
 // карточка музыки): шапка, тело-скролл, секции, wide-кнопки. Перенос из
-// mobile-table.css (волна W2); hover — здесь же, .on-визуал — глобальные
-// правила в styles.css (порядок: .on вне слоёв бьёт stylex-hover — выбранная
-// кнопка остаётся с акцентным фоном даже под курсором, как в легаси).
+// mobile-table.css (волна W2); hover — здесь же, .on-визуал — global.css
+// (порядок: .on вне слоёв бьёт stylex-hover — выбранная кнопка остаётся
+// с акцентным фоном даже под курсором, как в легаси).
 import * as stylex from '@stylexjs/stylex'
 
 export const overlayStyles = stylex.create({
@@ -26,10 +26,13 @@ export const overlayStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
-    // Тонкий скролл (нативный ползунок широкий и яркий); -webkit-* части
-    // остаются глобалом в styles.css.
+    // Тонкий скролл: нативный ползунок (стандартные свойства) + -webkit-псевдо
+    // (Chromium рисует свой; официальные псевдоэлементы stylex).
     scrollbarWidth: 'thin',
     scrollbarColor: '#3a3f49 transparent',
+    '::-webkit-scrollbar': { width: 6 },
+    '::-webkit-scrollbar-thumb': { background: '#3a3f49', borderRadius: 999 },
+    '::-webkit-scrollbar-track': { background: 'transparent' },
   },
   section: {
     padding: '6px 14px 14px',

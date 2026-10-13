@@ -412,3 +412,68 @@ const sx = stylex.props(styles.root)
   - **Проверки:** tsc 0; `eslint src/` 0; prettier --check 0; build 0; vitest **29 files / 236
     tests**; computed-diff **0/0/0** (16 снимков, 3408 элементов); 9 чекеров **ALL OK**; e2e
     **30/30** (flaky :210 не проявился).
+
+- **Wfinal-2 — хвост styles.css + бегунок масштаба (2026-10-12, коммит af728aa + рабочее дерево):**
+  - **Бегунок вместо кнопок-пилюль** (просьба человека: «UIUX ужасен, нужна переработка»): нативный
+    `input[type=range]` 100–200 % шагом 25 (снап к `UI_SCALES`, валидатор/тип не менялись), тёмный
+    трек с красной заливкой `--fill` (React-инлайн), thumb с кольцом, тики 100–200 % фикс-px (иначе
+    ×200 % рвут WCAG 1.4.10 по ширине); трек/боббин — вендор-псевдо в styles.css (прецедент
+    `-webkit-scrollbar`); чип-значение «100 %» удалён по вердикту человека (избыточен — масштаб
+    читается по бегунку/тикам), `aria-valuetext` остался на input; `.mtableScale.on` вымаран из
+    styles.css, из чекеров (audit-contrast/audit-fonts/ui-scale) вместе с контрактом чипа.
+  - **e2e 2.24** переведён на стрелки слайдера (`getByRole('slider')` + ArrowRight/Left) — старые
+    кнопки пресетов больше не существуют.
+  - **Хвост styles.css в stylex:** `body[data-mode='mtable'] .viewers` → `homeStyles.viewers`
+    (`pages/HomePage/ui/HomePage.stylex.ts`; data-mode ставится синхронно и не переключается —
+    селектор развернут, фолбэки vh→dvh/hidden→clip — массивы stylex); `:focus-visible` бегунка —
+    stylex `drawerStyles.scaleRange`. **Остаток навсегда (220 строк):** слои/токены, base-глобалы
+    (body/data-mode/[hidden]/фокус), `@keyframes`, impure-хост музыки, `-webkit-` скроллбары и
+    слайдер-псевдо, `.on`-визуал (чекеры ставят `.on` программно).
+  - **Грабли:** React-контролled range не берёт `el.value=`+$eval — в чекере prototype-setter (обход
+    instance-setter'а value-tracker) + `input`/`pointerup`; слитые пробелы истории — фикс
+    `Fragment + {' '}` (паритет с легаси `parts.append(s, createTextNode(' '))`).
+  - **Проверки:** tsc 0; eslint 0; prettier 0; lint:arch 0 (159 модулей); lint:fsd clean; vitest
+    236; e2e 30/30 (в коммите af728aa); чекеры 11/11; computed-diff после чипа **0/0/0**
+    (viewers-миграция — 0 дельт, дельта чипа осмотрена: removed=16, рефлоу бегунка — осознанный
+    `--save`).
+
+- **Wfinal-3 — styles.css удалён, единственный global.css (2026-10-12/13, рабочее дерево):**
+  - **Вердикт человека:** «все .css → .stylex»; после ресёрча выбран **один мини
+    `src/app/styles/global.css`** (официальная позиция StyleX: «Use a CSS file for global styles»,
+    facebook/stylex#324 — `*`/`[hidden]`/impure-дети/`.on`-контракт stylex физически не выражает;
+    токены `:root` переносятся в `defineVars` только отдельной волной — он переименует все
+    `var(--…)`-ссылки в компонентах, в global.css оставлен TODO).
+  - **Удалено/свёрнуто:** `src/app/styles.css` стёрт; волна Wfinal-2 (`.viewers`, focus-visible) и
+    эти правки свернуты в `global.css` (слои+токены+base+`.on`+iframe); main.tsx — один импорт.
+  - **В stylex ушли:** `@keyframes` ×5 → `stylex.keyframes` (fade/hintIn/spin/morph — локальные
+    константы в своих модулях; **pop ×3 копии локально** в Drawer/Sheet/MusicCard — плагин не умеет
+    keyframes через импорт: и barrel, и прямой путь резолвятся, но `animationName` требует локальный
+    вызов); `-webkit-` скроллбары → `overlayStyles.rows` + `drawerStyles.body`; трек/боббин бегунка
+    → `drawerStyles.scaleRange` (официальные `::-webkit-slider-*`); `:empty` хоста → `styles.host` в
+    MusicCard.
+  - **Грабль- находка (dev ≠ прод):** в dev stylex инжектит `/virtual:stylex.css` ссылкой ПЕРВЫМ,
+    vite-стили (импорт main.tsx) — позже → `@layer base, stylex;` из global.css объявлялся после
+    `priorityN` и base перебивал stylex (белый focus вместо красного слайдера). Фикс:
+    `<style>@layer base, stylex;</style>` **самым первым элементом head в index.html** (в проде
+    переживает минификацию и стоит раньше линка css; дубль в global.css идемпотентен). Проба:
+    `tmp/check/_layer-order-probe.mjs` (порядок источников + красный focus слайдера).
+  - **Чекер-контракты:** `hint-v2` — имя кадров теперь stylex-хеш (проверяет «анимация ≠ none»,
+    длительность ≤0.25 осталась); `audit-suspects` — чтение global.css вместо удалённого styles.css
+    (E2/F по css-хвосту).
+  - **Проверки:** tsc 0; lint 0; prettier 0; lint:arch 0; lint:fsd 0; build 0 (dist/index.html: линк
+    `assets/main-*.css`, декларация слоёв @368 < линк @3084; в ассете: base@0 → stylex@364 →
+    priority1@1625, `.on` вне слоёв, 5 keyframes — pop задедуплицирован по хэшу, 268 хэш-классов);
+    computed-diff: дельта только 80×`animation-name` → `--save` → **0/0/0**; батарея 10/10 +
+    audit-fonts 0; audit-suspects 0; layer-order probe 0.
+  - **Чистка global.css по просьбе человека (2026-10-13):** выпилено мёртвое — токены
+    `--font-sans/--bg/--text` (внешних usage 0, значения инлайннуты в body), условный селектор
+    `body[data-mode='mtable']` (всегда истинен: стол — всё приложение) → одно правило `body`
+    (fixed+inset+margin+overflow+bg/color/font), строка `document.body.dataset.mode` из main.tsx
+    (читателей не было нигде: css/e2e/чекеры/stylex — только исторические упоминания в задачах),
+    `html,body{height:100%}` (viewers в stylex даёт 100vh/100dvh явно), `width:100%` (избыточен при
+    inset:0). Оставлено осознанно: `[hidden]` (React hidden × stylex display), глобальный
+    `:focus-visible` (9 файлов с кнопками без своего в stylex), `.on`-контракт, impure-iframe,
+    `--ui-scale:1` (до-JS пинт) и живые `--fs-*/*-icon/--tap`. 119 → 109 строк. Проверки: build 0;
+    computed-diff **0/0/0** (body/геометрия/цвета в PROPS — сетка держит); probe 0 (маркер пробы
+    переведён с удалённого `--font-sans` на комментарий файла); lint 0; prettier 0; arch 0; fsd 0;
+    audit-suspects 0.

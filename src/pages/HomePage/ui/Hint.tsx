@@ -8,6 +8,12 @@ import { addIcon, dieGlyph } from '@/shared'
 import { selectPhase } from '../model/selectors'
 import { mtUiActions, selectMtUi, selectTotal } from '@/features'
 
+/** Вход хинта: кадры (бывший глобальный @keyframes mtableHintIn). */
+const hintIn = stylex.keyframes({
+  from: { opacity: 0, transform: 'translate(-50%, calc(-50% + 6px))' },
+  to: { opacity: 1, transform: 'translate(-50%, -50%)' },
+})
+
 const styles = stylex.create({
   hint: {
     position: 'absolute',
@@ -31,12 +37,11 @@ const styles = stylex.create({
     fontFamily: 'inherit',
     textAlign: 'center',
     cursor: 'pointer',
-    // Вход хинта: кадры mtableHintIn объявлены глобально в app/styles.css
-    // (stylex.keyframes переименовал бы имя — дельта computed-diff).
-    animationName: 'mtableHintIn',
+    // Вход хинта: кадры hintIn — stylex.keyframes; движение по желанию
+    // пользователя — хинт появляется без анимации (reduced-motion).
+    animationName: hintIn,
     animationDuration: '0.18s',
     animationTimingFunction: 'ease-out',
-    // Движение — по желанию пользователя: хинт появляется без анимации.
     '@media (prefers-reduced-motion: reduce)': {
       animationName: 'none',
     },

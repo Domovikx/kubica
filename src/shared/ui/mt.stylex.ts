@@ -7,15 +7,21 @@
 // star) — свой stylex в ui/Head.tsx.
 // W2 (stylex): mobile-table.css удалён — оверлеи (Sheet/Drawer/MusicCard/
 // Hint/Backdrop/Chip) на своём stylex, общее — ui/overlay-styles.ts;
-// state-комбо (.on/.holding/partMin…) — глобал в styles.css (специфика
-// stylex в @layer useCSSLayers:true).
+// state-комбо (.on/.holding/partMin…) — global.css (вне слоёв бьёт stylex).
 // Whtml (React-дети): innerHTML-сайты (иконки, морф/спиннер/Star, глифы
 // чипов, подписи соцсетей) стали React-узлами — их стили переехали в stylex
-// (svgHead/morph ниже, контекстные — в компонентах); в styles.css остались
-// только .on-визуал (чекеры ставят .on программно), impure-хост музыки,
-// -webkit-скроллбары, @keyframes и база/токены.
+// (svgHead/morph ниже, контекстные — в компонентах); распил styles.css
+// (2026-10-12): документ/токены/.on-визуал/impure-iframe — единый
+// app/styles/global.css, @keyframes и -webkit-скроллбары ушли в stylex
+// (keyframes/псевдоэлементы выше).
 
 import * as stylex from '@stylexjs/stylex'
+
+/** Морф крестика в ✓: кадры (бывший глобальный @keyframes mtableMorphIn). */
+const morphIn = stylex.keyframes({
+  from: { opacity: 0, transform: 'rotate(-90deg) scale(0.7)' },
+  to: { opacity: 1, transform: 'none' },
+})
 
 /** Иконки-кнопки: общая база для шапки/шторки/дровера/карточки музыки. */
 export const iconStyles = stylex.create({
@@ -71,10 +77,10 @@ export const iconStyles = stylex.create({
     width: 'var(--icon-head)',
     height: 'var(--icon-head)',
   },
-  /** Морф крестика в ✓ «Готово»: анимация svg-ребёнка (кадры — глобальные
-   * @keyframes в app/styles.css, reduced-motion снимает). */
+  /** Морф крестика в ✓ «Готово»: анимация svg-ребёнка (кадры — morphIn
+   * ниже, stylex.keyframes; reduced-motion снимает). */
   morph: {
-    animationName: 'mtableMorphIn',
+    animationName: morphIn,
     animationDuration: '160ms',
     animationTimingFunction: 'ease',
     '@media (prefers-reduced-motion: reduce)': {
