@@ -477,3 +477,14 @@ const sx = stylex.props(styles.root)
     computed-diff **0/0/0** (body/геометрия/цвета в PROPS — сетка держит); probe 0 (маркер пробы
     переведён с удалённого `--font-sans` на комментарий файла); lint 0; prettier 0; arch 0; fsd 0;
     audit-suspects 0.
+  - **Фикс после вердикта человека: «бегунок масштаба не виден» (2026-10-13):** корень — Chrome
+    (проверено на 153, Playwright chromium) **не красит вендор-псевдо внутри `@layer`**
+    (`::-webkit-slider-*`, `::-webkit-scrollbar-*`), а stylex с `useCSSLayers` кладёт всё в
+    priority-слои: `appearance:none` применялся, трек/боббин — нет → невидимая полоса (градиент
+    `var(--fill)` вдобавок выброшен валидатором значений stylex). Изоляция: те же атомарные классы,
+    инжектированные без слоёв, рисуют идеально. Фикс — все vendor-псевдо (бегунок track+thumb,
+    скроллбары `.mtableDrawerBody/.mtableRows`) перенесены в `global.css` вне слоёв по стабильным
+    DOM-классам (форма 1:1 как в af728aa); в stylex остались element-level база
+    (height/appearance/cursor/focus) и стандартные scrollbar-width/color. Проверки: скриншоты (100
+    %/150 % — трек, заливка, боббин с кольцом), build 0, ui-scale 0, e2e 2.24 3/3, computed-diff
+    **0/0/0**.

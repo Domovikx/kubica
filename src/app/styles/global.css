@@ -95,6 +95,42 @@
   color: #fff;
 }
 
+/* ---- Вендор-псевдо нативных контролов: Chrome (проверено на 153) не красит
+ * ::-webkit-slider-* и ::-webkit-scrollbar*, лежащие в @layer, — а stylex
+ * (useCSSLayers) кладёт все свои правила в priority-слои, поэтому трек/
+ * боббин бегунка и тонкий скролл живут здесь, вне слоёв, по стабильным
+ * DOM-классам. Element-level база бегунка (height/appearance) и стандартные
+ * scrollbar-width/color — stylex (drawerStyles.scaleRange / rows / body);
+ * заливку --fill (0–100 %) ставит React инлайном на инпут. */
+.mtableScaleRange::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #d92b1c var(--fill, 0%), #363b45 var(--fill, 0%));
+}
+.mtableScaleRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
+  border: 3px solid #d92b1c;
+  border-radius: 50%;
+  background: #f0f2f5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.mtableDrawerBody::-webkit-scrollbar,
+.mtableRows::-webkit-scrollbar {
+  width: 6px;
+}
+.mtableDrawerBody::-webkit-scrollbar-thumb,
+.mtableRows::-webkit-scrollbar-thumb {
+  background: #3a3f49;
+  border-radius: 999px;
+}
+.mtableDrawerBody::-webkit-scrollbar-track,
+.mtableRows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* ---- Impure-хост музыки: YT.Player заменяет целевой элемент своим
  * iframe'ом — React-ребёнка нет, stylex-селектор на ребёнка не строит
  * (хост: :empty — stylex в MusicCard). */

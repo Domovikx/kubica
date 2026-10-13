@@ -1,6 +1,7 @@
 // Секция «Масштаб интерфейса» в бургере: бегунок 100–200 % со снапом к
 // пресетам 100/125/150/175/200 (persist + стор, тост — при смене шага,
-// вибрация — на отпускание). Трек/боббин — вендор-псевдо stylex (Drawer.stylex).
+// вибрация — на отпускание). Трек/боббин — вендор-псевдо в global.css
+// (Chrome не красит их из @layer), база — Drawer.stylex scaleRange.
 import * as stylex from '@stylexjs/stylex'
 import { useAppDispatch, useAppSelector } from '@/app'
 import { setUiScale, UI_SCALES, type UiScale, uiScaleActions } from '@/features'

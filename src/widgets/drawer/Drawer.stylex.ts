@@ -41,12 +41,10 @@ export const drawerStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
-    // Тонкий скролл: нативный ползунок + -webkit-псевдо (см. overlayStyles.rows).
+    // Тонкий скролл: стандартные свойства здесь; -webkit-псевдо живут в
+    // global.css (Chrome не красит вендор-псевдо внутри @layer — см. там).
     scrollbarWidth: 'thin',
     scrollbarColor: '#3a3f49 transparent',
-    '::-webkit-scrollbar': { width: 6 },
-    '::-webkit-scrollbar-thumb': { background: '#3a3f49', borderRadius: 999 },
-    '::-webkit-scrollbar-track': { background: 'transparent' },
     paddingBottom: 'env(safe-area-inset-bottom)',
   },
   sectionHead: {
@@ -157,9 +155,9 @@ export const drawerStyles = stylex.create({
     flexDirection: 'column',
     gap: 2,
   },
-  // Бегунок масштаба: тап-бокс = --tap (44 базовых); трек/боббин — официальные
-  // вендор-псевдо stylex (бывшие глобалы в styles.css), --fill ставит React
-  // инлайном.
+  // Бегунок масштаба: тап-бокс = --tap (44 базовых), element-level. Трек/
+  // боббин — вендор-псевдо в global.css (Chrome не красит ::-webkit-slider-*
+  // из @layer), --fill ставит React инлайном.
   scaleRange: {
     flex: '1 1 auto',
     minWidth: 0,
@@ -172,21 +170,6 @@ export const drawerStyles = stylex.create({
     ':focus-visible': {
       outline: '2px solid #ef3124',
       outlineOffset: '-4px',
-    },
-    '::-webkit-slider-runnable-track': {
-      height: 8,
-      borderRadius: 999,
-      background: 'linear-gradient(to right, #d92b1c var(--fill, 0%), #363b45 var(--fill, 0%))',
-    },
-    '::-webkit-slider-thumb': {
-      WebkitAppearance: 'none',
-      width: 20,
-      height: 20,
-      marginTop: -6,
-      border: '3px solid #d92b1c',
-      borderRadius: '50%',
-      background: '#f0f2f5',
-      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.45)',
     },
   },
   scaleTicks: {

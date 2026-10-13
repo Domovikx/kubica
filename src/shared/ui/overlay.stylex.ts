@@ -26,13 +26,11 @@ export const overlayStyles = stylex.create({
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
-    // Тонкий скролл: нативный ползунок (стандартные свойства) + -webkit-псевдо
-    // (Chromium рисует свой; официальные псевдоэлементы stylex).
+    // Тонкий скролл: стандартные свойства здесь; -webkit-псевдо живут в
+    // global.css (Chrome не красит вендор-псевдо внутри @layer, а stylex
+    // кладёт всё в priority-слои — см. комментарий там).
     scrollbarWidth: 'thin',
     scrollbarColor: '#3a3f49 transparent',
-    '::-webkit-scrollbar': { width: 6 },
-    '::-webkit-scrollbar-thumb': { background: '#3a3f49', borderRadius: 999 },
-    '::-webkit-scrollbar-track': { background: 'transparent' },
   },
   section: {
     padding: '6px 14px 14px',
