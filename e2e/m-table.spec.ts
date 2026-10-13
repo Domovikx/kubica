@@ -393,7 +393,9 @@ test('музыка: пункт в дровере → карточка, сост�
   const row = page.getByTestId('mtable-drawer-music')
   await expect(row).toBeVisible()
   await expect(row).toHaveAttribute('aria-haspopup', 'dialog')
-  await expect(row).toHaveText('Фоновая музыка')
+  // useInnerText: на ≤360 в кнопке два span'а (полный + узкий ярлык) — textContent
+  // дал бы склейку «Фоновая музыкаМузыка», а видимый текст на 390 — один.
+  await expect(row).toHaveText('Фоновая музыка', { useInnerText: true })
   await row.click()
   await expect(page.getByTestId('mtable-music-card')).toBeVisible()
   await expect(page.getByTestId('mtable-drawer')).toBeHidden()

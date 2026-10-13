@@ -21,6 +21,12 @@ export const overlayStyles = stylex.create({
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
+    // ≤360 (официальный минимум 260): заголовок мельче и легче — «Выбор костей»
+    // и «Фоновая музыка» впритык в шапке рядом с двумя кнопками 44px.
+    '@media (max-width: 360px)': {
+      fontSize: 'var(--fs-cap)',
+      fontWeight: 600,
+    },
   },
   rows: {
     flex: 1,

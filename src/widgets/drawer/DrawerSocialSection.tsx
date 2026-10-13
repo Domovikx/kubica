@@ -17,7 +17,10 @@ export const DrawerSocialSection = (): React.JSX.Element => {
   const sxSocialSvg = stylex.props(s.socialSvg)
   const sxStarSvg = stylex.props(s.socialSvg, s.socialStar)
   const sxSocialName = stylex.props(s.socialName)
-  const sxSocialMeta = stylex.props(s.socialMeta)
+  const sxSocialMeta = stylex.props(s.socialMeta, s.socialMetaHide)
+  const sxStarMeta = stylex.props(s.socialMeta)
+  const sxStarNameLong = stylex.props(s.socialName, s.socialNameLong)
+  const sxStarNameShort = stylex.props(s.socialName, s.socialNameShort)
 
   return (
     <div
@@ -77,12 +80,18 @@ export const DrawerSocialSection = (): React.JSX.Element => {
         aria-label={starMenuLabel}
       >
         {likeIcon(sxStarSvg.className)}
-        <span {...sxSocialName} className={`mtableSocialName ${sxSocialName.className ?? ''}`}>
+        <span {...sxStarNameLong} className={`mtableSocialName ${sxStarNameLong.className ?? ''}`}>
           Оценить репозиторий
         </span>
         <span
-          {...sxSocialMeta}
-          className={`mtableSocialMeta ${sxSocialMeta.className ?? ''}`}
+          {...sxStarNameShort}
+          className={`mtableSocialName ${sxStarNameShort.className ?? ''}`}
+        >
+          Оценить
+        </span>
+        <span
+          {...sxStarMeta}
+          className={`mtableSocialMeta ${sxStarMeta.className ?? ''}`}
           data-testid="star-count"
           hidden={starCount === null || starCount < 1}
         >

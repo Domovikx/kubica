@@ -62,6 +62,37 @@ export const drawerStyles = stylex.create({
     fontWeight: 800,
     fontSize: 'var(--fs-body)',
   },
+  /** Заголовок секции «Звук и вибрация»: на ≤360 остаются только иконки. */
+  soundTitle: {
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
+  },
+  /** Полная подпись («Выключить звук» и т.п.) — на ≤360 спрятана. */
+  soundLong: {
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
+  },
+  /** ≤360: секция «Звук» — компактный ряд иконок-кнопок вместо столбика пилюль. */
+  soundRow: {
+    '@media (max-width: 360px)': {
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+  },
+  /** ≤360: .mtableWide превращается в иконку-плитку, заполняющую треть ряда;
+   *  marginTop: 0 гасит wideGap — в ряде отступ задаёт gap секции. */
+  iconBtn: {
+    '@media (max-width: 360px)': {
+      flex: '1 1 0',
+      width: 'auto',
+      padding: 0,
+      marginTop: 0,
+    },
+  },
   link: {
     minHeight: 'var(--tap)',
     padding: '0 12px',
@@ -110,6 +141,11 @@ export const drawerStyles = stylex.create({
   hmeta: {
     color: '#9aa0aa',
     fontSize: 'var(--fs-meta)',
+    // ≤360 (официальный минимум 260): мета «d4 d6 · 13:49» выкинута — в строке
+    // истории остаются результат, броски и ↻.
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
   },
   hp: {
     marginLeft: 'auto',
@@ -229,6 +265,19 @@ export const drawerStyles = stylex.create({
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
   },
+  /** ≤360: длинное имя звезды «Оценить репозиторий» спрятано — короткое
+   *  «Оценить» (socialNameShort), иначе обрезка ellipsis'ом. */
+  socialNameLong: {
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
+  },
+  socialNameShort: {
+    display: 'none',
+    '@media (max-width: 360px)': {
+      display: 'inline',
+    },
+  },
   /** Хендл/счётчик внутри ссылки (маркер mtableSocialMeta — чекеры). */
   socialMeta: {
     marginLeft: 'auto',
@@ -236,5 +285,12 @@ export const drawerStyles = stylex.create({
     fontSize: 'var(--fs-sec)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
+  },
+  /** ≤360: хендл @DomovikX спрятан — имя «GitHub»/«Telegram» само себя
+   *  опознаёт, экономим ширину (иначе имя режется в «Git...»). */
+  socialMetaHide: {
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
   },
 })

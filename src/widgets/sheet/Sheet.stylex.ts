@@ -66,6 +66,12 @@ export const sheetStyles = stylex.create({
     flexWrap: 'wrap',
     gap: 6,
     marginTop: 8,
+    // ≤360 (минимум 260): рваные строки flex-wrap с пустотой справа →
+    // сетка 2×N, чипы-плитки одинаковой ширины (контент по центру — в Chip).
+    '@media (max-width: 360px)': {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+    },
   },
   empty: {
     color: '#9aa0aa',
@@ -85,6 +91,12 @@ export const sheetStyles = stylex.create({
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderBottomColor: '#1d2026',
+    // ≤360: без desc (см. s.desc) строка сжимается — глиф+имя+степпер в одну
+    // линию на 260 (gap 6/падинг 14 ещё роняют «+» на вторую строку).
+    '@media (max-width: 360px)': {
+      gap: 4,
+      padding: '8px 10px',
+    },
   },
   glyph: {
     display: 'flex',
@@ -112,6 +124,11 @@ export const sheetStyles = stylex.create({
     lineHeight: 1.35,
     color: '#9aa0aa',
     flex: 1,
+    // ≤360 (минимум 260): подсказка «куб · урон» жала степпер на вторую строку —
+    // прячем; имя «d6» и так несёт смысл (решение по задаче 260px).
+    '@media (max-width: 360px)': {
+      display: 'none',
+    },
   },
   step: {
     width: 'var(--tap)',

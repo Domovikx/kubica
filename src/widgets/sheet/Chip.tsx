@@ -44,6 +44,11 @@ const styles = stylex.create({
     touchAction: 'manipulation',
     userSelect: 'none',
     WebkitUserSelect: 'none',
+    // ≤360 (минимум 260): в сетке 2×N (s.sets) чип — плитка во всю ячейку,
+    // глифы по центру, чтобы не было пустоты справа, как у сырых flex-wrap.
+    '@media (max-width: 360px)': {
+      justifyContent: 'center',
+    },
   },
   fill: {
     position: 'absolute',
